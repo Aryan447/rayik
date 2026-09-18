@@ -1,5 +1,6 @@
 package app.rayik.music.presentation
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,18 +14,24 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import app.rayik.music.R
+import app.rayik.music.auth.YtLoginActivity
+import app.rayik.music.auth.YtSessionStore
 import app.rayik.music.preferences.AppearancePreferences
 import app.rayik.music.preferences.StreamQuality
 import app.rayik.music.preferences.preference.collectAsState
@@ -40,12 +47,15 @@ import org.koin.compose.koinInject
 @Composable
 fun SettingsScreen(
   preferences: AppearancePreferences = koinInject(),
+  sessions: YtSessionStore = koinInject(),
 ) {
   val appTheme by preferences.appTheme.collectAsState()
   val darkMode by preferences.darkMode.collectAsState()
   val amoledMode by preferences.amoledMode.collectAsState()
   val albumArtDynamic by preferences.albumArtDynamic.collectAsState()
   val streamQuality by preferences.streamQuality.collectAsState()
+  val signedIn by sessions.signedIn.collectAsState()
+  val context = LocalContext.current
   val systemDark = isSystemInDarkTheme()
   val useDarkTheme = when (darkMode) {
     DarkMode.Dark -> true
@@ -61,6 +71,28 @@ fun SettingsScreen(
     Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineSmall)
     Spacer(Modifier.height(MaterialTheme.spacing.medium))
 
+    SectionTitle("Account")
+    Text(
+      if (signedIn) {
+        "Signed in — your streams ride on your session, which dodges most bot-blocks."
+      } else {
+        "Signed out — anonymous streams get blocked on some networks. Sign in to fix that."
+      },
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(MaterialTheme.spacing.small))
+    if (signedIn) {
+      OutlinedButton(onClick = { sessions.clear() }) {
+        Text("Sign out")
+      }
+    } else {
+      Button(onClick = { context.startActivity(Intent(context, YtLoginActivity::class.java)) }) {
+        Text("Sign in with Google")
+      }
+    }
+
+    Spacer(Modifier.height(MaterialTheme.spacing.medium))
     SectionTitle(stringResource(R.string.settings_section_appearance))
     ThemePicker(
       currentTheme = appTheme,

@@ -108,6 +108,32 @@ class PipedParsingTest {
     assertNull(source().pickBest(response, setOf("https://cdn/dead", "https://cdn/live")))
   }
 
+  @Test fun `muxed itag 18 backs up missing audio`() {
+    val response = PipedStreamsResponse(
+      videoStreams = listOf(
+        PipedVideoStream(url = "https://cdn/muxed18", itag = 18),
+        PipedVideoStream(url = "https://cdn/hd22", itag = 22),
+        PipedVideoStream(url = "https://cdn/video-only", itag = 133),
+      ),
+    )
+    // Cheapest muxed first; pure-video itags never qualify.
+    assertEquals("https://cdn/muxed18", source().pickBest(response)?.url)
+    assertEquals("video/mp4", source().pickBest(response)?.mimeType)
+    assertEquals("https://cdn/hd22", source().pickBest(response, setOf("https://cdn/muxed18"))?.url)
+    assertNull(source().pickBest(PipedStreamsResponse(videoStreams = listOf(PipedVideoStream(url = "https://cdn/v", itag = 133))))?.url)
+  }
+
+  @Test fun `audio beats muxed and muxed beats hls`() {
+    val response = PipedStreamsResponse(
+      hls = "https://cdn/hls",
+      audioStreams = listOf(PipedAudioStream(url = "https://cdn/a", codec = "opus", format = "webm", bitrate = 128_000)),
+      videoStreams = listOf(PipedVideoStream(url = "https://cdn/muxed18", itag = 18)),
+    )
+    assertEquals("https://cdn/a", source().pickBest(response)?.url)
+    assertEquals("https://cdn/muxed18", source().pickBest(response, setOf("https://cdn/a"))?.url)
+    assertEquals("https://cdn/hls", source().pickBest(response, setOf("https://cdn/a", "https://cdn/muxed18"))?.url)
+  }
+
   private fun source() = PipedSource(
     OkHttpClient(),
     AppearancePreferences(InMemoryPreferenceStore()),

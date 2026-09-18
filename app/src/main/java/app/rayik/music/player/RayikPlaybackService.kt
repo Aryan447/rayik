@@ -1,5 +1,6 @@
 package app.rayik.music.player
 
+import android.content.Context
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.datasource.cache.CacheDataSource
@@ -9,8 +10,11 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import app.rayik.music.R
+import app.rayik.music.streaming.youtube.InnerTubeResolver
 import java.io.File
 import okhttp3.OkHttpClient
 import org.koin.core.component.KoinComponent
@@ -29,30 +33,34 @@ class RayikPlaybackService : MediaSessionService(), KoinComponent {
   private val okHttp: OkHttpClient by inject()
 
   private var session: MediaSession? = null
-  private var cache: SimpleCache? = null
 
   override fun onCreate() {
     super.onCreate()
-    val mediaCache = SimpleCache(
-      File(cacheDir, "rayik-media"),
-      LeastRecentlyUsedCacheEvictor(TRANSIENT_CACHE_BYTES),
-      StandaloneDatabaseProvider(this),
-    )
-    cache = mediaCache
+    val mediaCache = RayikMediaCache.getInstance(this)
     val cacheSourceFactory =
       CacheDataSource.Factory()
         .setCache(mediaCache)
         .setUpstreamDataSourceFactory(
           OkHttpDataSource.Factory(okHttp).setUserAgent(PLAYER_USER_AGENT),
         )
+        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+
+    val audioAttributes = AudioAttributes.Builder()
+      .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+      .setUsage(C.USAGE_MEDIA)
+      .build()
+
     val player =
       ExoPlayer.Builder(this)
         .setMediaSourceFactory(DefaultMediaSourceFactory(cacheSourceFactory))
-        .setAudioAttributes(AudioAttributes.DEFAULT, true)
+        .setAudioAttributes(audioAttributes, true)
         .setWakeMode(C.WAKE_MODE_NETWORK)
         .setHandleAudioBecomingNoisy(true)
         .build()
     session = MediaSession.Builder(this, player).build()
+    val notificationProvider = DefaultMediaNotificationProvider.Builder(this).build()
+    notificationProvider.setSmallIcon(R.drawable.ic_launcher_monochrome)
+    setMediaNotificationProvider(notificationProvider)
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
@@ -64,8 +72,6 @@ class RayikPlaybackService : MediaSessionService(), KoinComponent {
       release()
     }
     session = null
-    cache?.release()
-    cache = null
     super.onDestroy()
   }
 
@@ -74,10 +80,35 @@ class RayikPlaybackService : MediaSessionService(), KoinComponent {
     const val TRANSIENT_CACHE_BYTES = 500L * 1024 * 1024
 
     /**
-     * Explicit browser UA for media fetches: googlevideo edges can 403
-     * unfamiliar client UAs, and the default ExoPlayer UA varies by build.
+     * User-Agent matching the InnerTube ANDROID client that resolved the
+     * googlevideo stream URL. Google Video edge servers reject/403 requests
+     * where the token's client (c=ANDROID) conflicts with the User-Agent.
      */
-    const val PLAYER_USER_AGENT =
-      "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    const val PLAYER_USER_AGENT = InnerTubeResolver.USER_AGENT
+  }
+}
+
+/**
+ * Process-wide singleton for the transient ExoPlayer disk cache.
+ * SimpleCache locks the directory with a file lock; keeping a single instance
+ * prevents "Another SimpleCache instance already exists" crashes when
+ * RayikPlaybackService restarts.
+ */
+object RayikMediaCache {
+  @Volatile private var cache: SimpleCache? = null
+  @Volatile private var databaseProvider: StandaloneDatabaseProvider? = null
+
+  @Synchronized
+  fun getInstance(context: Context): SimpleCache {
+    return cache ?: run {
+      val app = context.applicationContext
+      val db = databaseProvider ?: StandaloneDatabaseProvider(app).also { databaseProvider = it }
+      val cacheDir = File(app.cacheDir, "rayik-media")
+      SimpleCache(
+        cacheDir,
+        LeastRecentlyUsedCacheEvictor(RayikPlaybackService.TRANSIENT_CACHE_BYTES),
+        db,
+      ).also { cache = it }
+    }
   }
 }

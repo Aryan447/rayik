@@ -58,7 +58,7 @@ fun RayikNav() {
   ) { inner ->
     Column(Modifier.fillMaxSize().padding(inner).padding(MaterialTheme.spacing.medium)) {
       when (tabs[tab]) {
-        Tab.Raay -> RaayHomeScreen()
+        Tab.Raay -> RaayHomeScreen(onPlayStarted = { tab = Tab.Queue.ordinal })
         Tab.Search -> SearchScreen(onPlayStarted = { tab = Tab.Queue.ordinal })
         Tab.Queue -> QueueScreen()
         Tab.Lyrics -> LyricsScreen()

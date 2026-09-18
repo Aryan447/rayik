@@ -29,6 +29,19 @@ data class PipedStreamsResponse(
   val hls: String? = null,
   val dash: String? = null,
   val audioStreams: List<PipedAudioStream> = emptyList(),
+  /**
+   * Muxed video renditions (itag 18 class carries audio). Last-resort
+   * audio source: the PO-token-exempt class per yt-dlp, played with the
+   * video track dropped.
+   */
+  val videoStreams: List<PipedVideoStream> = emptyList(),
+)
+
+@Serializable
+data class PipedVideoStream(
+  val url: String = "",
+  val itag: Int = 0,
+  val codec: String = "",
 )
 
 @Serializable

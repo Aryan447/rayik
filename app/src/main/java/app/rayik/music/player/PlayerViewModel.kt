@@ -11,6 +11,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.core.content.ContextCompat
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.Job
@@ -115,7 +116,7 @@ class PlayerViewModel(
   }
 
   init {
-    controllerFuture.addListener({ onControllerReady() }, MoreExecutors.directExecutor())
+    controllerFuture.addListener({ onControllerReady() }, ContextCompat.getMainExecutor(appContext))
   }
 
   /** Replace the queue and start playback at [startIndex]. */
@@ -217,7 +218,7 @@ class PlayerViewModel(
       delay(CONNECT_RETRY_MS)
       releaseControllerFuture()
       controllerFuture = buildControllerFuture()
-      controllerFuture.addListener({ onControllerReady() }, MoreExecutors.directExecutor())
+      controllerFuture.addListener({ onControllerReady() }, ContextCompat.getMainExecutor(appContext))
     }
   }
 
@@ -241,15 +242,20 @@ class PlayerViewModel(
       return
     }
     this.controller = controller
-    controller.addListener(listener)
-    controller.repeatMode = toExoRepeat(_repeatMode.value)
-    _connected.value = true
-    val pending = pendingPlay
-    pendingPlay = null
-    if (pending != null) {
-      startOn(controller, pending.first, pending.second)
-    } else {
-      refreshFrom(controller)
+    try {
+      controller.addListener(listener)
+      controller.repeatMode = toExoRepeat(_repeatMode.value)
+      _connected.value = true
+      val pending = pendingPlay
+      pendingPlay = null
+      if (pending != null) {
+        startOn(controller, pending.first, pending.second)
+      } else {
+        refreshFrom(controller)
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed initializing controller: ${e.message}", e)
+      retryConnect()
     }
   }
 

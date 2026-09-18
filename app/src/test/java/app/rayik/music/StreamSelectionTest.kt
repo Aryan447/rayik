@@ -41,6 +41,20 @@ class StreamSelectionTest {
     assertNull(StreamSelection.select(emptyList(), StreamQuality.High))
   }
 
+  @Test fun `order walks cheapest-first for saver`() {
+    assertEquals(
+      listOf("https://cdn/low", "https://cdn/mid", "https://cdn/high"),
+      StreamSelection.order(candidates, StreamQuality.Saver).map { it.url },
+    )
+  }
+
+  @Test fun `order walks richest-first for high`() {
+    assertEquals(
+      listOf("https://cdn/high", "https://cdn/mid", "https://cdn/low"),
+      StreamSelection.order(candidates, StreamQuality.High).map { it.url },
+    )
+  }
+
   @Test fun `expiry parses expire param as epoch seconds`() {
     val url = "https://cdn/x?expire=1_700_000_000".replace("_", "")
     assertEquals(1_700_000_000_000L, ResolvedStream.expiryFromUrl(url, nowEpochMs = 0L))

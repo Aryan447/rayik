@@ -25,6 +25,12 @@
       </intent-filter>
     </activity>
 
+    <!-- Google sign-in for YouTube sessions: in-app WebView only, never exported. -->
+    <activity
+      android:name=".auth.YtLoginActivity"
+      android:exported="false"
+      android:label="Sign in" />
+
     <service
       android:name=".player.RayikPlaybackService"
       android:exported="false"

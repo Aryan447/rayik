@@ -12,7 +12,9 @@ import app.rayik.music.streaming.audioMimeType
 import app.rayik.music.streaming.youtube.InnerTubeResolver
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import okhttp3.Call
@@ -42,8 +44,15 @@ class PipedSource(
 
   override suspend fun search(query: String): Result<List<Track>> {
     if (query.isBlank()) return Result.success(emptyList())
+    // Primary: direct on-device InnerTube search (keyless, fast, no proxy bot blocks).
+    val directResult = direct.search(query)
+    if (directResult.isSuccess && !directResult.getOrNull().isNullOrEmpty()) {
+      return directResult
+    }
+    // Fallback: public Piped instances
     val encoded = java.net.URLEncoder.encode(query.trim(), "UTF-8")
     val errors = mutableListOf<String>()
+    directResult.exceptionOrNull()?.message?.let { errors += "direct: $it" }
     for (base in orderedInstances()) {
       try {
         val body = get("$base/search?q=$encoded&filter=videos")
@@ -80,27 +89,52 @@ class PipedSource(
       try {
         val body = get("$base/streams/${track.id}", STREAMS_CALL_TIMEOUT_MS)
         val response = json.decodeFromString(PipedStreamsResponse.serializer(), body)
-        val stream = pickBest(response, excludedUrls)
-        if (stream == null) {
-          errors += "$base: ${pipedEmptyReason(body)}"
-          continue
+        // Same verify-before-handover as direct: Piped hands out the same
+        // googlevideo edge URLs, so probe each candidate from this device
+        // and fail over instead of queuing a link that 403s on first fetch.
+        val excluded = excludedUrls.toMutableSet()
+        var lastStatus = -1
+        var verifiedDead = false
+        // A token minted during the direct pass (same video) applies here
+        // too — Piped hands out the same GVS edge URLs, and `pot` travels
+        // on googlevideo hosts only, never on proxied/manifest URLs.
+        val pot = direct.poTokenFor(track.id)
+        for (attempt in 0 until InnerTubeResolver.MAX_VERIFY_ATTEMPTS) {
+          val stream = pickBest(response, excluded)
+          if (stream == null) {
+            errors += "$base: ${pipedEmptyReason(body)}"
+            break
+          }
+          val url = InnerTubeResolver.withPot(stream.url, pot)
+          val status = withContext(Dispatchers.IO) { direct.verifyUrl(url) }
+          if (status in 200..299) {
+            lastGoodInstance = base
+            val now = System.currentTimeMillis()
+            Log.i(TAG, "resolve ${track.id} via piped $base (${stream.bitrate}bps ${stream.codec})")
+            return Result.success(
+              ResolvedStream(
+                url = url,
+                expiresAtEpochMs = ResolvedStream.expiryFromUrl(url, now),
+                bitrate = stream.bitrate,
+                codec = stream.codec,
+                // Manifest candidates already carry their MIME; muxed video
+                // keeps its container MIME (ExoPlayer drops the video
+                // track); progressive audio resolves through the
+                // codec/container lookup so ExoPlayer skips type-sniffing
+                // on extension-less URLs.
+                mimeType = stream.mimeType.takeIf { it.startsWith("application/") || it.startsWith("video/") }
+                  ?: audioMimeType(stream.codec, stream.mimeType).orEmpty(),
+              ),
+            )
+          }
+          lastStatus = status
+          verifiedDead = true
+          excluded += stream.url
+          excluded += url
+          Log.w(TAG, "resolve ${track.id} via piped $base candidate HTTP $status, failing over")
         }
-        lastGoodInstance = base
-        val now = System.currentTimeMillis()
-        Log.i(TAG, "resolve ${track.id} via piped $base (${stream.bitrate}bps ${stream.codec})")
-        return Result.success(
-          ResolvedStream(
-            url = stream.url,
-            expiresAtEpochMs = ResolvedStream.expiryFromUrl(stream.url, now),
-            bitrate = stream.bitrate,
-            codec = stream.codec,
-            // Manifest candidates already carry their MIME; progressive
-            // renditions resolve through the codec/container lookup so
-            // ExoPlayer skips type-sniffing on extension-less URLs.
-            mimeType = stream.mimeType.takeIf { it.startsWith("application/") }
-              ?: audioMimeType(stream.codec, stream.mimeType).orEmpty(),
-          ),
-        )
+        if (verifiedDead) errors += "$base: YouTube refused playback (HTTP $lastStatus)"
+        continue
       } catch (e: CancellationException) {
         throw e
       } catch (e: Exception) {
@@ -134,13 +168,19 @@ class PipedSource(
     return if (last == null) INSTANCES else listOf(last) + INSTANCES.filter { it != last }
   }
 
-  /** Manifest-first fallback depth: direct audio, then HLS, then DASH. */
+  /** Fallback depth: direct audio, then muxed-with-audio, then HLS, then DASH. */
   internal fun pickBest(response: PipedStreamsResponse, excludedUrls: Set<String> = emptySet()): AudioCandidate? {
     val quality = preferences.streamQuality.get()
     val candidates = response.audioStreams.map {
       AudioCandidate(url = it.url, bitrate = it.bitrate, codec = it.codec, mimeType = it.format)
     }.filter { it.url !in excludedUrls }
     StreamSelection.select(candidates, quality)?.let { return it }
+    // Muxed itag-18 class: video container with an audio track, cheapest
+    // first. PO-token exempt; ExoPlayer drops the video track.
+    response.videoStreams
+      .filter { it.url.isNotBlank() && it.url !in excludedUrls && (it.itag in MUXED_AUDIO_ITAGS) }
+      .minByOrNull { pipedMuxedBitrate(it) }
+      ?.let { return AudioCandidate(url = it.url, codec = it.codec, mimeType = "video/mp4") }
     // Explicit manifest MIME: these URLs are extension-less, so without
     // this ExoPlayer sniffs them as progressive and buffers forever.
     response.hls?.takeIf { it.isNotBlank() && it !in excludedUrls }?.let {
@@ -218,6 +258,15 @@ class PipedSource(
     )
 
     private val VIDEO_ID = Regex("[?&]v=([\\w-]{11})")
+
+    /** Muxed itags known to carry an audio track (mirrors the direct resolver). */
+    private val MUXED_AUDIO_ITAGS = setOf(18, 22, 17, 36)
+
+    /** Cheapest muxed rendition first (144p 3GP < 360p < 720p). */
+    private val MUXED_ITAG_RANK = mapOf(17 to 0, 18 to 1, 36 to 2, 22 to 3)
+
+    private fun pipedMuxedBitrate(stream: PipedVideoStream): Int =
+      MUXED_ITAG_RANK[stream.itag] ?: Int.MAX_VALUE
 
     fun PipedSearchItem.toTrack(): Track? {
       if (type.isNotBlank() && type != "stream") return null

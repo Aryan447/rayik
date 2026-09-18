@@ -33,6 +33,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -136,6 +137,22 @@ fun QueueScreen(
   }
 
   Column(Modifier.fillMaxSize()) {
+    // Self-heal the exact screen from the bug report: a dead edge link
+    // (HTTP 403 mid-playback or on open) auto-resolves a fresh, verified
+    // URL exactly once per track instead of parking on the error. If the
+    // fresh link dies too, the honest error + manual "Try again" remain.
+    var autoRetriedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val errorMessage = (playbackState as? PlaybackUiState.Error)?.message
+    val errorTrackId = queue.getOrNull(currentIndex)?.id
+    LaunchedEffect(errorMessage, errorTrackId) {
+      if (errorMessage != null && errorTrackId != null &&
+        errorMessage.contains("stream link died") &&
+        autoRetriedId != errorTrackId && resolvingId == null
+      ) {
+        autoRetriedId = errorTrackId
+        retryCurrent()
+      }
+    }
     TransportBlock(
       state = playbackState,
       positionMs = positionMs,

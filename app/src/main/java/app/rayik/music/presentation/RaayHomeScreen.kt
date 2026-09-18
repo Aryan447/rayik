@@ -25,6 +25,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
+import app.rayik.music.player.PlaybackUiState
+import app.rayik.music.player.PlayerViewModel
+import app.rayik.music.player.QueueItem
+import app.rayik.music.streaming.StreamSource
+import app.rayik.music.streaming.Track
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,13 +59,145 @@ import app.rayik.music.ui.theme.spacing
  * morning pick with its reason attached. Recommendations resolve with the
  * streaming layer; the slot and its copy contract already live here.
  */
+data class RaayPick(
+  val title: String,
+  val reason: String,
+  val track: Track,
+  val mood: String,
+)
+
+private val RAAY_PICKS = listOf(
+  RaayPick(
+    title = "Mehfil Mix — Rain Edition",
+    reason = "This morning • because you looped Arijit 12×",
+    track = Track(
+      id = "BddP6PYo2gs",
+      title = "Kesariya",
+      artist = "Pritam, Arijit Singh",
+    ),
+    mood = "Mehfil",
+  ),
+  RaayPick(
+    title = "Monsoon Rain Session",
+    reason = "Grey skies, wet earth, acoustic strings",
+    track = Track(
+      id = "MJyKN-8UncM",
+      title = "Shayad",
+      artist = "Pritam, Arijit Singh",
+    ),
+    mood = "Rain",
+  ),
+  RaayPick(
+    title = "Deep Focus Flow",
+    reason = "Zero distraction, repetitive cadence",
+    track = Track(
+      id = "6mr4cYJ7yew",
+      title = "Kesariya (Film Version)",
+      artist = "Pritam, Arijit Singh",
+    ),
+    mood = "Focus",
+  ),
+  RaayPick(
+    title = "Late Night Drive",
+    reason = "Empty highways, cool breeze",
+    track = Track(
+      id = "O5gwxm3NxFU",
+      title = "Best Of Arijit Singh",
+      artist = "Arijit Singh",
+    ),
+    mood = "Drive",
+  ),
+)
+
 @Composable
-fun RaayHomeScreen() {
+fun RaayHomeScreen(
+  onPlayStarted: () -> Unit = {},
+  player: PlayerViewModel = koinViewModel(),
+  source: StreamSource = koinInject(),
+) {
+  var pickIndex by rememberSaveable { mutableIntStateOf(0) }
+  var resolving by rememberSaveable { mutableStateOf(false) }
+  var resolveError by rememberSaveable { mutableStateOf<String?>(null) }
+  val scope = rememberCoroutineScope()
+
+  val queue by player.queue.collectAsState()
+  val currentIndex by player.currentIndex.collectAsState()
+  val playbackState by player.playbackState.collectAsState()
+  val positionMs by player.positionMs.collectAsState()
+  val durationMs by player.durationMs.collectAsState()
+
+  val currentPick = RAAY_PICKS[pickIndex % RAAY_PICKS.size]
+  val currentPlayingTrack = queue.getOrNull(currentIndex)
+  val isCurrentPlaying = currentPlayingTrack?.id == currentPick.track.id
+
+  fun playPick(pick: RaayPick) {
+    if (resolving) return
+    if (currentPlayingTrack?.id == pick.track.id) {
+      player.togglePlayPause()
+      return
+    }
+    resolving = true
+    resolveError = null
+    scope.launch {
+      source.resolve(pick.track)
+        .onSuccess { resolved ->
+          resolving = false
+          player.play(
+            listOf(
+              QueueItem(
+                id = pick.track.id,
+                title = pick.track.title,
+                artist = pick.track.artist,
+                streamUri = resolved.url,
+                artworkUrl = pick.track.artworkUrl,
+                mimeType = resolved.mimeType,
+              ),
+            ),
+            0,
+          )
+          onPlayStarted()
+        }
+        .onFailure {
+          resolving = false
+          resolveError = it.message ?: "Couldn't resolve stream — try again"
+        }
+    }
+  }
+
   ScreenScaffold(state = ScreenState.Ready, loadingText = "Tuning your morning mix…", onRetry = {}) {
     Column {
       HeroCard()
       Spacer(Modifier.height(MaterialTheme.spacing.medium))
-      MixCard()
+      MixCard(
+        pick = currentPick,
+        resolving = resolving,
+        isPlaying = isCurrentPlaying && playbackState == PlaybackUiState.Playing,
+        progress = if (isCurrentPlaying && durationMs > 0) {
+          (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+        } else {
+          0.62f
+        },
+        onPlayClick = { playPick(currentPick) },
+        onNextPick = {
+          pickIndex = (pickIndex + 1) % RAAY_PICKS.size
+          resolveError = null
+        },
+        onSelectMood = { mood ->
+          val found = RAAY_PICKS.indexOfFirst { it.mood.equals(mood, ignoreCase = true) }
+          if (found >= 0) {
+            pickIndex = found
+            playPick(RAAY_PICKS[found])
+          }
+        },
+      )
+      resolveError?.let { err ->
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
+        Text(
+          err,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.error,
+        )
+      }
     }
   }
 }
@@ -90,14 +238,16 @@ private fun HeroCard() {
   }
 }
 
-/**
- * Morning pick card mirroring the site's `.player-mock`: theme-aware conic
- * art tile ([BrandGradient.artSweepBrush] — the gradient that changes with
- * every theme), reason eyebrow, title, progress, and training chips.
- * Collapses to a column on narrow screens like the site's 560px breakpoint.
- */
 @Composable
-private fun MixCard() {
+private fun MixCard(
+  pick: RaayPick,
+  resolving: Boolean,
+  isPlaying: Boolean,
+  progress: Float,
+  onPlayClick: () -> Unit,
+  onNextPick: () -> Unit,
+  onSelectMood: (String) -> Unit,
+) {
   Surface(
     shape = RoundedCornerShape(20.dp),
     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -105,32 +255,55 @@ private fun MixCard() {
       1.dp,
       MaterialTheme.colorScheme.outlineVariant,
     ),
-    modifier = Modifier.fillMaxWidth(),
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(20.dp)),
   ) {
     BoxWithConstraints(Modifier.fillMaxWidth().padding(MaterialTheme.spacing.large)) {
       val narrow = maxWidth < 560.dp
       if (narrow) {
         Column {
-          MixArt(modifier = Modifier.fillMaxWidth().height(150.dp))
+          MixArt(
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(150.dp)
+              .clickable(onClick = onPlayClick),
+          )
           Spacer(Modifier.height(MaterialTheme.spacing.medium))
-          MixBody()
+          MixBody(
+            pick = pick,
+            resolving = resolving,
+            isPlaying = isPlaying,
+            progress = progress,
+            onPlayClick = onPlayClick,
+            onNextPick = onNextPick,
+            onSelectMood = onSelectMood,
+          )
         }
       } else {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          MixArt(modifier = Modifier.size(120.dp))
+          MixArt(
+            modifier = Modifier
+              .size(120.dp)
+              .clickable(onClick = onPlayClick),
+          )
           Spacer(Modifier.width(MaterialTheme.spacing.medium))
-          MixBody(modifier = Modifier.weight(1f))
+          MixBody(
+            modifier = Modifier.weight(1f),
+            pick = pick,
+            resolving = resolving,
+            isPlaying = isPlaying,
+            progress = progress,
+            onPlayClick = onPlayClick,
+            onNextPick = onNextPick,
+            onSelectMood = onSelectMood,
+          )
         }
       }
     }
   }
 }
 
-/**
- * Art tile: conic `primary → secondary → tertiary → primary` sweep, so the
- * tile re-skins itself with the active theme (green-gold under Hacker,
- * wine-gold under Banarasi, …). Dark note glyph echoes the site's tile icon.
- */
 @Composable
 private fun MixArt(modifier: Modifier = Modifier) {
   Box(
@@ -150,57 +323,86 @@ private fun MixArt(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MixBody(modifier: Modifier = Modifier) {
+private fun MixBody(
+  modifier: Modifier = Modifier,
+  pick: RaayPick,
+  resolving: Boolean,
+  isPlaying: Boolean,
+  progress: Float,
+  onPlayClick: () -> Unit,
+  onNextPick: () -> Unit,
+  onSelectMood: (String) -> Unit,
+) {
   Column(modifier) {
     Text(
-      "This morning • because you looped Arijit 12×",
+      pick.reason,
       style = MaterialTheme.typography.labelMedium,
       color = MaterialTheme.colorScheme.tertiary,
       fontWeight = FontWeight.Bold,
     )
     Text(
-      "Mehfil Mix — Rain Edition",
+      pick.title,
       style = MaterialTheme.typography.headlineSmall,
       modifier = Modifier.padding(top = MaterialTheme.spacing.small),
     )
     LinearProgressIndicator(
-      progress = { 0.62f },
+      progress = { progress },
       modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = MaterialTheme.spacing.small),
       color = MaterialTheme.colorScheme.primary,
       trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
     )
-    MixChips()
+    MixChips(
+      resolving = resolving,
+      isPlaying = isPlaying,
+      onPlayClick = onPlayClick,
+      onNextPick = onNextPick,
+      onSelectMood = onSelectMood,
+    )
   }
 }
 
-/**
- * Training chips as static labels (like the site's `.chip` spans): Play
- * reads hot in primary, the rest are outline chips. They become real actions
- * in plan.md Phase B when the pick wires to RaayRules — no dead buttons now.
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MixChips() {
+private fun MixChips(
+  resolving: Boolean,
+  isPlaying: Boolean,
+  onPlayClick: () -> Unit,
+  onNextPick: () -> Unit,
+  onSelectMood: (String) -> Unit,
+) {
   FlowRow(
     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
   ) {
-    Chip(label = "▶ Play", hot = true)
-    Chip(label = "Something else")
-    Chip(label = "Why this?")
-    Chip(label = "More like this")
-    Chip(label = "Never this")
+    val playLabel = when {
+      resolving -> "Tuning…"
+      isPlaying -> "⏸ Pause"
+      else -> "▶ Play"
+    }
+    Chip(label = playLabel, hot = true, onClick = onPlayClick)
+    Chip(label = "Something else", onClick = onNextPick)
+    Chip(label = "Mehfil", onClick = { onSelectMood("Mehfil") })
+    Chip(label = "Rain", onClick = { onSelectMood("Rain") })
+    Chip(label = "Focus", onClick = { onSelectMood("Focus") })
+    Chip(label = "Drive", onClick = { onSelectMood("Drive") })
   }
 }
 
 @Composable
-private fun Chip(label: String, hot: Boolean = false) {
+private fun Chip(
+  label: String,
+  hot: Boolean = false,
+  onClick: () -> Unit = {},
+) {
   if (hot) {
     Surface(
       shape = RoundedCornerShape(999.dp),
       color = MaterialTheme.colorScheme.primary,
+      modifier = Modifier
+        .clip(RoundedCornerShape(999.dp))
+        .clickable(onClick = onClick),
     ) {
       Text(
         label,
@@ -221,6 +423,9 @@ private fun Chip(label: String, hot: Boolean = false) {
         1.dp,
         MaterialTheme.colorScheme.outlineVariant,
       ),
+      modifier = Modifier
+        .clip(RoundedCornerShape(999.dp))
+        .clickable(onClick = onClick),
     ) {
       Text(
         label,

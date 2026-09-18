@@ -11,7 +11,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class InnerTubeParsingTest {
-  private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
+  // encodeDefaults mirrors the resolver: defaulted playback checks must hit the wire.
+  private val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
   private val resolver = InnerTubeResolver(OkHttpClient(), "test-key")
 
   private fun response() = json.decodeFromString(
@@ -53,6 +54,51 @@ class InnerTubeParsingTest {
       assertNull(formats.first { it.itag == 137 }.toCandidate()) // muxed video
       assertNotNull(formats.first { it.itag == 251 }.toCandidate())
     }
+  }
+
+  @Test fun `muxed with audio is the fallback when no audio-only exists`() {
+    // itag 18 class: video container carrying an audio track (audioChannels
+    // present). PO-token exempt per yt-dlp, and ExoPlayer drops the video
+    // track — audio still plays.
+    val muxedOnly = InnerTubePlayerResponse(
+      playabilityStatus = InnerTubePlayability(status = "OK"),
+      streamingData = InnerTubeStreamingData(
+        adaptiveFormats = listOf(
+          InnerTubeFormat(itag = 133, url = "https://cdn/video-only", mimeType = "video/mp4; codecs=\"avc1.4d400c\"", bitrate = 150_000),
+          InnerTubeFormat(itag = 18, url = "https://cdn/muxed?expire=1700000000", mimeType = "video/mp4; codecs=\"avc1.42001E, mp4a.40.2\"", bitrate = 500_000, audioChannels = 2),
+        ),
+      ),
+    )
+    val picked = resolver.pick(muxedOnly, StreamQuality.Auto)
+    assertEquals("https://cdn/muxed?expire=1700000000", picked?.url)
+    assertEquals("video/mp4", picked?.mimeType)
+  }
+
+  @Test fun `video-only without audio never plays`() {
+    val videoOnly = InnerTubePlayerResponse(
+      playabilityStatus = InnerTubePlayability(status = "OK"),
+      streamingData = InnerTubeStreamingData(
+        adaptiveFormats = listOf(
+          InnerTubeFormat(itag = 133, url = "https://cdn/video-only", mimeType = "video/mp4; codecs=\"avc1.4d400c\"", bitrate = 150_000),
+        ),
+      ),
+    )
+    assertNull(resolver.pick(videoOnly, StreamQuality.Auto))
+  }
+
+  @Test fun `try-order is audio then muxed then hls`() {
+    val mixed = InnerTubePlayerResponse(
+      playabilityStatus = InnerTubePlayability(status = "OK"),
+      streamingData = InnerTubeStreamingData(
+        adaptiveFormats = listOf(
+          InnerTubeFormat(itag = 18, url = "https://cdn/muxed", mimeType = "video/mp4; codecs=\"avc1.42001E, mp4a.40.2\"", bitrate = 500_000, audioChannels = 2),
+          InnerTubeFormat(itag = 140, url = "https://cdn/audio", mimeType = "audio/mp4; codecs=\"mp4a.40.2\"", bitrate = 131_000),
+        ),
+        hlsManifestUrl = "https://cdn/hls",
+      ),
+    )
+    val ordered = resolver.orderedCandidates(mixed, StreamQuality.Auto).map { it.url }
+    assertEquals(listOf("https://cdn/audio", "https://cdn/muxed", "https://cdn/hls"), ordered)
   }
 
   @Test fun `hls is the fallback when no direct audio exists`() {
@@ -136,6 +182,11 @@ class InnerTubeParsingTest {
     )
     assertTrue(body.contains("\"videoId\":\"dQw4w9WgXcQ\""))
     assertTrue(body.contains("\"clientName\":\"ANDROID\""))
+    // Official-client playback checks ride along (live-verified: the
+    // ANDROID client still answers OK with direct audio URLs).
+    assertTrue(body.contains("\"contentCheckOk\":true"))
+    assertTrue(body.contains("\"racyCheckOk\":true"))
+    assertTrue(body.contains("\"html5Preference\":\"HTML5_PREF_WANTS\""))
   }
 
   @Test fun `piped bot-block envelope decodes for honest errors`() {
@@ -144,5 +195,66 @@ class InnerTubeParsingTest {
       """{"error":"org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException: blocked"}""",
     )
     assertTrue(envelope.error!!.contains("SignInConfirmNotBot"))
+  }
+
+  @Test fun `pot attaches to googlevideo urls only`() {
+    assertEquals(
+      "https://rr1.googlevideo.com/videoplayback?expire=1&pot=abc",
+      InnerTubeResolver.withPot("https://rr1.googlevideo.com/videoplayback?expire=1", "abc"),
+    )
+    // Already present: never double-attach.
+    assertEquals(
+      "https://rr1.googlevideo.com/videoplayback?pot=old",
+      InnerTubeResolver.withPot("https://rr1.googlevideo.com/videoplayback?pot=old", "abc"),
+    )
+    // Blank token, blank url, and off-googlevideo hosts pass through.
+    assertEquals("https://rr1.googlevideo.com/x", InnerTubeResolver.withPot("https://rr1.googlevideo.com/x", ""))
+    assertEquals("", InnerTubeResolver.withPot("", "abc"))
+    assertEquals(
+      "https://proxy.example.com/videoplayback?expire=1",
+      InnerTubeResolver.withPot("https://proxy.example.com/videoplayback?expire=1", "abc"),
+    )
+  }
+
+  @Test fun `request omits integrity fields without a token`() {
+    val body = json.encodeToString(
+      InnerTubeRequest.serializer(),
+      InnerTubeRequest(
+        videoId = "dQw4w9WgXcQ",
+        context = InnerTubeContext(InnerTubeClient("ANDROID", "20.10.38", 34)),
+      ),
+    )
+    assertTrue(!body.contains("poToken"))
+    assertTrue(!body.contains("visitorData"))
+  }
+
+  @Test fun `request carries token and visitor identity when present`() {
+    val body = json.encodeToString(
+      InnerTubeRequest.serializer(),
+      InnerTubeRequest(
+        videoId = "dQw4w9WgXcQ",
+        context = InnerTubeContext(InnerTubeClient("ANDROID", "20.10.38", 34, visitorData = "CAESYDDaGFjay10ZXN0")),
+        serviceIntegrityDimensions = InnerTubeIntegrity(poToken = "pot-test"),
+      ),
+    )
+    assertTrue(body.contains("\"poToken\":\"pot-test\""))
+    assertTrue(body.contains("\"visitorData\":\"CAESYDDaGFjay10ZXN0\""))
+  }
+
+  @Test fun `player response captures visitor identity`() {
+    val parsed = json.decodeFromString(
+      InnerTubePlayerResponse.serializer(),
+      """{"playabilityStatus":{"status":"OK"},"responseContext":{"visitorData":"CAESYDDaGFjay10ZXN0"}}""",
+    )
+    assertEquals("CAESYDDaGFjay10ZXN0", parsed.responseContext?.visitorData)
+  }
+
+  @Test fun `po-token freshness expires after ttl`() {
+    val now = 1_000_000L
+    assertTrue(PoTokenProvider.isFresh(now - 1_000L, now))
+    assertTrue(!PoTokenProvider.isFresh(now - PoTokenProvider.POT_TTL_MS, now))
+    assertTrue(!PoTokenProvider.isFresh(now - PoTokenProvider.POT_TTL_MS - 1L, now))
+    assertTrue(!PoTokenProvider.isFresh(0L, now))
+    assertTrue(!PoTokenProvider.isFresh(now + 1_000L, now))
   }
 }
