@@ -8,6 +8,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +26,9 @@ fun ScreenScaffold(
   state: ScreenState,
   loadingText: String,
   onRetry: () -> Unit,
+  /** Optional secondary action under Try again (e.g. Copy details). */
+  secondaryLabel: String? = null,
+  onSecondary: (() -> Unit)? = null,
   content: @Composable () -> Unit,
 ) {
   when (state) {
@@ -55,6 +59,11 @@ fun ScreenScaffold(
       )
       Button(onClick = onRetry, modifier = Modifier.padding(top = MaterialTheme.spacing.medium)) {
         Text("Try again")
+      }
+      if (secondaryLabel != null && onSecondary != null) {
+        TextButton(onClick = onSecondary) {
+          Text(secondaryLabel)
+        }
       }
     }
     ScreenState.Ready -> content()

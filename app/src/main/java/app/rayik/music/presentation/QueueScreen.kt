@@ -29,6 +29,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -40,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,6 +54,7 @@ import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
 import app.rayik.music.player.QueueItem
 import app.rayik.music.player.RepeatMode
+import app.rayik.music.player.buildPlaybackDiagnostics
 import app.rayik.music.player.formatMs
 import app.rayik.music.streaming.StreamSource
 import app.rayik.music.streaming.Track
@@ -76,6 +82,7 @@ fun QueueScreen(
   val connected by player.connected.collectAsState()
   var resolvingId by rememberSaveable { mutableStateOf<String?>(null) }
   val scope = rememberCoroutineScope()
+  val context = LocalContext.current
 
   fun playRow(item: QueueItem, index: Int) {
     if (item.streamUri.isNotBlank() || resolvingId != null) {
@@ -144,6 +151,21 @@ fun QueueScreen(
       onCycleRepeat = player::cycleRepeat,
       onToggleShuffle = player::toggleShuffle,
       onRetry = ::retryCurrent,
+      secondaryLabel = "Copy details",
+      onSecondary = {
+        copyDiagnostics(
+          context,
+          buildPlaybackDiagnostics(
+            appVersion = app.rayik.music.BuildConfig.VERSION_NAME,
+            gitSha = app.rayik.music.BuildConfig.GIT_SHA,
+            trackId = queue.getOrNull(currentIndex)?.id.orEmpty(),
+            trackTitle = queue.getOrNull(currentIndex)?.title.orEmpty(),
+            streamUrl = queue.getOrNull(currentIndex)?.streamUri.orEmpty(),
+            mimeType = queue.getOrNull(currentIndex)?.mimeType.orEmpty(),
+            errorMessage = (playbackState as? PlaybackUiState.Error)?.message.orEmpty(),
+          ),
+        )
+      },
     )
 
     Spacer(Modifier.height(MaterialTheme.spacing.medium))
@@ -211,12 +233,16 @@ private fun TransportBlock(
   onCycleRepeat: () -> Unit,
   onToggleShuffle: () -> Unit,
   onRetry: () -> Unit,
+  secondaryLabel: String? = null,
+  onSecondary: (() -> Unit)? = null,
 ) {
   if (state is PlaybackUiState.Error) {
     ScreenScaffold(
       state = ScreenState.Unavailable(state.message),
       loadingText = "",
       onRetry = onRetry,
+      secondaryLabel = secondaryLabel,
+      onSecondary = onSecondary,
     ) {}
     return
   }
@@ -307,6 +333,13 @@ private fun TransportBlock(
       }
     }
   }
+}
+
+/** Copies diagnostics for a bug report — no adb needed on the reporter's side. */
+private fun copyDiagnostics(context: Context, details: String) {
+  val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+  clipboard.setPrimaryClip(ClipData.newPlainText("rayik diagnostics", details))
+  Toast.makeText(context, "Details copied — paste them into your report", Toast.LENGTH_SHORT).show()
 }
 
 @Composable
