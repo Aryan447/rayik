@@ -1,0 +1,20 @@
+*.iml
+.gradle
+/local.properties
+.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+app/release
+*.keystore
+*.jks
+/gradle/gradle-daemon-jvm.properties
+PLAN.md
+# Local-only strategy docs (never tracked, never pushed)
+plan.md
+AGENTS.md
+# Build outputs (module-level; root /build was already covered)
+app/build/

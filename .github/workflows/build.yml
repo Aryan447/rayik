@@ -1,0 +1,55 @@
+name: CI Build
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Generate short SHA
+        id: set-short-sha
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+          cache: 'gradle'
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run unit tests (StreamResolver, queue/repeat, Raay rules, download quotas)
+        run: ./gradlew :app:testDebugUnitTest
+
+      - name: Assemble release APKs
+        run: ./gradlew assembleRelease -PciDebugSigning
+
+      - name: Build release bundle
+        run: ./gradlew bundleRelease -PciDebugSigning
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-release-bundle-ci-signed-${{ env.SHORT_SHA }}
+          path: app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: warn
+
+      - name: Upload universal APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-release-apk-ci-signed-${{ env.SHORT_SHA }}
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: warn

@@ -1,0 +1,2 @@
+-keep class app.rayik.music.** { *; }
+-dontwarn androidx.media3.**

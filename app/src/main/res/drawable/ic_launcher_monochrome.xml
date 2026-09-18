@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome glyph for themed icons: "The Pro Harmonic Spectrum"
+     Adapts dynamically to system Material You theme tints. Zero letters. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Acoustic orbit ring -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="1.4"
+        android:strokeAlpha="0.4"
+        android:strokeLineCap="round"
+        android:pathData="M 25,54 a 29,29 0 1,0 58,0 a 29,29 0 1,0 -58,0" />
+
+    <!-- Five precision equalizer faders -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 34,46.75 V 61.25" />
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 44,39.75 V 68.25" />
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 54,32.75 V 75.25" />
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 64,39.75 V 68.25" />
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 74,46.75 V 61.25" />
+</vector>
