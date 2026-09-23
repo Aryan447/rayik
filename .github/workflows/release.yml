@@ -1,0 +1,102 @@
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    name: "Release for GitHub"
+    runs-on: ubuntu-latest
+    # Preview tags have their own lane (pre-release.yml); skip them here.
+    if: ${{ !contains(github.ref, 'preview') }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+          cache: 'gradle'
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build unsigned release
+        run: ./gradlew assembleRelease bundleRelease --stacktrace
+
+      - name: Sign APKs and AABs
+        run: |
+          set -e
+          RELEASE_APK_DIR="app/build/outputs/apk/release"
+          RELEASE_BUNDLE_DIR="app/build/outputs/bundle/release"
+
+          echo "${{ secrets.SIGNING_KEYSTORE }}" | base64 -d > release.keystore
+          trap 'rm -f release.keystore' EXIT
+
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "apksigner not found under $ANDROID_HOME/build-tools"
+            find "$ANDROID_HOME/build-tools" -maxdepth 2 | head -20 || true
+            exit 1
+          fi
+          echo "Using apksigner: $APKSIGNER"
+
+          APK_COUNT=$(find "$RELEASE_APK_DIR" -name "*-release-unsigned.apk" -type f | wc -l)
+          if [ "$APK_COUNT" -eq 0 ]; then
+            echo "No unsigned release APKs found"
+            ls -lah "$RELEASE_APK_DIR"
+            exit 1
+          fi
+
+          find "$RELEASE_APK_DIR" -name "*-release-unsigned.apk" -type f | while read -r apk; do
+            signed_apk="${apk/-unsigned/}"
+
+            "$APKSIGNER" sign \
+              --ks release.keystore \
+              --ks-key-alias "${{ secrets.SIGNING_KEY_ALIAS }}" \
+              --ks-pass "pass:${{ secrets.SIGNING_STORE_PASSWORD }}" \
+              --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
+              --out "$signed_apk" \
+              "$apk"
+
+            "$APKSIGNER" verify "$signed_apk"
+            rm "$apk"
+          done
+
+          AAB_FOUND=0
+          for aab in "$RELEASE_BUNDLE_DIR"/*.aab; do
+            [ -e "$aab" ] || continue
+            AAB_FOUND=1
+            jarsigner -verbose \
+              -sigalg SHA256withRSA -digestalg SHA-256 \
+              -keystore release.keystore \
+              -storepass "${{ secrets.SIGNING_STORE_PASSWORD }}" \
+              -keypass "${{ secrets.KEY_PASSWORD }}" \
+              "$aab" "${{ secrets.SIGNING_KEY_ALIAS }}"
+            jarsigner -verify "$aab"
+          done
+          if [ "$AAB_FOUND" -eq 0 ]; then
+            echo "No AAB found in $RELEASE_BUNDLE_DIR"
+            ls -lah "$RELEASE_BUNDLE_DIR"
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          prerelease: false
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

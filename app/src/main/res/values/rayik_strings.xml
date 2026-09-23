@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+  <string name="pref_appearance_theme_picker_label">App Theme</string>
+  <string name="theme_gold">Gold</string>
+  <string name="theme_dynamic">Dynamic</string>
+  <string name="theme_barber">Indian Barber Shop</string>
+  <string name="theme_local_bus">Local Bus</string>
+  <string name="theme_peacock">Peacock</string>
+  <string name="theme_chai">Cutting Chai</string>
+  <string name="theme_banarasi">Banarasi</string>
+  <string name="theme_monsoon">Monsoon</string>
+  <string name="theme_indigo">Indigo</string>
+  <string name="theme_rangoli">Rangoli</string>
+  <string name="theme_vinyl_noir">Vinyl Noir</string>
+  <string name="theme_forest">Forest</string>
+  <string name="theme_rose_gold">Rose Gold</string>
+  <string name="theme_rose_pine">Rosé Pine</string>
+  <string name="theme_hacker">Hacker</string>
+
+  <string name="pref_appearance_darkmode_dark">Dark</string>
+  <string name="pref_appearance_darkmode_light">Light</string>
+  <string name="pref_appearance_darkmode_system">System</string>
+
+  <string name="tab_raay">Raay</string>
+  <string name="tab_search">Search</string>
+  <string name="tab_queue">Queue</string>
+  <string name="tab_lyrics">Lyrics</string>
+  <string name="tab_settings">Settings</string>
+
+  <string name="queue_title">Up next</string>
+  <string name="queue_empty_title">Nothing queued</string>
+  <string name="queue_empty_body">Search for something worth hearing and it will line up here, gapless.</string>
+  <string name="queue_no_stream_body">This queue has no playable streams yet — they resolve when the streaming layer connects.</string>
+  <string name="queue_connecting">Connecting to the player…</string>
+
+  <string name="transport_play">Play</string>
+  <string name="transport_pause">Pause</string>
+  <string name="transport_next">Next</string>
+  <string name="transport_previous">Previous</string>
+  <string name="transport_repeat">Repeat: %1$s</string>
+  <string name="transport_shuffle_on">Shuffle on</string>
+  <string name="transport_shuffle_off">Shuffle off</string>
+  <string name="transport_seek_forward">Forward 10 seconds</string>
+  <string name="transport_seek_back">Back 10 seconds</string>
+
+  <string name="search_title">Find it with one line</string>
+  <string name="search_body">Only remember a single lyric? That’s plenty — type it and hear it.</string>
+  <string name="search_hint">Songs, artists, or a half-remembered lyric</string>
+  <string name="search_searching">Searching…</string>
+  <string name="search_no_results">No matches — try different words.</string>
+  <string name="search_unavailable">Search is unreachable right now — check your connection and try again.</string>
+
+  <string name="lyrics_title">Sing along</string>
+  <string name="lyrics_body">Lyrics and what’s next, together on one screen. No tab-hopping mid-song.</string>
+  <string name="lyrics_empty_title">Nothing playing</string>
+  <string name="lyrics_empty_body">Start something from your queue and the words will meet you here.</string>
+  <string name="lyrics_unavailable">Lyric lines arrive with the streaming layer.</string>
+  <string name="lyrics_loading">Finding the words…</string>
+  <string name="lyrics_none">No lyrics found for this one — enjoy it wordless.</string>
+
+  <string name="settings_title">Settings</string>
+  <string name="rayik_settings_section_appearance">Appearance</string>
+  <string name="settings_section_playback">Playback</string>
+  <string name="pref_dark_mode_label">Theme mode</string>
+  <string name="pref_amoled_label">Pure black (AMOLED)</string>
+  <string name="pref_album_art_label">Art-driven colors</string>
+  <string name="pref_quality_label">Streaming quality</string>
+  <string name="pref_quality_auto">Auto</string>
+  <string name="pref_quality_high">High</string>
+  <string name="pref_quality_saver">Data saver</string>
+</resources>

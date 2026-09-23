@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="gold">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rāyik — music with opinions | Coming soon</title>
+<meta name="description" content="rāyik is a new music app with opinions. It tells you what it thinks and why — you always get the last word. Coming soon to Android.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20108%20108%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%220%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23FFF5D4%22/%3E%3Cstop%20offset%3D%2235%25%22%20stop-color%3D%22%23F2CE62%22/%3E%3Cstop%20offset%3D%2270%25%22%20stop-color%3D%22%23DEAC33%22/%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%239C6E15%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%22108%22%20height%3D%22108%22%20rx%3D%2226%22%20fill%3D%22%2314100A%22/%3E%3Ccircle%20cx%3D%2254%22%20cy%3D%2254%22%20r%3D%2229%22%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%221.8%22%20opacity%3D%220.4%22/%3E%3Crect%20x%3D%2231.25%22%20y%3D%2244%22%20width%3D%225.5%22%20height%3D%2220%22%20rx%3D%222.75%22%20fill%3D%22url%28%23g%29%22/%3E%3Crect%20x%3D%2241.25%22%20y%3D%2237%22%20width%3D%225.5%22%20height%3D%2234%22%20rx%3D%222.75%22%20fill%3D%22url%28%23g%29%22/%3E%3Crect%20x%3D%2251.25%22%20y%3D%2230%22%20width%3D%225.5%22%20height%3D%2248%22%20rx%3D%222.75%22%20fill%3D%22url%28%23g%29%22/%3E%3Crect%20x%3D%2261.25%22%20y%3D%2237%22%20width%3D%225.5%22%20height%3D%2234%22%20rx%3D%222.75%22%20fill%3D%22url%28%23g%29%22/%3E%3Crect%20x%3D%2271.25%22%20y%3D%2244%22%20width%3D%225.5%22%20height%3D%2220%22%20rx%3D%222.75%22%20fill%3D%22url%28%23g%29%22/%3E%3C/svg%3E">
+<style>
+  :root, html[data-theme="gold"] { --bg:#14100A; --surface:#1F180E; --surface2:#2A2114; --primary:#EAC453; --secondary:#C8A24A; --tertiary:#F9E7A1; --text:#F7EFDA; --muted:#B3A17E; --border:#3D3220; }
+  html[data-theme="dynamic"] { --bg:#1C1B1F; --surface:#26242B; --surface2:#2F2C37; --primary:#D0BCFF; --secondary:#CCC2DC; --tertiary:#EFB8C8; --text:#EFEAF4; --muted:#B3AEBD; --border:#3E3A48; }
+  html[data-theme="noir"] { --bg:#0A0B0D; --surface:#131518; --surface2:#1B1E23; --primary:#E6E1D5; --secondary:#9AA3AB; --tertiary:#D9A940; --text:#ECE8DE; --muted:#9B978C; --border:#2A2D33; }
+  html[data-theme="forest"] { --bg:#0C1510; --surface:#122019; --surface2:#182B21; --primary:#9BD79C; --secondary:#B3CDBD; --tertiary:#E1C16A; --text:#E9F2E6; --muted:#9DB8A3; --border:#24382C; }
+  html[data-theme="rosegold"] { --bg:#1D1114; --surface:#2A181D; --surface2:#362027; --primary:#F5B4C1; --secondary:#E2BFB2; --tertiary:#E5BE5F; --text:#F8ECEE; --muted:#C09AA2; --border:#472A32; }
+  html[data-theme="rosepine"] { --bg:#191724; --surface:#1F1D2E; --surface2:#26233A; --primary:#EBBCBA; --secondary:#9CCFD8; --tertiary:#C4A7E7; --text:#E0DEF4; --muted:#908CAA; --border:#403D52; }
+  html[data-theme="hacker"] { --bg:#060A06; --surface:#0A120A; --surface2:#0F1A0F; --primary:#4AF626; --secondary:#1F9D55; --tertiary:#FFB000; --text:#D6F5D6; --muted:#6B8F6B; --border:#1E3A1E; }
+  html[data-theme="barber"] { --bg:#0E1514; --surface:#14201E; --surface2:#1A2B28; --primary:#4DB6AC; --secondary:#E57373; --tertiary:#FFC93C; --text:#EFF5F1; --muted:#93ACA5; --border:#26403B; }
+  html[data-theme="localbus"] { --bg:#101512; --surface:#182018; --surface2:#212B1F; --primary:#FF6659; --secondary:#81C784; --tertiary:#FFD54F; --text:#F1F3E9; --muted:#9FAD93; --border:#2D3A28; }
+  html[data-theme="peacock"] { --bg:#081420; --surface:#0C1E33; --surface2:#122A49; --primary:#35A7E8; --secondary:#2FBF71; --tertiary:#F2B705; --text:#EAF4FB; --muted:#8FA9C2; --border:#1D3A5C; }
+  html[data-theme="chai"] { --bg:#120C07; --surface:#1C130B; --surface2:#261912; --primary:#E8A93D; --secondary:#B65D2E; --tertiary:#F5E6C8; --text:#F3E9D7; --muted:#A9946F; --border:#3A2A18; }
+  html[data-theme="banarasi"] { --bg:#1A0B12; --surface:#241019; --surface2:#301524; --primary:#D94F8C; --secondary:#7A1E4E; --tertiary:#E7C15A; --text:#F9EBF1; --muted:#B28CA0; --border:#422031; }
+  html[data-theme="monsoon"] { --bg:#0B1116; --surface:#111A21; --surface2:#16232D; --primary:#7FA8C9; --secondary:#3E6B7E; --tertiary:#F2C230; --text:#E8EFF4; --muted:#8BA0AF; --border:#22333F; }
+  html[data-theme="indigo"] { --bg:#0C0E1E; --surface:#131631; --surface2:#1A1F45; --primary:#5C6FF0; --secondary:#2E3A8C; --tertiary:#E8A90C; --text:#ECEEFA; --muted:#9398C4; --border:#252B5C; }
+  html[data-theme="rangoli"] { --bg:#200C0A; --surface:#2B100D; --surface2:#381512; --primary:#F2EAD8; --secondary:#E8842C; --tertiary:#C63A3A; --text:#F6EFE2; --muted:#B39A86; --border:#4A201B; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; transition:background .35s,color .35s; }
+  .wrap { max-width:1060px; margin:0 auto; padding:0 20px; }
+  header.hero { text-align:center; padding:76px 20px 44px; background:radial-gradient(720px 320px at 50% -60px, var(--primary) 0%, transparent 62%); }
+  .badge { display:inline-block; font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); border:1px solid var(--border); background:var(--surface); border-radius:999px; padding:5px 16px; margin-bottom:20px; }
+  .logo { width:96px; height:96px; display:block; margin:0 auto 20px; border-radius:26px; border:1px solid var(--border); box-shadow:0 12px 40px rgba(0,0,0,.45); }
+  h1 { font-size:clamp(48px,8vw,88px); letter-spacing:-2px; line-height:1; }
+  h1 span { color:var(--primary); }
+  .tagline { font-size:clamp(18px,3.2vw,26px); font-weight:700; color:var(--primary); margin-top:14px; }
+  .sub { color:var(--muted); max-width:640px; margin:12px auto 0; font-size:16px; }
+  .cta-row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:28px; }
+  .btn { display:inline-block; text-decoration:none; font-weight:700; font-size:16px; padding:14px 30px; border-radius:999px; border:1px solid transparent; cursor:pointer; }
+  .btn-primary { background:var(--primary); color:#141414; }
+  .btn-primary:hover { filter:brightness(1.08); }
+  .btn-ghost { background:transparent; color:var(--text); border-color:var(--border); }
+  .btn-ghost:hover { border-color:var(--primary); }
+  .soon-note { margin-top:14px; font-size:14px; color:var(--muted); }
+  section { padding:56px 0 8px; }
+  h2 { font-size:clamp(26px,4vw,36px); letter-spacing:-.5px; margin-bottom:6px; }
+  h2 span { color:var(--primary); }
+  .sec-sub { color:var(--muted); margin-bottom:24px; max-width:680px; }
+  .picker { display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 26px; }
+  .picker button { border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:999px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; }
+  .picker button[aria-pressed="true"] { border-color:var(--primary); box-shadow:0 0 0 1px var(--primary) inset; }
+  .dot { width:14px; height:14px; border-radius:50%; flex:none; border:1px solid rgba(0,0,0,.4); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; transition:border-color .3s; }
+  .card:hover { border-color:var(--primary); }
+  .swatches { display:flex; gap:6px; margin:10px 0 12px; }
+  .sw { height:34px; flex:1; border-radius:9px; border:1px solid rgba(0,0,0,.35); }
+  .card h3 { font-size:17px; margin-bottom:2px; }
+  .card .kind { font-size:12px; color:var(--tertiary); font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .card p { font-size:13.5px; color:var(--muted); }
+  .feat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+  .feat { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; }
+  .feat .icon { font-size:22px; }
+  .feat h3 { font-size:16px; margin:8px 0 4px; color:var(--primary); }
+  .feat p { font-size:14px; color:var(--muted); }
+  .player-mock { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:22px; display:grid; grid-template-columns:120px 1fr; gap:18px; align-items:center; margin-top:8px; }
+  .art { width:120px; height:120px; border-radius:16px; background:conic-gradient(from 40deg, var(--primary), var(--secondary), var(--tertiary), var(--primary)); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:40px; }
+  .bar { height:6px; border-radius:99px; background:var(--surface2); margin:12px 0; position:relative; overflow:hidden; }
+  .bar::after { content:""; position:absolute; inset:0 38% 0 0; background:var(--primary); border-radius:99px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .chip { font-size:12px; border:1px solid var(--border); border-radius:999px; padding:3px 12px; color:var(--muted); }
+  .chip.hot { color:#141414; background:var(--primary); border-color:transparent; font-weight:700; }
+  .coming { text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:24px; padding:56px 28px; margin:56px 0 64px; }
+  .coming h2 { margin-bottom:8px; }
+  footer { text-align:center; color:var(--muted); font-size:13px; padding:0 0 56px; }
+  @media (max-width:560px){ .player-mock{ grid-template-columns:1fr; } .art{ width:100%; height:150px; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <svg class="logo" viewBox="0 0 108 108" role="img" aria-label="rāyik logo">
+      <defs>
+        <radialGradient id="rayikbg" cx="50%" cy="45%" r="78%">
+          <stop offset="0%" stop-color="#261E12"/>
+          <stop offset="55%" stop-color="#14100A"/>
+          <stop offset="100%" stop-color="#090704"/>
+        </radialGradient>
+        <linearGradient id="rayikgold" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#FFF5D4"/>
+          <stop offset="30%" stop-color="#F2CE62"/>
+          <stop offset="70%" stop-color="#DEAC33"/>
+          <stop offset="100%" stop-color="#9C6E15"/>
+        </linearGradient>
+        <linearGradient id="rayikring" x1="20" y1="20" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFF3CE"/>
+          <stop offset="50%" stop-color="#EAC453"/>
+          <stop offset="100%" stop-color="#9C6E15"/>
+        </linearGradient>
+      </defs>
+      <rect width="108" height="108" rx="26" fill="url(#rayikbg)"/>
+      <rect x="0.75" y="0.75" width="106.5" height="106.5" rx="25.25" fill="none" stroke="#3D3220" stroke-width="1.5"/>
+      <!-- Concentric acoustic rings (soundstage / streaming orbit) -->
+      <circle cx="54" cy="54" r="29" fill="none" stroke="url(#rayikring)" stroke-width="1.4" opacity="0.35"/>
+      <circle cx="54" cy="54" r="25" fill="none" stroke="url(#rayikring)" stroke-width="0.8" opacity="0.2"/>
+      <!-- Five precision studio equalizer faders (pro-level control) -->
+      <rect x="31.25" y="44" width="5.5" height="20" rx="2.75" fill="url(#rayikgold)"/>
+      <rect x="41.25" y="37" width="5.5" height="34" rx="2.75" fill="url(#rayikgold)"/>
+      <rect x="51.25" y="30" width="5.5" height="48" rx="2.75" fill="url(#rayikgold)"/>
+      <rect x="61.25" y="37" width="5.5" height="34" rx="2.75" fill="url(#rayikgold)"/>
+      <rect x="71.25" y="44" width="5.5" height="20" rx="2.75" fill="url(#rayikgold)"/>
+    </svg>
+    <div class="badge">Coming soon &bull; Android</div>
+    <h1>r<span>ā</span>yik</h1>
+    <div class="tagline">Music with opinions.</div>
+    <p class="sub">rāyik doesn't just play what you ask — it tells you what it thinks, and why. You always get the last word.</p>
+    <div class="cta-row">
+      <span class="btn btn-primary">Coming soon to Android</span>
+      <a class="btn btn-ghost" href="#themes">Pick your vibe</a>
+    </div>
+    <p class="soon-note">Launching soon. Try the vibes below while you wait.</p>
+  </div>
+</header>
+
+<div class="wrap">
+<section id="themes">
+  <h2>Pick your <span>vibe.</span></h2>
+  <p class="sec-sub">Fifteen handcrafted looks, from low-light vinyl to full Indian street color. Tap any name and this whole page changes — that's exactly how it will feel in the app.</p>
+  <div class="picker" id="picker" role="group" aria-label="Theme picker"></div>
+  <div class="grid" id="themeGrid"></div>
+</section>
+
+<section id="player">
+  <h2>It has <span>taste.</span></h2>
+  <p class="sec-sub">Open rāyik in the morning and it already has a thought waiting — with the reason attached. Agree, skip, or tell it why it's wrong.</p>
+  <div class="player-mock">
+    <div class="art"><svg viewBox="0 0 108 108" width="72" height="72" aria-hidden="true"><path fill="rgba(20,16,10,.88)" fill-rule="evenodd" d="M40,29 H68 Q83,29 83,44 V54 Q83,69 68,69 H62 L54,86 L46,69 H40 Q25,69 25,54 V44 Q25,29 40,29 Z M41,59 a10.5,7.5 -20 1,0 21,0 a10.5,7.5 -20 1,0 -21,0 Z M58,58.5 V36.5 Q58,34 60.5,34 Q63,34 63,36.5 V58.5 Z"/></svg></div>
+    <div>
+      <div class="kind" style="font-size:12px;color:var(--tertiary);font-weight:700;letter-spacing:.08em;text-transform:uppercase;">This morning &bull; because you looped Arijit 12&times;</div>
+      <h3 style="font-size:22px;margin:4px 0;">Mehfil Mix — Rain Edition</h3>
+      <div class="bar"></div>
+      <div class="chips"><span class="chip hot">&#9654; Play</span><span class="chip">Something else</span><span class="chip">Why this?</span><span class="chip">More like this</span><span class="chip">Never this</span></div>
+    </div>
+  </div>
+  <div class="feat-grid" style="margin-top:14px;">
+    <div class="feat"><div class="icon">&#127783;</div><h3>Moods, not menus</h3><p>Focus, rain, drive, mehfil — your day already has a soundtrack, rāyik just follows it.</p></div>
+    <div class="feat"><div class="icon">&#27573;</div><h3>You train it</h3><p>Love it, skip it, bury it. Every tap sharpens tomorrow morning's pick.</p></div>
+    <div class="feat"><div class="icon">&#128172;</div><h3>It shows its work</h3><p>Every suggestion comes with its reason. No black-box shuffling.</p></div>
+  </div>
+</section>
+
+<section id="features">
+  <h2>Everything you <span>love.</span></h2>
+  <p class="sec-sub">The best bits of every music app you've used — in one place, without the clutter.</p>
+  <div class="feat-grid">
+    <div class="feat"><div class="icon">&#127911;</div><h3>Albums flow perfectly</h3><p>Songs melt into each other exactly how the artist meant. No gaps, no jolts.</p></div>
+    <div class="feat"><div class="icon">&#128269;</div><h3>Find it with one line</h3><p>Only remember a single lyric? That's plenty — hum it, type it, hear it.</p></div>
+    <div class="feat"><div class="icon">&#128196;</div><h3>Lyrics and what's next, together</h3><p>Sing along and see the queue on one screen. No tab-hopping mid-song.</p></div>
+    <div class="feat"><div class="icon">&#128268;</div><h3>Bring your playlists</h3><p>Years of Spotify playlists move with you in one tap. Nothing left behind.</p></div>
+    <div class="feat"><div class="icon">&#127959;</div><h3>Offline for the metro</h3><p>Pin favorites for tunnels and flights. rāyik tidies up the rest by itself.</p></div>
+    <div class="feat"><div class="icon">&#127863;</div><h3>Sleep timer and sound shaping</h3><p>Drift off to slow songs. Tune bass and treble to your ears, not someone else's.</p></div>
+    <div class="feat"><div class="icon">&#128663;</div><h3>At home in your car</h3><p>Plays nicely with your car screen and headphones — pause, skip, and go.</p></div>
+    <div class="feat"><div class="icon">&#129518;</div><h3>Honest sound quality</h3><p>See exactly what quality you're hearing. No fine print, no fake badges.</p></div>
+    <div class="feat"><div class="icon">&#127919;</div><h3>A fresh mix every week</h3><p>New discoveries every week, plus radio that never runs dry.</p></div>
+  </div>
+</section>
+
+<section class="coming">
+  <div class="badge">Launching soon</div>
+  <h2>Be first to <span>hear it.</span></h2>
+  <p class="sec-sub" style="margin:0 auto 22px;">rāyik is being tuned pixel by pixel before launch. Come back soon — your vibe is already waiting.</p>
+  <div class="cta-row"><a class="btn btn-ghost" href="#themes">Find your vibe</a></div>
+  <p class="soon-note">Free to preview. No sign-up, no tracking on this page.</p>
+</section>
+
+<footer>rāyik &mdash; music with opinions. Coming soon to Android.</footer>
+</div>
+
+<script>
+const THEMES = [
+  {k:"gold",n:"Gold",mood:"Festive",c:"#EAC453",s:"#C8A24A",t:"#F9E7A1",d:"Pure celebration. For wedding playlists and big wins."},
+  {k:"dynamic",n:"Dynamic",mood:"Adaptive",c:"#D0BCFF",s:"#CCC2DC",t:"#EFB8C8",d:"Matches your wallpaper. Always in sync."},
+  {k:"barber",n:"Indian Barber Shop",mood:"Only on rāyik",c:"#4DB6AC",s:"#E57373",t:"#FFC93C",d:"Teal walls and brass mirrors — the mohalla shop, in your pocket."},
+  {k:"localbus",n:"Local Bus",mood:"Only on rāyik",c:"#FF6659",s:"#81C784",t:"#FFD54F",d:"Bus-red and ticket-yellow. The whole city, singing along."},
+  {k:"peacock",n:"Peacock",mood:"Only on rāyik",c:"#35A7E8",s:"#2FBF71",t:"#F2B705",d:"Shimmering blue-green, tipped with gold. A show-off, like the bird."},
+  {k:"chai",n:"Cutting Chai",mood:"Only on rāyik",c:"#E8A93D",s:"#B65D2E",t:"#F5E6C8",d:"Kulhad brown and milky amber. One more sip."},
+  {k:"banarasi",n:"Banarasi",mood:"Only on rāyik",c:"#D94F8C",s:"#7A1E4E",t:"#E7C15A",d:"Deep wine silk with gold zari. Dress up."},
+  {k:"monsoon",n:"Monsoon",mood:"Only on rāyik",c:"#7FA8C9",s:"#3E6B7E",t:"#F2C230",d:"Grey clouds, wet earth, one flash of lightning. Chai weather."},
+  {k:"indigo",n:"Indigo",mood:"Only on rāyik",c:"#5C6FF0",s:"#2E3A8C",t:"#E8A90C",d:"Deep dye blue with turmeric gold. Old craft, new sound."},
+  {k:"rangoli",n:"Rangoli",mood:"Only on rāyik",c:"#F2EAD8",s:"#E8842C",t:"#C63A3A",d:"Rice-white patterns on festive red. Made fresh every morning."},
+  {k:"noir",n:"Vinyl Noir",mood:"After dark",c:"#E6E1D5",s:"#9AA3AB",t:"#D9A940",d:"Black vinyl, low lights. For late-night listening."},
+  {k:"forest",n:"Forest",mood:"Calm",c:"#9BD79C",s:"#B3CDBD",t:"#E1C16A",d:"Deep greens for slow, quiet mornings."},
+  {k:"rosegold",n:"Rose Gold",mood:"Romantic",c:"#F5B4C1",s:"#E2BFB2",t:"#E5BE5F",d:"Soft blush. Made for evening ghazals."},
+  {k:"rosepine",n:"Rosé Pine",mood:"Soft",c:"#EBBCBA",s:"#9CCFD8",t:"#C4A7E7",d:"Muted and dreamy, like Sunday noon."},
+  {k:"hacker",n:"Hacker",mood:"Terminal",c:"#4AF626",s:"#1F9D55",t:"#FFB000",d:"Green phosphor, black screen. For night owls."},
+];
+const root=document.documentElement, picker=document.getElementById('picker'), grid=document.getElementById('themeGrid');
+function setTheme(k){ root.setAttribute('data-theme',k); [...picker.children].forEach(b=>b.setAttribute('aria-pressed', b.dataset.k===k ? 'true':'false')); }
+THEMES.forEach(t=>{
+  const b=document.createElement('button'); b.dataset.k=t.k; b.setAttribute('aria-pressed', t.k==='gold'?'true':'false');
+  b.innerHTML=`<span class="dot" style="background:${t.c}"></span>${t.n}`;
+  b.onclick=()=>setTheme(t.k); picker.appendChild(b);
+  const card=document.createElement('div'); card.className='card';
+  card.innerHTML=`<div class="kind">${t.mood}</div><h3>${t.n}</h3><p>${t.d}</p><div class="swatches"><div class="sw" style="background:${t.c}"></div><div class="sw" style="background:${t.s}"></div><div class="sw" style="background:${t.t}"></div></div>`;
+  card.style.cursor='pointer'; card.onclick=()=>setTheme(t.k); grid.appendChild(card);
+});
+</script>
+</body>
+</html>

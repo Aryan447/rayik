@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- rāyik launcher foreground: "The Pro Harmonic Spectrum"
+     Minimalist audiophile design based on "sane defaults, pro-level control".
+     Five precision studio faders centered inside concentric acoustic rings.
+     Strict 66dp adaptive safe zone on 108x108 grid. Zero letters. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Concentric acoustic rings (soundstage / streaming orbit) -->
+    <path
+        android:strokeColor="#EAC453"
+        android:strokeWidth="1.4"
+        android:strokeAlpha="0.35"
+        android:strokeLineCap="round"
+        android:pathData="M 25,54 a 29,29 0 1,0 58,0 a 29,29 0 1,0 -58,0" />
+    <path
+        android:strokeColor="#EAC453"
+        android:strokeWidth="0.8"
+        android:strokeAlpha="0.20"
+        android:strokeLineCap="round"
+        android:pathData="M 29,54 a 25,25 0 1,0 50,0 a 25,25 0 1,0 -50,0" />
+
+    <!-- Five precision studio equalizer faders (pro-level control) -->
+    <!-- Bar 1 (outer left): height 20 -->
+    <path
+        android:strokeColor="#EAC453"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 34,46.75 V 61.25" />
+
+    <!-- Bar 2 (inner left): height 34 -->
+    <path
+        android:strokeColor="#EAC453"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 44,39.75 V 68.25" />
+
+    <!-- Bar 3 (center peak): height 48 -->
+    <path
+        android:strokeColor="#EAC453"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 54,32.75 V 75.25" />
+
+    <!-- Bar 4 (inner right): height 34 -->
+    <path
+        android:strokeColor="#EAC453"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 64,39.75 V 68.25" />
+
+    <!-- Bar 5 (outer right): height 20 -->
+    <path
+        android:strokeColor="#EAC453"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:pathData="M 74,46.75 V 61.25" />
+</vector>

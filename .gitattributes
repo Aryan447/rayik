@@ -1,0 +1,30 @@
+# Normalize line endings: check out/in with LF, keep repo CRLF-free.
+* text=auto eol=lf
+
+*.kt text eol=lf
+*.kts text eol=lf
+*.java text eol=lf
+*.xml text eol=lf
+*.pro text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.properties text eol=lf
+*.gradle text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.mp3 binary
+*.ogg binary
+*.so binary
+*.aar binary
+*.jar binary
+*.jks binary
+*.keystore binary

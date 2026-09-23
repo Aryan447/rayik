@@ -1,0 +1,155 @@
+name: Make Preview Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'v*-preview*'
+      - 'v*.preview*'
+
+jobs:
+  release-for-github:
+    name: "Preview Release for GitHub"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+          cache: 'gradle'
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build preview APK and bundle
+        run: ./gradlew assembleRelease bundleRelease --stacktrace
+
+      - name: Get tag name
+        if: startsWith(github.ref, 'refs/tags/')
+        run: echo "VERSION_TAG=$(basename $GITHUB_REF)" >> $GITHUB_ENV
+
+      - name: Verify build output
+        run: |
+          RELEASE_APK_DIR="app/build/outputs/apk/release"
+          RELEASE_BUNDLE_DIR="app/build/outputs/bundle/release"
+
+          if [ ! -d "$RELEASE_APK_DIR" ]; then
+            echo "Release APK directory does not exist!"
+            find app/build/outputs -name "*.apk" -type f || true
+            exit 1
+          fi
+
+          ls -lah "$RELEASE_APK_DIR"
+          ls -lah "$RELEASE_BUNDLE_DIR"
+
+      - name: Sign APKs and AABs
+        run: |
+          set -e
+          RELEASE_APK_DIR="app/build/outputs/apk/release"
+          RELEASE_BUNDLE_DIR="app/build/outputs/bundle/release"
+
+          echo "${{ secrets.SIGNING_KEYSTORE }}" | base64 -d > release.keystore
+          trap 'rm -f release.keystore' EXIT
+
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "apksigner not found under $ANDROID_HOME/build-tools"
+            find "$ANDROID_HOME/build-tools" -maxdepth 2 | head -20 || true
+            exit 1
+          fi
+          echo "Using apksigner: $APKSIGNER"
+
+          APK_COUNT=$(find "$RELEASE_APK_DIR" -name "*-release-unsigned.apk" -type f | wc -l)
+          if [ "$APK_COUNT" -eq 0 ]; then
+            echo "No unsigned release APKs found"
+            ls -lah "$RELEASE_APK_DIR"
+            exit 1
+          fi
+
+          find "$RELEASE_APK_DIR" -name "*-release-unsigned.apk" -type f | while read -r apk; do
+            signed_apk="${apk/-unsigned/}"
+
+            "$APKSIGNER" sign \
+              --ks release.keystore \
+              --ks-key-alias "${{ secrets.SIGNING_KEY_ALIAS }}" \
+              --ks-pass "pass:${{ secrets.SIGNING_STORE_PASSWORD }}" \
+              --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
+              --out "$signed_apk" \
+              "$apk"
+
+            "$APKSIGNER" verify "$signed_apk"
+            rm "$apk"
+          done
+
+          AAB_FOUND=0
+          for aab in "$RELEASE_BUNDLE_DIR"/*.aab; do
+            [ -e "$aab" ] || continue
+            AAB_FOUND=1
+            jarsigner -verbose \
+              -sigalg SHA256withRSA -digestalg SHA-256 \
+              -keystore release.keystore \
+              -storepass "${{ secrets.SIGNING_STORE_PASSWORD }}" \
+              -keypass "${{ secrets.KEY_PASSWORD }}" \
+              "$aab" "${{ secrets.SIGNING_KEY_ALIAS }}"
+            jarsigner -verify "$aab"
+          done
+          if [ "$AAB_FOUND" -eq 0 ]; then
+            echo "No AAB found in $RELEASE_BUNDLE_DIR"
+            ls -lah "$RELEASE_BUNDLE_DIR"
+            exit 1
+          fi
+
+      - name: Copy built artifacts
+        run: |
+          set -e
+          mkdir -p preview
+
+          APK=$(find app/build/outputs/apk/release -maxdepth 1 -name '*-release.apk' ! -name '*-unsigned.apk' -print -quit)
+          AAB=$(find app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' -print -quit)
+
+          if [ -z "$APK" ]; then
+            echo "No signed release APK found"
+            ls -lah app/build/outputs/apk/release
+            exit 1
+          fi
+          if [ -z "$AAB" ]; then
+            echo "No release AAB found"
+            ls -lah app/build/outputs/bundle/release
+            exit 1
+          fi
+
+          cp "$APK" "preview/rayik-preview-universal-${VERSION_TAG}.apk"
+          cp "$AAB" "preview/rayik-preview-${VERSION_TAG}.aab"
+
+          echo "apk_universal_sha256=$(sha256sum "preview/rayik-preview-universal-${VERSION_TAG}.apk" | awk '{ print $1 }')" >> "$GITHUB_ENV"
+          echo "aab_sha256=$(sha256sum "preview/rayik-preview-${VERSION_TAG}.aab" | awk '{ print $1 }')" >> "$GITHUB_ENV"
+
+      - name: Create GitHub pre-release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ env.VERSION_TAG }}
+          name: "rayik ${{ env.VERSION_TAG }}"
+          body: |
+            Preview build of rayik ${{ env.VERSION_TAG }} — opinionated music streaming, early preview.
+
+            ### Checksums
+            | Variant | SHA-256 |
+            | ------- | ------- |
+            | Universal APK | ${{ env.apk_universal_sha256 }} |
+            | Bundle (AAB) | ${{ env.aab_sha256 }} |
+          files: |
+            preview/rayik-preview-universal-${{ env.VERSION_TAG }}.apk
+            preview/rayik-preview-${{ env.VERSION_TAG }}.aab
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

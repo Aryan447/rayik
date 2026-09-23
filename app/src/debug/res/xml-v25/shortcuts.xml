@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_search"
+        android:shortcutId="search"
+        android:shortcutShortLabel="@string/search">
+        <intent
+            android:action="app.rayik.music.action.SEARCH"
+            android:targetClass="app.rayik.music.MainActivity"
+            android:targetPackage="app.rayik.music.debug" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_library"
+        android:shortcutId="library"
+        android:shortcutShortLabel="@string/filter_library">
+        <intent
+            android:action="app.rayik.music.action.LIBRARY"
+            android:targetClass="app.rayik.music.MainActivity"
+            android:targetPackage="app.rayik.music.debug" />
+    </shortcut>
+</shortcuts>
