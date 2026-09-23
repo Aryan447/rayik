@@ -1129,4 +1129,7 @@
     <string name="onboarding_login_history_desc">Continue your listening journey across devices with synced history.</string>
     <string name="onboarding_login_playback_title">Better playback</string>
     <string name="onboarding_login_playback_desc">Use your account context for a more dependable playback experience.</string>
+    <string name="playback_error_no_internet" translatable="false">No network connection</string>
+    <string name="playback_error_unknown" translatable="false">Unknown error</string>
+    <string name="together_room_closed_inactivity_notification">Room closed because no one joined for 10 minutes</string>
 </resources>
