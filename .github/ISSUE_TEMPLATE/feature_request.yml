@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose something within the v1 scope (AGENTS.md)
+title: "[feat] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Which listening problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What do you propose? (include degraded/offline behavior)
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: Inside v1 scope (search, Raay home, queue, lyrics, pinned offline, quality toggle, themes)
+          required: true

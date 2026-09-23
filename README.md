@@ -1,5 +1,9 @@
 # rāyik — music with opinions
 
+[![CI Build](https://github.com/Aryan447/rayik/actions/workflows/build.yml/badge.svg)](https://github.com/Aryan447/rayik/actions/workflows/build.yml)
+[![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/Aryan447/rayik)](https://github.com/Aryan447/rayik/releases)
+
 > **Opinionated music streaming — sane defaults, pro-level control.**
 > Opinionated for everyday listening, fully customizable for pros.
 

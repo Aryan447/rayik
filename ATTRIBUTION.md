@@ -45,8 +45,9 @@ README.md). The FSF GPLv3 text in LICENSE is unchanged.
 
 ## What was vendored (kept)
 
-`app/` (incl. `db/` Room, `ui/theme`, `playback/MusicService`,
-`utils/potoken`, `together/` dormant backend, `discord/` dormant
+`app/` (incl. `db/` Room, `ui/theme`, `playback/MusicService` +
+stream/preload resolvers, `utils/potoken`, `downloads/`, `equalizer/`,
+`gatekeeper/`, `together/` dormant backend, `discord/` dormant
 backend, `spotify/`), `core/` (InnerTube client), `lyrics/*`
 (7 providers), `lastfm/`, `spotifycore/` (import/search/matching),
 `morideobfuscator/` (youtubei signature decipher —

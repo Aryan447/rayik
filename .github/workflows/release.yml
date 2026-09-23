@@ -20,24 +20,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup JDK 17
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 17
+          java-version: 21
           cache: 'gradle'
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build unsigned release
-        run: ./gradlew assembleRelease bundleRelease --stacktrace
+      - name: Build unsigned release (foss/mobile/universal)
+        run: ./gradlew assembleFossMobileUniversalRelease bundleFossMobileUniversalRelease --stacktrace
 
       - name: Sign APKs and AABs
         run: |
           set -e
-          RELEASE_APK_DIR="app/build/outputs/apk/release"
-          RELEASE_BUNDLE_DIR="app/build/outputs/bundle/release"
+          RELEASE_APK_DIR="app/build/outputs/apk/fossMobileUniversal/release"
+          RELEASE_BUNDLE_DIR="app/build/outputs/bundle/fossMobileUniversalRelease"
 
           echo "${{ secrets.SIGNING_KEYSTORE }}" | base64 -d > release.keystore
           trap 'rm -f release.keystore' EXIT
@@ -96,7 +96,7 @@ jobs:
           draft: true
           prerelease: false
           files: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/apk/fossMobileUniversal/release/*.apk
+            app/build/outputs/bundle/fossMobileUniversalRelease/*.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
