@@ -42,7 +42,6 @@ import app.rayik.music.di.DownloadCache
 import app.rayik.music.di.PlayerCache
 import app.rayik.music.downloads.DownloadedArtworkRepository
 import app.rayik.music.playback.DownloadUtil
-import app.rayik.music.ui.player.CanvasArtworkPlaybackCache
 import app.rayik.music.utils.ArtworkStorage
 import app.rayik.music.utils.PreferenceStore
 import app.rayik.music.utils.dataStore
@@ -206,7 +205,7 @@ class StorageLocationRepository
                             StorageCacheKind.SONGS -> clearMediaCache(playerCache, StorageCacheKind.SONGS, onProgress)
                             StorageCacheKind.DOWNLOADS -> clearDownloads(onProgress)
                             StorageCacheKind.IMAGES -> clearImageCache(onProgress)
-                            StorageCacheKind.CANVAS -> clearCanvasCache(onProgress)
+                            StorageCacheKind.CANVAS -> clearCacheDirectory(StorageFolderKind.CANVAS_CACHE, onProgress)
                         }
                     if (cleared) {
                         onProgress(StorageCacheClearProgress(kind = kind, percent = 100))
@@ -405,11 +404,6 @@ class StorageLocationRepository
             runCatching {
                 downloadUtil.downloadManager.removeAllDownloads()
             }.isSuccess && clearMediaCache(downloadCache, StorageCacheKind.DOWNLOADS, onProgress)
-
-        private suspend fun clearCanvasCache(onProgress: suspend (StorageCacheClearProgress) -> Unit): Boolean {
-            val memoryAndIndexCleared = CanvasArtworkPlaybackCache.clearAndPersist()
-            return memoryAndIndexCleared && clearCacheDirectory(StorageFolderKind.CANVAS_CACHE, onProgress)
-        }
 
         private suspend fun clearImageCache(onProgress: suspend (StorageCacheClearProgress) -> Unit): Boolean {
             val imageLoader = context.imageLoader
