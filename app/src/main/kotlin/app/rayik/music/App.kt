@@ -48,9 +48,6 @@ import app.rayik.music.playback.stream.YoutubeiStreamRepository
 import app.rayik.music.scrobbling.LastFmServiceConfig
 import app.rayik.music.storage.StorageFolderKind
 import app.rayik.music.storage.StorageLocationRepository
-import app.rayik.music.ui.screens.settings.ThemePalettes
-import app.rayik.music.ui.theme.ThemeSeedPalette
-import app.rayik.music.ui.theme.ThemeSeedPaletteCodec
 import app.rayik.music.utils.PlaylistCoverInterceptor
 import app.rayik.music.utils.PreferenceStore
 import app.rayik.music.utils.ProxyUtils
@@ -115,7 +112,6 @@ class App :
         }
         BotGuardTokenGenerator.initialize(this)
         PreferenceStore.start(this)
-        LeakCanaryController.initialize(this)
         Timber.plant(Timber.DebugTree())
         try {
             Timber.plant(
@@ -210,21 +206,7 @@ class App :
                     YouTube.useLoginForBrowse = true
                 }
 
-                // Apply random theme on startup if enabled
-                if (prefs[RandomThemeOnStartupKey] == true) {
-                    val randomPalette = ThemePalettes.generateRandomPalette()
-                    val seedPalette =
-                        ThemeSeedPalette(
-                            primary = randomPalette.primary,
-                            secondary = randomPalette.secondary,
-                            tertiary = randomPalette.tertiary,
-                            neutral = randomPalette.neutral,
-                        )
-                    val encodedPalette = ThemeSeedPaletteCodec.encodeForPreference(seedPalette, "Random")
-                    dataStore.edit { settings ->
-                        settings[CustomThemeColorKey] = encodedPalette
-                    }
-                }
+                // Random theme on startup is cut in rāyik v1 (themes are user-picked).
 
                 isInitialized = true
             } catch (e: Exception) {
@@ -305,14 +287,7 @@ class App :
                     val sw = StringWriter()
                     val pw = PrintWriter(sw)
                     throwable.printStackTrace(pw)
-                    val stack = sw.toString()
-
-                    val intent =
-                        Intent(this@App, DebugActivity::class.java).apply {
-                            putExtra(DebugActivity.EXTRA_STACK_TRACE, stack)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                        }
-                    startActivity(intent)
+                    Timber.e(throwable, "Uncaught exception in %s", thread.name)
                     try {
                         Thread.sleep(100)
                     } catch (_: InterruptedException) {

@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import app.rayik.music.innertube.SearchFilter
 import app.rayik.music.innertube.YouTube
 import app.rayik.music.innertube.models.SongItem
 import app.rayik.music.models.toMediaMetadata
@@ -45,7 +44,7 @@ class SearchViewModel @Inject constructor(
     job?.cancel()
     _state.value = SearchUiState.Searching
     job = viewModelScope.launch(Dispatchers.IO) {
-      YouTube.search(trimmed, SearchFilter.FILTER_SONG)
+      YouTube.search(trimmed, YouTube.SearchFilter.FILTER_SONG)
         .onSuccess { result ->
           val songs = result.items.filterIsInstance<SongItem>()
           _state.value = SearchUiState.Results(songs)

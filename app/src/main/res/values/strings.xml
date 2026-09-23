@@ -1118,4 +1118,15 @@
     <string name="qobuz_user_auth_token">Qobuz User Auth Token</string>
     <string name="memory_cache_toggle">Memory Cache</string>
     <string name="select_flac_download_folder">Select FLAC Download Folder</string>
+    <string name="gatekeeper_connection_blocked">Connection blocked by remote policy. This build could not be verified — install an official rāyik release from https://github.com/Aryan447/rayik.</string>
+    <string name="onboarding_permission_device_audio_capture_desc">Recognize music playing in other apps without using the microphone. Android asks for screen and audio capture approval each time, rāyik processes audio only.</string>
+    <string name="onboarding_permission_device_audio_capture_title">On-device audio recognition</string>
+    <string name="onboarding_login_title">Sync your listening</string>
+    <string name="onboarding_login_subtitle">Log in to sync your library and history across devices and get more reliable playback.</string>
+    <string name="onboarding_login_library_title">Sync your library</string>
+    <string name="onboarding_login_library_desc">Keep your saved music and playlists available wherever you listen.</string>
+    <string name="onboarding_login_history_title">Keep your history</string>
+    <string name="onboarding_login_history_desc">Continue your listening journey across devices with synced history.</string>
+    <string name="onboarding_login_playback_title">Better playback</string>
+    <string name="onboarding_login_playback_desc">Use your account context for a more dependable playback experience.</string>
 </resources>
