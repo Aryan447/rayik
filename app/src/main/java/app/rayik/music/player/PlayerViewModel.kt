@@ -72,6 +72,12 @@ class PlayerViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, false)
 
   @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+  val isLiked: StateFlow<Boolean> =
+    connection.flatMapLatest { conn ->
+      if (conn == null) flowOf(false) else conn.currentSong.map { it?.song?.liked == true }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+  @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
   val connected: StateFlow<Boolean> =
     connection.map { it != null }
       .stateIn(viewModelScope, SharingStarted.Lazily, false)

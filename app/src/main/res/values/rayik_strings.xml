@@ -24,15 +24,34 @@
 
   <string name="tab_raay">Raay</string>
   <string name="tab_search">Search</string>
-  <string name="tab_queue">Queue</string>
-  <string name="tab_lyrics">Lyrics</string>
+  <string name="tab_library">Library</string>
   <string name="tab_settings">Settings</string>
+
+  <string name="library_counts">%1$d liked • %2$d recent</string>
+  <string name="library_loading">Opening your library…</string>
+  <string name="library_filter_all">All</string>
+  <string name="library_filter_liked">Liked</string>
+  <string name="library_filter_recent">Recent</string>
+  <string name="library_filter_most">Most played</string>
+  <string name="library_liked_title">Liked songs</string>
+  <string name="library_recent_title">Recently played</string>
+  <string name="library_most_title">Most played</string>
+  <string name="library_liked_hint">Songs you heart will wait for you here.</string>
+  <string name="library_empty_title">Quiet shelves, for now</string>
+  <string name="library_empty_body">Play something worth keeping and it will line up here.</string>
+
+  <string name="player_now_playing">Now Playing</string>
+  <string name="player_up_next_count">%1$d in line</string>
+  <string name="action_unlike">Unlike</string>
+  <string name="action_share">Share</string>
+  <string name="action_open_queue">Jump to Up next</string>
+  <string name="action_collapse">Close player</string>
+  <string name="lyrics_preview_title">Lyrics preview</string>
+  <string name="lyrics_show_more">Full lyrics</string>
+  <string name="lyrics_show_less">Show less</string>
 
   <string name="queue_title">Up next</string>
   <string name="queue_empty_title">Nothing queued</string>
-  <string name="queue_empty_body">Search for something worth hearing and it will line up here, gapless.</string>
-  <string name="queue_no_stream_body">This queue has no playable streams yet — they resolve when the streaming layer connects.</string>
-  <string name="queue_connecting">Connecting to the player…</string>
 
   <string name="transport_play">Play</string>
   <string name="transport_pause">Pause</string>
@@ -51,12 +70,6 @@
   <string name="search_no_results">No matches — try different words.</string>
   <string name="search_unavailable">Search is unreachable right now — check your connection and try again.</string>
 
-  <string name="lyrics_title">Sing along</string>
-  <string name="lyrics_body">Lyrics and what’s next, together on one screen. No tab-hopping mid-song.</string>
-  <string name="lyrics_empty_title">Nothing playing</string>
-  <string name="lyrics_empty_body">Start something from your queue and the words will meet you here.</string>
-  <string name="lyrics_unavailable">Lyric lines arrive with the streaming layer.</string>
-  <string name="lyrics_loading">Finding the words…</string>
   <string name="lyrics_none">No lyrics found for this one — enjoy it wordless.</string>
 
   <string name="settings_title">Settings</string>

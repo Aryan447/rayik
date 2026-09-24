@@ -36,11 +36,11 @@ import app.rayik.music.R
 
 /**
  * Compact now-playing strip above the bottom nav. Visible whenever the
- * queue is non-empty; tap opens the Queue tab.
+ * queue is non-empty; tap expands the full player sheet.
  */
 @Composable
 fun MiniPlayer(
-  onOpenQueue: () -> Unit,
+  onOpenPlayer: () -> Unit,
   player: PlayerViewModel = hiltViewModel(),
 ) {
   val rows by player.queueRows.collectAsState()
@@ -51,8 +51,8 @@ fun MiniPlayer(
   val current = rows.firstOrNull { it.isCurrent } ?: return
 
   Surface(
-    tonalElevation = 3.dp,
-    shape = RoundedCornerShape(16.dp),
+    tonalElevation = 4.dp,
+    shape = RoundedCornerShape(20.dp),
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
@@ -61,17 +61,21 @@ fun MiniPlayer(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(16.dp))
-          .clickable(onClick = onOpenQueue)
-          .padding(MaterialTheme.spacing.small),
+          .clip(RoundedCornerShape(20.dp))
+          .clickable(onClick = onOpenPlayer)
+          .padding(
+            horizontal = MaterialTheme.spacing.medium,
+            vertical = MaterialTheme.spacing.smaller,
+          ),
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        TrackArt(artworkUrl = current.artworkUrl, modifier = Modifier.size(44.dp))
+        TrackArt(artworkUrl = current.artworkUrl, corner = 12.dp, modifier = Modifier.size(48.dp))
         Spacer(Modifier.width(MaterialTheme.spacing.medium))
         Column(Modifier.weight(1f)) {
           Text(
             current.title,
             style = MaterialTheme.typography.bodyLarge,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
           )
@@ -83,10 +87,20 @@ fun MiniPlayer(
             overflow = TextOverflow.Ellipsis,
           )
         }
+        if (playbackState == PlaybackUiState.Playing) {
+          PlayingIndicator(modifier = Modifier.padding(end = MaterialTheme.spacing.small))
+        }
         when (playbackState) {
-          PlaybackUiState.Loading -> CircularProgressIndicator(modifier = Modifier.size(24.dp))
-          PlaybackUiState.Playing -> IconButton(onClick = player::togglePlayPause) {
-            Icon(Icons.Filled.Pause, contentDescription = stringResource(R.string.transport_pause))
+          PlaybackUiState.Loading -> CircularProgressIndicator(modifier = Modifier.size(28.dp))
+          PlaybackUiState.Playing -> IconButton(
+            onClick = player::togglePlayPause,
+            modifier = Modifier.size(48.dp),
+          ) {
+            Icon(
+              Icons.Filled.Pause,
+              contentDescription = stringResource(R.string.transport_pause),
+              modifier = Modifier.size(28.dp),
+            )
           }
           else -> IconButton(
             onClick = player::togglePlayPause,
@@ -94,8 +108,13 @@ fun MiniPlayer(
             // prepares and plays; only Error stays behind retry.
             enabled = playbackState == PlaybackUiState.Paused ||
               playbackState == PlaybackUiState.Idle,
+            modifier = Modifier.size(48.dp),
           ) {
-            Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.transport_play))
+            Icon(
+              Icons.Filled.PlayArrow,
+              contentDescription = stringResource(R.string.transport_play),
+              modifier = Modifier.size(28.dp),
+            )
           }
         }
       }
