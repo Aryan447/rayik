@@ -1,6 +1,7 @@
 package app.rayik.music.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,13 +14,19 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState as collectFlowAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.datastore.preferences.core.edit
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,8 +45,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import app.rayik.music.BuildConfig
 import app.rayik.music.R
+import app.rayik.music.constants.AccountChannelHandleKey
+import app.rayik.music.constants.AccountEmailKey
+import app.rayik.music.constants.AccountNameKey
 import app.rayik.music.constants.AudioQuality
 import app.rayik.music.constants.AudioQualityKey
+import app.rayik.music.constants.DataSyncIdKey
+import app.rayik.music.constants.InnerTubeCookieKey
+import app.rayik.music.constants.PoTokenGvsKey
+import app.rayik.music.constants.PoTokenKey
+import app.rayik.music.constants.PoTokenPlayerKey
+import app.rayik.music.innertube.PlaybackAuthState
+import app.rayik.music.innertube.YouTube
+import app.rayik.music.innertube.utils.hasCompleteYouTubeLoginCookies
 import app.rayik.music.utils.dataStore
 
 /**
@@ -57,6 +75,12 @@ fun SettingsScreen(
   val streamQuality by preferences.streamQuality.collectAsState()
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
+  var showLogin by rememberSaveable { mutableStateOf(false) }
+  val accountPrefs by context.dataStore.data.collectFlowAsState(initial = null)
+  val sessionCookie = accountPrefs?.get(InnerTubeCookieKey)
+  val loggedIn = sessionCookie?.let { hasCompleteYouTubeLoginCookies(it) } == true
+  val accountName = accountPrefs?.get(AccountNameKey).orEmpty()
+  val accountEmail = accountPrefs?.get(AccountEmailKey).orEmpty()
   val systemDark = isSystemInDarkTheme()
   val useDarkTheme = when (darkMode) {
     DarkMode.Dark -> true
@@ -64,6 +88,7 @@ fun SettingsScreen(
     DarkMode.System -> systemDark
   }
 
+  Box(Modifier.fillMaxSize()) {
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -119,6 +144,40 @@ fun SettingsScreen(
     )
 
     Spacer(Modifier.height(MaterialTheme.spacing.medium))
+    SectionTitle(stringResource(R.string.account))
+    if (loggedIn) {
+      Text(
+        if (accountEmail.isNotBlank()) "$accountName\n$accountEmail" else accountName,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      Spacer(Modifier.height(MaterialTheme.spacing.small))
+      Button(
+        onClick = {
+          scope.launch(Dispatchers.IO) {
+            context.dataStore.edit { prefs ->
+              prefs.remove(InnerTubeCookieKey)
+              prefs.remove(AccountNameKey)
+              prefs.remove(AccountEmailKey)
+              prefs.remove(AccountChannelHandleKey)
+              prefs.remove(DataSyncIdKey)
+              prefs.remove(PoTokenKey)
+              prefs.remove(PoTokenGvsKey)
+              prefs.remove(PoTokenPlayerKey)
+            }
+            YouTube.authState = PlaybackAuthState()
+          }
+        },
+      ) {
+        Text(stringResource(R.string.logout))
+      }
+    } else {
+      Button(onClick = { showLogin = true }) {
+        Text(stringResource(R.string.login_with_google))
+      }
+    }
+
+    Spacer(Modifier.height(MaterialTheme.spacing.medium))
     SectionTitle("About")
     Text(
       "rāyik ${BuildConfig.VERSION_NAME} • GPL-3.0-only\n" +
@@ -127,6 +186,12 @@ fun SettingsScreen(
       style = MaterialTheme.typography.bodyMedium,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+  }
+    if (showLogin) {
+      Surface(Modifier.fillMaxSize()) {
+        LoginScreen(onDone = { showLogin = false })
+      }
+    }
   }
 }
 

@@ -1132,4 +1132,8 @@
     <string name="playback_error_no_internet" translatable="false">No network connection</string>
     <string name="playback_error_unknown" translatable="false">Unknown error</string>
     <string name="together_room_closed_inactivity_notification">Room closed because no one joined for 10 minutes</string>
+    <string name="login_failed">Couldn’t sign you in — check the account details and retry.</string>
+    <string name="login_missing_datasync">Signed in, but the session is incomplete — retry once.</string>
+    <string name="login_with_google">Log in with Google</string>
+    <string name="logout">Log out</string>
 </resources>
