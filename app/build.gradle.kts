@@ -65,8 +65,8 @@ android {
     applicationId = "app.rayik.music"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.0.4"
+        versionCode = 5
+        versionName = "0.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -294,6 +294,7 @@ dependencies {
     implementation(libs.navigation)
     implementation(libs.hilt.navigation)
     implementation(libs.datastore)
+    implementation(libs.security.crypto)
     implementation(libs.work.runtime)
     implementation("androidx.browser:browser:1.10.0")
 
