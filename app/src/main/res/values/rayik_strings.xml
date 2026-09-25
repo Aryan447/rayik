@@ -40,6 +40,19 @@
   <string name="library_empty_title">Quiet shelves, for now</string>
   <string name="library_empty_body">Play something worth keeping and it will line up here.</string>
 
+  <string name="deviceflow_requesting">Contacting Google…</string>
+  <string name="deviceflow_code_label">Enter this code on Google\'s page</string>
+  <string name="deviceflow_copy">Copy code</string>
+  <string name="deviceflow_copied">Code copied</string>
+  <string name="deviceflow_continue">Continue in browser</string>
+  <string name="deviceflow_waiting">Waiting for approval — tap Allow on Google\'s page</string>
+  <string name="deviceflow_completing">Finishing sign-in…</string>
+  <string name="deviceflow_retry">Try again</string>
+  <string name="deviceflow_use_password">Use password instead</string>
+
+  <string name="login_switch_account">Use a different account</string>
+  <string name="login_returning_hint">Signed in here before? Just pick your account — no password typing needed.</string>
+
   <string name="player_now_playing">Now Playing</string>
   <string name="player_up_next_count">%1$d in line</string>
   <string name="action_unlike">Unlike</string>
@@ -63,6 +76,14 @@
   <string name="transport_seek_forward">Forward 10 seconds</string>
   <string name="transport_seek_back">Back 10 seconds</string>
 
+  <string name="home_greeting_morning">Good morning</string>
+  <string name="home_greeting_afternoon">Good afternoon</string>
+  <string name="home_greeting_evening">Good evening</string>
+  <string name="home_jump_title">Jump back in</string>
+  <string name="home_new_title">New releases</string>
+  <string name="home_all">All</string>
+  <string name="home_loading">Tuning your home…</string>
+
   <string name="search_title">Find it with one line</string>
   <string name="search_body">Only remember a single lyric? That’s plenty — type it and hear it.</string>
   <string name="search_hint">Songs, artists, or a half-remembered lyric</string>
@@ -73,6 +94,61 @@
   <string name="lyrics_none">No lyrics found for this one — enjoy it wordless.</string>
 
   <string name="settings_title">Settings</string>
+  <string name="settings_search_hint">Search settings</string>
+  <string name="settings_profile_guest">Guest listener</string>
+  <string name="settings_profile_guest_body">Sign in to sync likes and library</string>
+  <string name="settings_sign_in">Sign in</string>
+  <string name="settings_sign_out">Sign out</string>
+
+  <string name="settings_section_audio">Audio</string>
+  <string name="settings_section_offline">Offline &amp; storage</string>
+  <string name="settings_section_privacy">Privacy &amp; content</string>
+  <string name="settings_section_connected">Connected accounts</string>
+  <string name="settings_section_about_app">About</string>
+
+  <string name="settings_gapless_label">Gapless preload</string>
+  <string name="settings_gapless_body">Start loading the next song early</string>
+  <string name="settings_autoplay_label">Autoplay</string>
+  <string name="settings_autoplay_body">Keep playing related music</string>
+  <string name="settings_restore_label">Restore queue</string>
+  <string name="settings_restore_body">Pick up where you left off</string>
+  <string name="settings_skiperror_label">Skip on error</string>
+  <string name="settings_skiperror_body">Jump past unplayable tracks</string>
+  <string name="settings_keepshuffle_label">Keep shuffle</string>
+  <string name="settings_keepshuffle_body">Remember shuffle across queues</string>
+
+  <string name="settings_normalize_label">Normalize volume</string>
+  <string name="settings_normalize_body">Even out loudness between songs</string>
+  <string name="settings_silence_label">Skip silence</string>
+  <string name="settings_silence_body">Pauses while crossfade is on</string>
+  <string name="settings_crossfade_label">Crossfade</string>
+  <string name="settings_crossfade_body">Blend song endings together</string>
+  <string name="settings_offload_label">Audio offload</string>
+  <string name="settings_offload_body">Hardware decoding, less battery</string>
+
+  <string name="settings_autodl_label">Download liked</string>
+  <string name="settings_autodl_body">Pin liked songs for offline</string>
+  <string name="settings_cache_label">Streaming cache</string>
+  <string name="settings_cache_body">Capped at %1$d MB</string>
+  <string name="settings_cache_clear">Clear cache</string>
+  <string name="settings_cache_clearing">Clearing…</string>
+  <string name="settings_cache_cleared">Cache cleared</string>
+  <string name="settings_cache_failed">Couldn\'t clear cache</string>
+
+  <string name="settings_history_label">Pause history</string>
+  <string name="settings_history_body">Stop recording what you play</string>
+  <string name="settings_explicit_label">Hide explicit</string>
+  <string name="settings_explicit_body">Filter explicit tracks out</string>
+  <string name="settings_lowdata_label">Low-data mode</string>
+  <string name="settings_lowdata_body">Lighter streams on metered networks</string>
+
+  <string name="settings_lastfm_label">Last.fm</string>
+  <string name="settings_lastfm_body">Scrobble what you play</string>
+  <string name="settings_listenbrainz_label">ListenBrainz</string>
+  <string name="settings_listenbrainz_body">Keep an open listening history</string>
+  <string name="settings_discord_label">Discord</string>
+  <string name="settings_discord_body">Show status while playing</string>
+  <string name="settings_github">GitHub</string>
   <string name="rayik_settings_section_appearance">Appearance</string>
   <string name="settings_section_playback">Playback</string>
   <string name="pref_dark_mode_label">Theme mode</string>

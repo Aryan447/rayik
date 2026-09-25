@@ -13,7 +13,7 @@ class AppearancePreferences(
   preferenceStore: PreferenceStore,
 ) {
   val darkMode = preferenceStore.getEnum("dark_mode", app.rayik.music.ui.theme.DarkMode.System)
-  val appTheme = preferenceStore.getEnum("app_theme", AppTheme.Dynamic)
+  val appTheme = preferenceStore.getEnum("app_theme", AppTheme.Gold)
   val amoledMode = preferenceStore.getBoolean("amoled_mode", false)
   val albumArtDynamic = preferenceStore.getBoolean("album_art_dynamic", true)
   val onboardingCompleted = preferenceStore.getBoolean("onboarding_completed", false)

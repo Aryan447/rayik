@@ -18,7 +18,7 @@ import app.rayik.music.preferences.AppearancePreferences
 import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.R
 
-val LocalAppTheme = staticCompositionLocalOf { AppTheme.Dynamic }
+val LocalAppTheme = staticCompositionLocalOf { AppTheme.Gold }
 
 /**
  * rayik theme. Ported from mpvium MpviumTheme pattern, renamed to RayikTheme.

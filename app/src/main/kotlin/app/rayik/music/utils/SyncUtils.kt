@@ -29,6 +29,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import app.rayik.music.auth.OAuthSessionManager
 import app.rayik.music.constants.InnerTubeCookieKey
 import app.rayik.music.constants.SelectedYtmPlaylistsKey
 import app.rayik.music.constants.YtmSyncKey
@@ -69,6 +70,7 @@ class SyncUtils
     constructor(
         private val database: MusicDatabase,
         @ApplicationContext private val context: Context,
+        private val oAuthSessionManager: OAuthSessionManager,
     ) {
         private val syncScope = CoroutineScope(Dispatchers.IO)
         private val syncEnabled = MutableStateFlow(true)
@@ -222,6 +224,7 @@ class SyncUtils
                 }
 
         private suspend fun isLoggedIn(): Boolean {
+            if (oAuthSessionManager.hasSession.value) return true
             val cookie =
                 context.dataStore.data
                     .map { it[InnerTubeCookieKey] }

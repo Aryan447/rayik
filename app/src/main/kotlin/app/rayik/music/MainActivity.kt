@@ -31,7 +31,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import app.rayik.music.auth.OAuthSessionManager
+import app.rayik.music.innertube.YouTube
 import app.rayik.music.preferences.AppearancePreferences
+import kotlinx.coroutines.launch
 import app.rayik.music.presentation.RayikNav
 import app.rayik.music.ui.theme.RayikTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -54,6 +57,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var appearancePreferences: AppearancePreferences
+
+    @Inject
+    lateinit var oAuthSessionManager: OAuthSessionManager
 
     private var playerConnection by mutableStateOf<PlayerConnection?>(null)
 
@@ -79,6 +85,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // OAuth Bearer rides on every InnerTube request once signed in;
+        // cookie auth stays as the untouched fallback.
+        YouTube.oauthAccessTokenProvider = oAuthSessionManager::validAccessToken
+        lifecycleScope.launch { oAuthSessionManager.refreshIfNeeded() }
         requestNotificationPermission()
         enableEdgeToEdge()
         setContent {

@@ -95,6 +95,53 @@ class YouTubeLoginRepository
                 }
             }
 
+        /**
+         * Completes a TV device-flow sign-in. The Bearer token is already
+         * live (stored by [OAuthSessionManager]); identity comes from the
+         * authenticated account menu, never from cookies. DataSyncId is
+         * best-effort — without it the PageId header is simply omitted,
+         * unlike cookie login which throws when it is missing.
+         */
+        suspend fun completeOAuthLogin(): Result<YouTubeLoginSession> =
+            withContext(Dispatchers.IO) {
+                runCatchingPreservingCancellation {
+                    val accountInfo = YouTube.accountInfo().getOrThrow()
+                    val dataSyncId = YouTube.accountDataSyncId().getOrNull().normalizeDataSyncId()
+
+                    val authState =
+                        PlaybackAuthState(
+                            cookie = null,
+                            visitorData = YouTube.visitorData,
+                            dataSyncId = dataSyncId,
+                        ).normalized()
+                    YouTube.authState = authState
+
+                    context.dataStore.edit { preferences ->
+                        preferences.remove(InnerTubeCookieKey)
+                        authState.visitorData
+                            ?.let { preferences[VisitorDataKey] = it }
+                            ?: preferences.remove(VisitorDataKey)
+                        authState.dataSyncId
+                            ?.let { preferences[DataSyncIdKey] = it }
+                            ?: preferences.remove(DataSyncIdKey)
+                        preferences[AccountNameKey] = accountInfo.name
+                        preferences[AccountEmailKey] = accountInfo.email.orEmpty()
+                        preferences[AccountChannelHandleKey] = accountInfo.channelHandle.orEmpty()
+                        preferences.remove(PoTokenKey)
+                        preferences.remove(PoTokenGvsKey)
+                        preferences.remove(PoTokenPlayerKey)
+                        preferences[WebClientPoTokenEnabledKey] = false
+                    }
+
+                    YouTubeLoginSession(
+                        authState = authState,
+                        accountName = accountInfo.name,
+                        accountEmail = accountInfo.email.orEmpty(),
+                        accountChannelHandle = accountInfo.channelHandle.orEmpty(),
+                    )
+                }
+            }
+
         suspend fun switchSavedAccount(account: SavedAccount): Result<PlaybackAuthState> =
             withContext(Dispatchers.IO) {
                 runCatchingPreservingCancellation {
@@ -220,6 +267,14 @@ class CompleteYouTubeLoginUseCase
                 visitorData = visitorData,
                 dataSyncId = dataSyncId,
             )
+    }
+
+class CompleteOAuthLoginUseCase
+    @Inject
+    constructor(
+        private val repository: YouTubeLoginRepository,
+    ) {
+        suspend operator fun invoke(): Result<YouTubeLoginSession> = repository.completeOAuthLogin()
     }
 
 class SwitchSavedYouTubeAccountUseCase

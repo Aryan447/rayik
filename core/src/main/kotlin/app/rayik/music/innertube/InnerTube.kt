@@ -114,6 +114,15 @@ class InnerTube {
 
     var useLoginForBrowse: Boolean = false
 
+    /**
+     * In-memory OAuth access-token supplier (TV device flow). When it yields
+     * a token, requests carry `Authorization: Bearer …` and the cookie block
+     * is skipped (never mix the two — Google's gateway rejects it). Null
+     * means classic cookie/SAPISIDHASH auth. Synchronous on purpose: the
+     * session manager caches a valid token and refreshes proactively.
+     */
+    var oauthAccessTokenProvider: (() -> String?)? = null
+
     fun currentAuthState(): PlaybackAuthState = authState
 
     fun applyAuthState(value: PlaybackAuthState) {
@@ -190,7 +199,10 @@ class InnerTube {
             if (includeVisitorData) {
                 authState.visitorData?.let { append("X-Goog-Visitor-Id", it) }
             }
-            if (setLogin && client.supportsCookieAuthentication) {
+            val oauthBearer = oauthAccessTokenProvider?.invoke()?.takeIf { it.isNotBlank() }
+            if (oauthBearer != null) {
+                append("Authorization", "Bearer $oauthBearer")
+            } else if (setLogin && client.supportsCookieAuthentication) {
                 authState.cookie?.let { cookie ->
                     append("cookie", cookie)
                     val loginCookieValue = youtubeLoginCookieValue(cookie) ?: return@let
@@ -222,7 +234,10 @@ class InnerTube {
             append("X-Origin", requestOrigin)
             append("Referer", client.requestReferer())
             authState.visitorData?.let { append("X-Goog-Visitor-Id", it) }
-            if (client.supportsCookieAuthentication) {
+            val oauthBearer = oauthAccessTokenProvider?.invoke()?.takeIf { it.isNotBlank() }
+            if (oauthBearer != null) {
+                append("Authorization", "Bearer $oauthBearer")
+            } else if (client.supportsCookieAuthentication) {
                 authState.cookie?.let { cookie ->
                     append("cookie", cookie)
                     val loginCookieValue = youtubeLoginCookieValue(cookie) ?: return@let

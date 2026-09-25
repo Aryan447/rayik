@@ -159,6 +159,17 @@ object YouTube {
         set(value) {
             authState = authState.copy(cookie = value)
         }
+
+    /**
+     * In-memory OAuth Bearer supplier (TV device flow). When set and yielding
+     * a token, InnerTube requests prefer it over cookies — same delegate
+     * style as the fields above.
+     */
+    var oauthAccessTokenProvider: (() -> String?)?
+        get() = innerTube.oauthAccessTokenProvider
+        set(value) {
+            innerTube.oauthAccessTokenProvider = value
+        }
     var poToken: String?
         get() = authState.poToken
         set(value) {
