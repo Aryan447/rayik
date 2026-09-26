@@ -1,6 +1,7 @@
 package app.rayik.music.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,10 +21,14 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -88,27 +93,37 @@ fun LibraryScreen(
     return
   }
 
-  LazyColumn(
-    state = listState,
-    modifier = Modifier.fillMaxSize(),
-    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
-  ) {
+  var showWrapped by remember { mutableStateOf(false) }
+
+  Box(Modifier.fillMaxSize()) {
+    LazyColumn(
+      state = listState,
+      modifier = Modifier.fillMaxSize(),
+      verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+    ) {
     item {
-      Text(
-        stringResource(R.string.library_title),
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
-      )
-      Text(
-        stringResource(
-          R.string.library_counts,
-          likedList.size,
-          recentList.size,
-        ),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = MaterialTheme.spacing.smaller),
-      )
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+          Text(
+            stringResource(R.string.library_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+          )
+          Text(
+            stringResource(
+              R.string.library_counts,
+              likedList.size,
+              recentList.size,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = MaterialTheme.spacing.smaller),
+          )
+        }
+        TextButton(onClick = { showWrapped = true }) {
+          Text(stringResource(R.string.wrapped_open))
+        }
+      }
     }
 
     item {
@@ -164,6 +179,12 @@ fun LibraryScreen(
         emptyHint = null,
         onPlay = library::play,
       )
+    }
+    }
+    if (showWrapped) {
+      Surface(Modifier.fillMaxSize()) {
+        WrappedScreen(onClose = { showWrapped = false })
+      }
     }
   }
 }

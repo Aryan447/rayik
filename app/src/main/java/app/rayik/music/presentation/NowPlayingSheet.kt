@@ -37,10 +37,8 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -60,9 +58,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -106,6 +108,7 @@ fun NowPlayingSheetContent(
   val repeatMode by player.repeatMode.collectAsState()
   val shuffleEnabled by player.shuffleEnabled.collectAsState()
   val isLiked by player.isLiked.collectAsState()
+  val queueTitle by player.queueTitle.collectAsState()
   val connection by player.connection.collectAsState()
   val context = LocalContext.current
 
@@ -131,8 +134,9 @@ fun NowPlayingSheetContent(
       .fillMaxHeight(0.94f)
       .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
   ) {
-    // ---- Ambient blurred background ----
+    // ---- Ambient background: artwork sharp on top, melting into blur ----
     if (artwork.isNotBlank()) {
+      // Blurred base covering the whole sheet.
       AsyncImage(
         model = artwork,
         contentDescription = null,
@@ -140,6 +144,29 @@ fun NowPlayingSheetContent(
         modifier = Modifier
           .matchParentSize()
           .blur(72.dp),
+      )
+      // Sharp twin on top, masked out toward the controls so the art
+      // dissolves gradiently into the blur instead of cutting off.
+      AsyncImage(
+        model = artwork,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+          .matchParentSize()
+          .graphicsLayer {
+            compositingStrategy = CompositingStrategy.Offscreen
+          }
+          .drawWithContent {
+            drawContent()
+            drawRect(
+              brush = Brush.verticalGradient(
+                0f to Color.Black,
+                0.40f to Color.Black,
+                0.68f to Color.Transparent,
+              ),
+              blendMode = BlendMode.DstIn,
+            )
+          },
       )
     } else {
       Box(
@@ -419,6 +446,13 @@ fun NowPlayingSheetContent(
             positionMs = positionMs,
             expanded = lyricsExpanded,
             onToggleExpand = { lyricsExpanded = !lyricsExpanded },
+            onShareCard = rememberShareLyricCard(
+              raw = rawLyrics,
+              positionMs = positionMs,
+              title = current?.title.orEmpty(),
+              artist = current?.artist.orEmpty(),
+              artworkUrl = artwork,
+            ),
           )
           Spacer(Modifier.height(MaterialTheme.spacing.medium))
         }
@@ -472,6 +506,41 @@ fun NowPlayingSheetContent(
               )
             }
             Spacer(Modifier.height(6.dp))
+          }
+        }
+
+        if (!queueTitle.isNullOrBlank()) {
+          item {
+            Spacer(Modifier.height(MaterialTheme.spacing.small))
+            GlassCard {
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+              ) {
+                Column(Modifier.weight(1f)) {
+                  Text(
+                    stringResource(R.string.playing_from, queueTitle!!),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                  )
+                }
+                GlassIconButton(
+                  onClick = {
+                    scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) }
+                  },
+                ) {
+                  Icon(
+                    Icons.Filled.QueueMusic,
+                    contentDescription = stringResource(R.string.action_open_queue),
+                    modifier = Modifier.size(22.dp),
+                  )
+                }
+              }
+            }
           }
         }
 
@@ -781,95 +850,117 @@ private fun ControlDock(
   onToggleShuffle: () -> Unit,
 ) {
   val scheme = MaterialTheme.colorScheme
-  Surface(
-    shape = RoundedCornerShape(32.dp),
-    color = scheme.surface.copy(alpha = 0.5f),
-    tonalElevation = 0.dp,
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(32.dp)),
+  Row(
+    modifier = Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.Center,
+    verticalAlignment = Alignment.CenterVertically,
   ) {
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 12.dp, vertical = 12.dp),
-      horizontalArrangement = Arrangement.SpaceEvenly,
-      verticalAlignment = Alignment.CenterVertically,
+    IconButton(onClick = onToggleShuffle, modifier = Modifier.size(44.dp)) {
+      Icon(
+        imageVector = Icons.Filled.Shuffle,
+        contentDescription = stringResource(
+          if (shuffleEnabled) R.string.transport_shuffle_on else R.string.transport_shuffle_off,
+        ),
+        tint = if (shuffleEnabled) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.7f),
+      )
+    }
+    Spacer(Modifier.width(10.dp))
+    TransportPill(
+      onClick = onPrevious,
+      enabled = state != PlaybackUiState.Loading,
+      containerColor = scheme.surface.copy(alpha = 0.5f),
+      borderColor = Color.White.copy(alpha = 0.16f),
+      modifier = Modifier.size(width = 76.dp, height = 64.dp),
     ) {
-      IconButton(onClick = onToggleShuffle, modifier = Modifier.size(48.dp)) {
-        Icon(
-          imageVector = Icons.Filled.Shuffle,
-          contentDescription = stringResource(
-            if (shuffleEnabled) R.string.transport_shuffle_on else R.string.transport_shuffle_off,
-          ),
-          tint = if (shuffleEnabled) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.7f),
-        )
-      }
-      IconButton(
-        onClick = onPrevious,
-        enabled = state != PlaybackUiState.Loading,
-        modifier = Modifier.size(56.dp),
+      Icon(
+        Icons.Filled.SkipPrevious,
+        contentDescription = stringResource(R.string.transport_previous),
+        tint = scheme.onSurface,
+        modifier = Modifier.size(30.dp),
+      )
+    }
+    Spacer(Modifier.width(10.dp))
+    if (state == PlaybackUiState.Loading) {
+      CircularProgressIndicator(modifier = Modifier.size(76.dp))
+    } else {
+      TransportPill(
+        onClick = onToggle,
+        enabled = state == PlaybackUiState.Playing || state == PlaybackUiState.Paused ||
+          state == PlaybackUiState.Idle,
+        containerColor = scheme.primary,
+        borderColor = scheme.primary.copy(alpha = 0.4f),
+        shadowColor = scheme.primary.copy(alpha = 0.55f),
+        modifier = Modifier.size(width = 116.dp, height = 76.dp),
       ) {
         Icon(
-          Icons.Filled.SkipPrevious,
-          contentDescription = stringResource(R.string.transport_previous),
-          modifier = Modifier.size(36.dp),
-        )
-      }
-      if (state == PlaybackUiState.Loading) {
-        CircularProgressIndicator(modifier = Modifier.size(72.dp))
-      } else {
-        FilledIconButton(
-          onClick = onToggle,
-          enabled = state == PlaybackUiState.Playing || state == PlaybackUiState.Paused ||
-            state == PlaybackUiState.Idle,
-          modifier = Modifier
-            .size(76.dp)
-            .shadow(24.dp, CircleShape, spotColor = scheme.primary.copy(alpha = 0.55f)),
-          colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = scheme.primary,
-            contentColor = scheme.onPrimary,
-          ),
-        ) {
-          Icon(
-            imageVector = if (state == PlaybackUiState.Playing) {
-              Icons.Filled.Pause
-            } else {
-              Icons.Filled.PlayArrow
-            },
-            contentDescription = stringResource(
-              if (state == PlaybackUiState.Playing) {
-                R.string.transport_pause
-              } else {
-                R.string.transport_play
-              },
-            ),
-            modifier = Modifier.size(38.dp),
-          )
-        }
-      }
-      IconButton(
-        onClick = onNext,
-        enabled = state != PlaybackUiState.Loading,
-        modifier = Modifier.size(56.dp),
-      ) {
-        Icon(
-          Icons.Filled.SkipNext,
-          contentDescription = stringResource(R.string.transport_next),
-          modifier = Modifier.size(36.dp),
-        )
-      }
-      IconButton(onClick = onCycleRepeat, modifier = Modifier.size(48.dp)) {
-        Icon(
-          imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-          contentDescription = stringResource(R.string.transport_repeat, repeatMode.name),
-          tint = if (repeatMode == RepeatMode.OFF) {
-            scheme.onSurfaceVariant.copy(alpha = 0.7f)
+          imageVector = if (state == PlaybackUiState.Playing) {
+            Icons.Filled.Pause
           } else {
-            scheme.primary
+            Icons.Filled.PlayArrow
           },
+          contentDescription = stringResource(
+            if (state == PlaybackUiState.Playing) {
+              R.string.transport_pause
+            } else {
+              R.string.transport_play
+            },
+          ),
+          tint = scheme.onPrimary,
+          modifier = Modifier.size(40.dp),
         )
       }
+    }
+    Spacer(Modifier.width(10.dp))
+    TransportPill(
+      onClick = onNext,
+      enabled = state != PlaybackUiState.Loading,
+      containerColor = scheme.surface.copy(alpha = 0.5f),
+      borderColor = Color.White.copy(alpha = 0.16f),
+      modifier = Modifier.size(width = 76.dp, height = 64.dp),
+    ) {
+      Icon(
+        Icons.Filled.SkipNext,
+        contentDescription = stringResource(R.string.transport_next),
+        tint = scheme.onSurface,
+        modifier = Modifier.size(30.dp),
+      )
+    }
+    Spacer(Modifier.width(10.dp))
+    IconButton(onClick = onCycleRepeat, modifier = Modifier.size(44.dp)) {
+      Icon(
+        imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+        contentDescription = stringResource(R.string.transport_repeat, repeatMode.name),
+        tint = if (repeatMode == RepeatMode.OFF) {
+          scheme.onSurfaceVariant.copy(alpha = 0.7f)
+        } else {
+          scheme.primary
+        },
+      )
+    }
+  }
+}
+
+@Composable
+private fun TransportPill(
+  onClick: () -> Unit,
+  enabled: Boolean,
+  containerColor: Color,
+  borderColor: Color,
+  shadowColor: Color = Color.Transparent,
+  modifier: Modifier = Modifier,
+  content: @Composable () -> Unit,
+) {
+  Surface(
+    onClick = onClick,
+    enabled = enabled,
+    shape = RoundedCornerShape(24.dp),
+    color = containerColor,
+    modifier = modifier
+      .shadow(20.dp, RoundedCornerShape(24.dp), spotColor = shadowColor)
+      .border(1.dp, borderColor, RoundedCornerShape(24.dp)),
+  ) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+      content()
     }
   }
 }

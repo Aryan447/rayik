@@ -37,6 +37,24 @@
   <string name="library_recent_title">Recently played</string>
   <string name="library_most_title">Most played</string>
   <string name="library_liked_hint">Songs you heart will wait for you here.</string>
+  <string name="wrapped_title">Your Wrapped</string>
+  <string name="wrapped_open">Wrapped</string>
+  <string name="wrapped_window_month">Last 30 days</string>
+  <string name="wrapped_window_all">All time</string>
+  <string name="wrapped_loading">Wrapping your year…</string>
+  <string name="wrapped_empty_title">Nothing to wrap yet</string>
+  <string name="wrapped_empty_body">Play something worth remembering and it will show up here.</string>
+  <string name="wrapped_minutes_body">of music, all yours</string>
+  <string name="wrapped_top_song">Top song</string>
+  <string name="wrapped_top_artist">Top artist</string>
+  <string name="wrapped_artist_body">%1$d songs deep</string>
+  <string name="wrapped_rhythm">Your rhythm</string>
+  <string name="wrapped_peak_body">Peak hour: %1$s</string>
+  <string name="wrapped_top_five">Top 5 songs</string>
+  <string name="wrapped_plays_count">%1$d plays</string>
+  <string name="wrapped_none_yet">Not enough history for this one yet.</string>
+  <string name="wrapped_share">Share my Wrapped</string>
+
   <string name="library_empty_title">Quiet shelves, for now</string>
   <string name="library_empty_body">Play something worth keeping and it will line up here.</string>
 
@@ -55,6 +73,7 @@
 
   <string name="player_now_playing">Now Playing</string>
   <string name="player_up_next_count">%1$d in line</string>
+  <string name="playing_from">Playing from %1$s</string>
   <string name="action_unlike">Unlike</string>
   <string name="action_share">Share</string>
   <string name="action_open_queue">Jump to Up next</string>

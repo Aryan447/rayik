@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -52,6 +53,7 @@ fun LyricsPreviewCard(
   expanded: Boolean,
   onToggleExpand: () -> Unit,
   modifier: Modifier = Modifier,
+  onShareCard: (() -> Unit)? = null,
 ) {
   Surface(
     tonalElevation = 0.dp,
@@ -73,11 +75,26 @@ fun LyricsPreviewCard(
           vertical = MaterialTheme.spacing.medium,
         ),
     ) {
-      Text(
-        stringResource(R.string.lyrics_preview_title),
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-      )
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+          stringResource(R.string.lyrics_preview_title),
+          style = MaterialTheme.typography.titleMedium,
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.weight(1f),
+        )
+        if (onShareCard != null) {
+          androidx.compose.material3.IconButton(
+            onClick = onShareCard,
+            modifier = Modifier.size(40.dp),
+          ) {
+            Icon(
+              imageVector = Icons.Filled.Share,
+              contentDescription = stringResource(R.string.action_share),
+              modifier = Modifier.size(20.dp),
+            )
+          }
+        }
+      }
       Spacer(Modifier.height(MaterialTheme.spacing.small))
 
       if (raw.isNullOrBlank() || raw == "LYRICS_NOT_FOUND") {

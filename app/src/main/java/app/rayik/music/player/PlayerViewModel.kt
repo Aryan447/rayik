@@ -77,6 +77,13 @@ class PlayerViewModel @Inject constructor(
       if (conn == null) flowOf(false) else conn.currentSong.map { it?.song?.liked == true }
     }.stateIn(viewModelScope, SharingStarted.Lazily, false)
 
+  /** Display name of the queue source ("Playing from …"), when the service sets one. */
+  @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+  val queueTitle: StateFlow<String?> =
+    connection.flatMapLatest { conn ->
+      if (conn == null) flowOf(null) else conn.queueTitle
+    }.stateIn(viewModelScope, SharingStarted.Lazily, null)
+
   @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
   val connected: StateFlow<Boolean> =
     connection.map { it != null }
