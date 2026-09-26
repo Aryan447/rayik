@@ -390,6 +390,19 @@ dependencies {
     implementation(libs.accompanist.lyrics.core)
 }
 
+// Release-tab friendly names: rayik-universal-v0.0.5.apk instead of
+// app-foss-mobile-universal-release.apk. Debug builds get a -debug suffix.
+androidComponents {
+    onVariants { variant ->
+        val abiName = variant.productFlavors.firstOrNull { it.second == "abi" }?.first ?: "universal"
+        val buildSuffix = if (variant.buildType == "debug") "-debug" else ""
+        val fileName = "rayik-$abiName-v${android.defaultConfig.versionName}$buildSuffix.apk"
+        variant.outputs.forEach { output ->
+            (output as? com.android.build.api.variant.VariantOutput)?.outputFileName?.set(fileName)
+        }
+    }
+}
+
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)

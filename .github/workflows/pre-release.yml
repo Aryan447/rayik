@@ -68,14 +68,14 @@ jobs:
           fi
           echo "Using apksigner: $APKSIGNER"
 
-          APK_COUNT=$(find "$RELEASE_APK_DIR" -name "*-release-unsigned.apk" -type f | wc -l)
+          APK_COUNT=$(find "$RELEASE_APK_DIR" -name "*-unsigned.apk" -type f | wc -l)
           if [ "$APK_COUNT" -eq 0 ]; then
             echo "No unsigned release APKs found"
             ls -lah "$RELEASE_APK_DIR"
             exit 1
           fi
 
-          find "$RELEASE_APK_DIR" -name "*-release-unsigned.apk" -type f | while read -r apk; do
+          find "$RELEASE_APK_DIR" -name "*-unsigned.apk" -type f | while read -r apk; do
             signed_apk="${apk/-unsigned/}"
 
             "$APKSIGNER" sign \
