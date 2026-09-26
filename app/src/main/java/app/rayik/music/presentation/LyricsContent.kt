@@ -1,12 +1,15 @@
 package app.rayik.music.presentation
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -51,9 +54,16 @@ fun LyricsPreviewCard(
   modifier: Modifier = Modifier,
 ) {
   Surface(
-    tonalElevation = 2.dp,
-    shape = RoundedCornerShape(24.dp),
-    modifier = modifier.fillMaxWidth(),
+    tonalElevation = 0.dp,
+    shape = RoundedCornerShape(26.dp),
+    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+    modifier = modifier
+      .fillMaxWidth()
+      .border(
+        1.dp,
+        androidx.compose.ui.graphics.Color.White.copy(alpha = 0.13f),
+        RoundedCornerShape(26.dp),
+      ),
   ) {
     Column(
       modifier = Modifier
