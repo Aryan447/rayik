@@ -2,7 +2,6 @@ package app.rayik.music.presentation
 
 import android.content.Context
 import android.content.Intent
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -81,7 +80,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import app.rayik.music.BuildConfig
 import app.rayik.music.R
-import app.rayik.music.lyrics.LrcParser
 import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
 import app.rayik.music.player.RepeatMode
@@ -91,8 +89,8 @@ import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 
 /** Lazy-list indices of the scroll targets; header sections above are always emitted. */
-private const val LYRICS_SECTION_INDEX = 7
-private const val UPNEXT_SECTION_INDEX = 8
+private const val LYRICS_SECTION_INDEX = 6
+private const val UPNEXT_SECTION_INDEX = 7
 
 /**
  * Immersive full-screen player: ambient blurred artwork, glowing hero art,
@@ -350,20 +348,6 @@ fun NowPlayingSheetContent(
                 Text("Queue", style = MaterialTheme.typography.labelLarge)
               }
             }
-          }
-        }
-
-        item {
-          val syncedLine = remember(rawLyrics, positionMs) {
-            val lines = if (rawLyrics.isNullOrBlank()) emptyList() else LrcParser.parseLyrics(rawLyrics)
-            val active = activeLyricIndex(lines, positionMs)
-            lines.getOrNull(active)?.text.orEmpty()
-          }
-          if (syncedLine.isNotBlank()) {
-            Spacer(Modifier.height(16.dp))
-            LyricGlowPill(line = syncedLine)
-          } else {
-            Spacer(Modifier.height(12.dp))
           }
         }
 
@@ -720,31 +704,6 @@ private fun LikePill(
   }
 }
 
-@Composable
-private fun LyricGlowPill(line: String) {
-  val scheme = MaterialTheme.colorScheme
-  Box(
-    modifier = Modifier
-      .fillMaxWidth()
-      .clip(RoundedCornerShape(20.dp))
-      .background(scheme.surface.copy(alpha = 0.45f))
-      .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp))
-      .padding(horizontal = 18.dp, vertical = 12.dp),
-    contentAlignment = Alignment.Center,
-  ) {
-    Text(
-      "“$line”",
-      style = MaterialTheme.typography.titleMedium,
-      fontWeight = FontWeight.SemiBold,
-      maxLines = 2,
-      overflow = TextOverflow.Ellipsis,
-      textAlign = TextAlign.Center,
-      color = scheme.onSurface,
-      modifier = Modifier.animateContentSize(),
-    )
-  }
-}
-
 /** Frosted card used for lyrics / error / empty states. */
 @Composable
 fun GlassCard(
@@ -864,39 +823,42 @@ private fun ControlDock(
   onCycleRepeat: () -> Unit,
   onToggleShuffle: () -> Unit,
 ) {
+  // Compact by design: the five controls must fit a 320dp row with the
+  // play pill dead-center — measure twice (40+60+92+60+40 + 4×6spacers).
   val scheme = MaterialTheme.colorScheme
   Row(
     modifier = Modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.Center,
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    IconButton(onClick = onToggleShuffle, modifier = Modifier.size(44.dp)) {
+    IconButton(onClick = onToggleShuffle, modifier = Modifier.size(40.dp)) {
       Icon(
         imageVector = Icons.Filled.Shuffle,
         contentDescription = stringResource(
           if (shuffleEnabled) R.string.transport_shuffle_on else R.string.transport_shuffle_off,
         ),
         tint = if (shuffleEnabled) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.7f),
+        modifier = Modifier.size(22.dp),
       )
     }
-    Spacer(Modifier.width(10.dp))
+    Spacer(Modifier.width(6.dp))
     TransportPill(
       onClick = onPrevious,
       enabled = state != PlaybackUiState.Loading,
       containerColor = scheme.surface.copy(alpha = 0.5f),
       borderColor = Color.White.copy(alpha = 0.16f),
-      modifier = Modifier.size(width = 76.dp, height = 64.dp),
+      modifier = Modifier.size(width = 60.dp, height = 58.dp),
     ) {
       Icon(
         Icons.Filled.SkipPrevious,
         contentDescription = stringResource(R.string.transport_previous),
         tint = scheme.onSurface,
-        modifier = Modifier.size(30.dp),
+        modifier = Modifier.size(28.dp),
       )
     }
-    Spacer(Modifier.width(10.dp))
+    Spacer(Modifier.width(6.dp))
     if (state == PlaybackUiState.Loading) {
-      CircularProgressIndicator(modifier = Modifier.size(76.dp))
+      CircularProgressIndicator(modifier = Modifier.size(70.dp))
     } else {
       TransportPill(
         onClick = onToggle,
@@ -905,7 +867,7 @@ private fun ControlDock(
         containerColor = scheme.primary,
         borderColor = scheme.primary.copy(alpha = 0.4f),
         shadowColor = scheme.primary.copy(alpha = 0.55f),
-        modifier = Modifier.size(width = 116.dp, height = 76.dp),
+        modifier = Modifier.size(width = 92.dp, height = 70.dp),
       ) {
         Icon(
           imageVector = if (state == PlaybackUiState.Playing) {
@@ -921,27 +883,27 @@ private fun ControlDock(
             },
           ),
           tint = scheme.onPrimary,
-          modifier = Modifier.size(40.dp),
+          modifier = Modifier.size(38.dp),
         )
       }
     }
-    Spacer(Modifier.width(10.dp))
+    Spacer(Modifier.width(6.dp))
     TransportPill(
       onClick = onNext,
       enabled = state != PlaybackUiState.Loading,
       containerColor = scheme.surface.copy(alpha = 0.5f),
       borderColor = Color.White.copy(alpha = 0.16f),
-      modifier = Modifier.size(width = 76.dp, height = 64.dp),
+      modifier = Modifier.size(width = 60.dp, height = 58.dp),
     ) {
       Icon(
         Icons.Filled.SkipNext,
         contentDescription = stringResource(R.string.transport_next),
         tint = scheme.onSurface,
-        modifier = Modifier.size(30.dp),
+        modifier = Modifier.size(28.dp),
       )
     }
-    Spacer(Modifier.width(10.dp))
-    IconButton(onClick = onCycleRepeat, modifier = Modifier.size(44.dp)) {
+    Spacer(Modifier.width(6.dp))
+    IconButton(onClick = onCycleRepeat, modifier = Modifier.size(40.dp)) {
       Icon(
         imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
         contentDescription = stringResource(R.string.transport_repeat, repeatMode.name),

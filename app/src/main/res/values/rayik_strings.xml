@@ -105,6 +105,12 @@
   <string name="home_all">All</string>
   <string name="home_loading">Tuning your home…</string>
 
+  <string name="search_browse_title">Browse all</string>
+  <string name="search_recents">Recent searches</string>
+  <string name="search_clear">Clear</string>
+  <string name="search_top_result">Top result</string>
+  <string name="search_songs_title">Songs</string>
+
   <string name="search_title">Find it with one line</string>
   <string name="search_body">Only remember a single lyric? That’s plenty — type it and hear it.</string>
   <string name="search_hint">Songs, artists, or a half-remembered lyric</string>

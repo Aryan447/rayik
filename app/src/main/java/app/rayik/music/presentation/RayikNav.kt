@@ -82,9 +82,12 @@ fun RayikNav() {
   }
 
   if (playerSheetOpen) {
+    // No system drag handle: the sheet content already draws its own grab
+    // pill, and two handles stacked reads broken, not premium.
     ModalBottomSheet(
       onDismissRequest = { playerSheetOpen = false },
       sheetState = sheetState,
+      dragHandle = {},
     ) {
       NowPlayingSheetContent(onCollapse = { playerSheetOpen = false })
     }
