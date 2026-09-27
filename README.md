@@ -58,11 +58,11 @@ via env `YOUTUBE_INNERTUBE_API_KEY`, `-PinnertubeApiKey`, or
 ## Website (Cloudflare Pages)
 
 `site/` is an Astro 7 static site built with **bun**. Cloudflare settings:
-Root `site`, build `bun run build`, output `dist`. Pin `BUN_VERSION` on the
-dashboard to match `site/.bun-version` — Cloudflare's default bun is older
-and cannot read newer lockfiles. After upgrading local bun, bump both the
-file and the dashboard var; the Site Guard workflow fails loudly if they
-drift. Local dev: `bun install && bun run dev` inside `site/`.
+Root `site`, build `bun run build`, output `dist`, `BUN_VERSION=latest`
+(matching `site/.bun-version`). Latest bun always reads the committed
+lockfile, so no dashboard updates on bun upgrades; the Site Guard
+workflow builds with the same version and fails exactly when a deploy
+would. Local dev: `bun install && bun run dev` inside `site/`.
 
 ## How it plays (honest version)
 

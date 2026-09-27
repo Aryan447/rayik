@@ -1,9 +1,8 @@
 name: Site Guard
 
-# Keeps Cloudflare Pages honest: the pinned bun (site/.bun-version)
-# must read site/bun.lock, and the Astro site must build. If you
-# upgrade local bun and this goes red, bump BUN_VERSION on the
-# Cloudflare dashboard to match site/.bun-version and update that file.
+# Mirrors Cloudflare Pages: installs with the same bun
+# (site/.bun-version, currently `latest`) and builds the Astro site.
+# Goes red exactly when a deploy would.
 
 on:
   pull_request:
