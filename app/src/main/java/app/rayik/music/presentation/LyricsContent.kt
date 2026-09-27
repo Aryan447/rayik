@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +55,7 @@ fun LyricsPreviewCard(
   onToggleExpand: () -> Unit,
   modifier: Modifier = Modifier,
   onShareCard: (() -> Unit)? = null,
+  onOpenImmersive: (() -> Unit)? = null,
 ) {
   Surface(
     tonalElevation = 0.dp,
@@ -82,6 +84,18 @@ fun LyricsPreviewCard(
           fontWeight = FontWeight.Bold,
           modifier = Modifier.weight(1f),
         )
+        if (onOpenImmersive != null) {
+          androidx.compose.material3.IconButton(
+            onClick = onOpenImmersive,
+            modifier = Modifier.size(40.dp),
+          ) {
+            Icon(
+              imageVector = Icons.Filled.Fullscreen,
+              contentDescription = stringResource(R.string.lyrics_fullscreen),
+              modifier = Modifier.size(20.dp),
+            )
+          }
+        }
         if (onShareCard != null) {
           androidx.compose.material3.IconButton(
             onClick = onShareCard,

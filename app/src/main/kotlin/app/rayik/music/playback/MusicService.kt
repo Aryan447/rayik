@@ -171,7 +171,6 @@ import app.rayik.music.constants.RepeatModeKey
 import app.rayik.music.constants.ScrobbleDelayPercentKey
 import app.rayik.music.constants.ScrobbleDelaySecondsKey
 import app.rayik.music.constants.ScrobbleMinSongDurationKey
-import app.rayik.music.constants.ShowLyricsKey
 import app.rayik.music.constants.SkipSilenceKey
 import app.rayik.music.constants.SmartTrimmerKey
 import app.rayik.music.constants.StopMusicOnTaskClearKey
@@ -1252,13 +1251,11 @@ class MusicService :
             }
         }
 
-        combine(
-            currentMediaMetadata.distinctUntilChangedBy { it?.id },
-            dataStore.data.map { it[ShowLyricsKey] ?: false }.distinctUntilChanged(),
-        ) { mediaMetadata, showLyrics ->
-            mediaMetadata to showLyrics
-        }.collectLatest(ioScope) { (mediaMetadata, showLyrics) ->
-            if (showLyrics && mediaMetadata != null && !mediaMetadata.isPodcast && database
+        // Lyrics are fetched for every played track (and cached in the DB):
+        // gating this on the legacy ShowLyricsKey toggle meant nothing ever
+        // fetched, since no current UI writes that key.
+        currentMediaMetadata.distinctUntilChangedBy { it?.id }.collectLatest(ioScope) { mediaMetadata ->
+            if (mediaMetadata != null && !mediaMetadata.isPodcast && database
                     .lyrics(mediaMetadata.id)
                     .first() == null
             ) {
