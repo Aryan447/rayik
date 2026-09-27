@@ -61,26 +61,29 @@ jobs:
           fi
           echo "Using apksigner: $APKSIGNER"
 
-          APK_COUNT=$(find "$RELEASE_APK_DIR" -name "*-unsigned.apk" -type f | wc -l)
+          # With an explicit outputFileName, AGP emits the final name even
+          # when unsigned — sign to a temp file, verify, then move it back
+          # so the published file keeps its clean rāyik name.
+          APK_COUNT=$(find "$RELEASE_APK_DIR" -name "*.apk" -type f | wc -l)
           if [ "$APK_COUNT" -eq 0 ]; then
-            echo "No unsigned release APKs found"
+            echo "No release APKs found"
             ls -lah "$RELEASE_APK_DIR"
             exit 1
           fi
 
-          find "$RELEASE_APK_DIR" -name "*-unsigned.apk" -type f | while read -r apk; do
-            signed_apk="${apk/-unsigned/}"
+          find "$RELEASE_APK_DIR" -name "*.apk" -type f | while read -r apk; do
+            tmp_apk="${apk%.apk}-signed.apk"
 
             "$APKSIGNER" sign \
               --ks release.keystore \
               --ks-key-alias "${{ secrets.SIGNING_KEY_ALIAS }}" \
               --ks-pass "pass:${{ secrets.SIGNING_STORE_PASSWORD }}" \
               --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
-              --out "$signed_apk" \
+              --out "$tmp_apk" \
               "$apk"
 
-            "$APKSIGNER" verify "$signed_apk"
-            rm "$apk"
+            "$APKSIGNER" verify "$tmp_apk"
+            mv "$tmp_apk" "$apk"
           done
 
           AAB_FOUND=0
