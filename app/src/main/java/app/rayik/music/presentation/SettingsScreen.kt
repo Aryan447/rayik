@@ -2,6 +2,7 @@ package app.rayik.music.presentation
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -192,7 +193,7 @@ fun SettingsScreen(
         .verticalScroll(rememberScrollState()),
       verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
     ) {
-      Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineSmall)
+      GradientHeadline(stringResource(R.string.settings_title))
 
       ProfileCard(
         loggedIn = loggedIn,
@@ -506,7 +507,12 @@ private fun ProfileCard(
           modifier = Modifier
             .size(56.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primaryContainer),
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .border(
+              2.dp,
+              MaterialTheme.colorScheme.tertiary,
+              CircleShape,
+            ),
           contentAlignment = Alignment.Center,
         ) {
           Text(

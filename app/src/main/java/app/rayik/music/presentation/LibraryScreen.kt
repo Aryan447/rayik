@@ -104,11 +104,7 @@ fun LibraryScreen(
     item {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-          Text(
-            stringResource(R.string.library_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-          )
+          GradientHeadline(stringResource(R.string.library_title))
           Text(
             stringResource(
               R.string.library_counts,

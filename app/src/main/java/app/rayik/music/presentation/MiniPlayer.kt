@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
+import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 import app.rayik.music.R
 
@@ -53,6 +54,10 @@ fun MiniPlayer(
   Surface(
     tonalElevation = 4.dp,
     shape = RoundedCornerShape(20.dp),
+    border = androidx.compose.foundation.BorderStroke(
+      1.dp,
+      BrandGradient.glassHairline(0.10f),
+    ),
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),

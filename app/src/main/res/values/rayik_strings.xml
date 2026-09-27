@@ -12,6 +12,7 @@
   <string name="theme_monsoon">Monsoon</string>
   <string name="theme_indigo">Indigo</string>
   <string name="theme_rangoli">Rangoli</string>
+  <string name="theme_saffron">Saffron</string>
   <string name="theme_vinyl_noir">Vinyl Noir</string>
   <string name="theme_forest">Forest</string>
   <string name="theme_rose_gold">Rose Gold</string>
@@ -79,6 +80,7 @@
   <string name="action_open_queue">Jump to Up next</string>
   <string name="action_collapse">Close player</string>
   <string name="lyrics_preview_title">Lyrics preview</string>
+  <string name="lyrics_fullscreen">Full-screen lyrics</string>
   <string name="lyrics_show_more">Full lyrics</string>
   <string name="lyrics_show_less">Show less</string>
 

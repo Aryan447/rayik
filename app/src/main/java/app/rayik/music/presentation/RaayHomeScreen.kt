@@ -280,11 +280,7 @@ private fun GreetingHeader() {
     RayikMark(modifier = Modifier.size(48.dp))
     Spacer(Modifier.width(MaterialTheme.spacing.medium))
     Column {
-      Text(
-        greeting,
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
-      )
+      GradientHeadline(greeting)
       Text(
         date,
         style = MaterialTheme.typography.bodyMedium,
@@ -405,6 +401,10 @@ private fun RaayPickCard(
   Surface(
     shape = RoundedCornerShape(24.dp),
     tonalElevation = 2.dp,
+    border = androidx.compose.foundation.BorderStroke(
+      1.dp,
+      MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+    ),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(

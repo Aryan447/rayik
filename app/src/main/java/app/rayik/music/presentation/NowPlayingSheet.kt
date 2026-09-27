@@ -60,6 +60,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -86,6 +87,7 @@ import app.rayik.music.player.PlayerViewModel
 import app.rayik.music.player.RepeatMode
 import app.rayik.music.player.buildPlaybackDiagnostics
 import app.rayik.music.player.formatMs
+import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 
 /** Lazy-list indices of the scroll targets; header sections above are always emitted. */
@@ -122,6 +124,7 @@ fun NowPlayingSheetContent(
   val listState = rememberLazyListState()
   val scope = rememberCoroutineScope()
   var lyricsExpanded by remember { mutableStateOf(false) }
+  var immersiveLyrics by remember { mutableStateOf(false) }
 
   val artwork = current?.artworkUrl.orEmpty()
   val scheme = MaterialTheme.colorScheme
@@ -178,23 +181,23 @@ fun NowPlayingSheetContent(
         ),
       )
     }
-    // Color bloom orbs for depth — premium mesh feel
+    // Theme bloom orbs for depth — premium mesh feel (shared primitives).
     Box(
       Modifier.matchParentSize().background(
-        Brush.radialGradient(
-          0f to primary.copy(alpha = 0.38f),
-          0.55f to Color.Transparent,
-          center = androidx.compose.ui.geometry.Offset(200f, 120f),
+        BrandGradient.bloomBrush(
+          color = primary,
+          alpha = 0.38f,
+          center = Offset(200f, 120f),
           radius = 900f,
         ),
       ),
     )
     Box(
       Modifier.matchParentSize().background(
-        Brush.radialGradient(
-          0f to scheme.tertiary.copy(alpha = 0.28f),
-          0.6f to Color.Transparent,
-          center = androidx.compose.ui.geometry.Offset(900f, 1500f),
+        BrandGradient.bloomBrush(
+          color = scheme.tertiary,
+          alpha = 0.28f,
+          center = Offset(900f, 1500f),
           radius = 1100f,
         ),
       ),
@@ -453,6 +456,7 @@ fun NowPlayingSheetContent(
               artist = current?.artist.orEmpty(),
               artworkUrl = artwork,
             ),
+            onOpenImmersive = { immersiveLyrics = true },
           )
           Spacer(Modifier.height(MaterialTheme.spacing.medium))
         }
@@ -547,6 +551,17 @@ fun NowPlayingSheetContent(
         item {
           Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
         }
+      }
+    }
+
+    if (immersiveLyrics) {
+      Surface(Modifier.fillMaxSize()) {
+        ImmersiveLyrics(
+          raw = rawLyrics,
+          positionMs = positionMs,
+          artworkUrl = artwork,
+          onClose = { immersiveLyrics = false },
+        )
       }
     }
   }

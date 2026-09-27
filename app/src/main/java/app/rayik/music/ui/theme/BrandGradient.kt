@@ -72,4 +72,41 @@ object BrandGradient {
       listOf(scheme.primary, scheme.secondary, scheme.tertiary, scheme.primary),
     )
   }
+
+  /**
+   * Headline text gradient: `primary → secondary` diagonal. Both stops stay
+   * readable on light and dark surfaces across all themes (tertiary is
+   * reserved for accents — champagne-on-cream does not survive).
+   */
+  @Composable
+  @ReadOnlyComposable
+  fun gradientTextBrush(): Brush {
+    val scheme = MaterialTheme.colorScheme
+    return Brush.linearGradient(
+      listOf(scheme.primary, scheme.secondary),
+    )
+  }
+
+  /**
+   * Ambient bloom: `color` at [alpha] melting to transparent. Backs hero
+   * cards and screen headers so every theme bleeds into its surfaces.
+   */
+  @Composable
+  @ReadOnlyComposable
+  fun bloomBrush(
+    color: Color,
+    alpha: Float,
+    center: androidx.compose.ui.geometry.Offset = androidx.compose.ui.geometry.Offset.Unspecified,
+    radius: Float = Float.POSITIVE_INFINITY,
+  ): Brush {
+    return Brush.radialGradient(
+      0f to color.copy(alpha = alpha),
+      1f to Color.Transparent,
+      center = center,
+      radius = radius,
+    )
+  }
+
+  /** Frosted-glass hairline used on elevated pills, cards and the nav. */
+  fun glassHairline(alpha: Float = 0.14f): Color = Color.White.copy(alpha = alpha)
 }

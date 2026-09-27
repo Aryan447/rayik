@@ -16,7 +16,31 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
+
+/**
+ * Screen headline rendered in the active theme's primary → secondary
+ * gradient. Bold display text keeps both stops readable on light and
+ * dark surfaces across all themes.
+ */
+@Composable
+fun GradientHeadline(
+  text: String,
+  style: TextStyle = MaterialTheme.typography.headlineSmall,
+  modifier: Modifier = Modifier,
+) {
+  Text(
+    text,
+    style = style.copy(
+      brush = BrandGradient.gradientTextBrush(),
+      fontWeight = FontWeight.Bold,
+    ),
+    modifier = modifier,
+  )
+}
 
 /** Copies diagnostics for a bug report — no adb needed on the reporter's side. */
 fun copyDiagnostics(context: Context, details: String) {

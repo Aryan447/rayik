@@ -153,6 +153,18 @@ enum class AppTheme(
     backgroundDark = Color(0xFF200C0A),
     searchKeywords = "rangoli, kolam, festive, red",
   ),
+  Saffron(
+    titleRes = R.string.theme_saffron,
+    primaryLight = Color(0xFFB25A00),
+    primaryDark = Color(0xFFFFA63D),
+    secondaryLight = Color(0xFF8A4A12),
+    secondaryDark = Color(0xFFDE9A45),
+    tertiaryLight = Color(0xFF7A3D0A),
+    tertiaryDark = Color(0xFFFFC966),
+    backgroundLight = Color(0xFFFFF6E9),
+    backgroundDark = Color(0xFF170D05),
+    searchKeywords = "saffron, kesar, kesariya, orange, amber, marigold",
+  ),
   VinylNoir(
     titleRes = R.string.theme_vinyl_noir,
     primaryLight = Color(0xFF1E2025),
