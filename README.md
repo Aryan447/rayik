@@ -80,10 +80,12 @@ include those lines in bug reports.
 
 ## Tech stack
 
-Kotlin · Jetpack Compose M3 · Media3 1.10.1 ExoPlayer
-(`MediaLibraryService`, OkHttp + transient cache) · Hilt · Room ·
-Coil · Coroutines / StateFlow · JUnit. Playback core forked from
-ArchiveTune — see [ATTRIBUTION.md](ATTRIBUTION.md).
+Kotlin · Jetpack Compose with **Material 3 Expressive** · Media3 1.10.1
+ExoPlayer (`MediaLibraryService`, OkHttp + transient cache) · Hilt ·
+Room · Coil · Coroutines / StateFlow · JUnit. The whole UI — player,
+sheets, pills, carousels — is built on the M3 Expressive system.
+Playback core forked from ArchiveTune — see
+[ATTRIBUTION.md](ATTRIBUTION.md).
 
 ## Project structure
 

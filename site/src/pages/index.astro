@@ -2,6 +2,21 @@
 import '../styles/global.css';
 import Logo from '../components/Logo.astro';
 import { THEMES } from '../data/themes';
+import { readFileSync } from 'node:fs';
+
+// Direct-download URLs baked at build time from the app version — no API
+// needed: github.com/<owner>/<repo>/releases/download/<tag>/<asset>
+// redirects straight to the file. Works the moment the tag is published
+// (drafts 404, which is correct — nothing to download yet).
+const REPO = 'Aryan447/rayik';
+const gradle = readFileSync(new URL('../../../../app/build.gradle.kts', import.meta.url), 'utf8');
+const APP_VERSION = gradle.match(/versionName\s*=\s*"([^"]+)"/)?.[1] ?? '0.0.0';
+const TAG = `v${APP_VERSION}`;
+const APK_NAME = `rayik-universal-${TAG}.apk`;
+const AAB_NAME = `rayik-universal-${TAG}.aab`;
+const APK_URL = `https://github.com/${REPO}/releases/download/${TAG}/${APK_NAME}`;
+const AAB_URL = `https://github.com/${REPO}/releases/download/${TAG}/${AAB_NAME}`;
+const RELEASES_PAGE = `https://github.com/${REPO}/releases`;
 
 const FEATURES = [
   { icon: '&#127911;', h: 'Albums flow perfectly', p: 'Songs melt into each other exactly how the artist meant. No gaps, no jolts.' },
@@ -13,6 +28,7 @@ const FEATURES = [
   { icon: '&#128663;', h: 'At home in your car', p: 'Plays nicely with your car screen and headphones — pause, skip, and go.' },
   { icon: '&#129518;', h: 'Honest sound quality', p: "See exactly what quality you're hearing. No fine print, no fake badges." },
   { icon: '&#127919;', h: 'A fresh mix every week', p: 'New discoveries every week, plus radio that never runs dry.' },
+  { icon: '&#10024;', h: 'Expressive by design', p: 'The whole app is drawn with Material 3 Expressive — springy pills, glass sheets, motion with intent.' },
 ];
 ---
 <!DOCTYPE html>
@@ -28,15 +44,15 @@ const FEATURES = [
 <header class="hero">
   <div class="wrap">
     <Logo />
-    <div class="badge"><span id="heroVersion">Android</span> &bull; Free forever</div>
+    <div class="badge"><span id="heroVersion">{TAG}</span> &bull; Free forever</div>
     <h1>r<span>ā</span>yik</h1>
     <div class="tagline">Music with opinions.</div>
     <p class="sub">rāyik doesn&rsquo;t just play what you ask — it tells you what it thinks, and why. You always get the last word.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" id="dlHero" href="https://github.com/Aryan447/rayik/releases/latest">Download for Android</a>
+      <a class="btn btn-primary" id="dlHero" href={APK_URL}>Download for Android</a>
       <a class="btn btn-ghost" href="#themes">Pick your vibe</a>
     </div>
-    <p class="soon-note" id="dlHeroNote">Fetching the latest release…</p>
+    <p class="soon-note" id="dlHeroNote">Direct download: {APK_NAME}</p>
   </div>
 </header>
 
@@ -69,7 +85,7 @@ const FEATURES = [
 
 <section id="player">
   <h2>It has <span>taste.</span></h2>
-  <p class="sec-sub">Open rāyik in the morning and it already has a thought waiting — with the reason attached. Agree, skip, or tell it why it&rsquo;s wrong.</p>
+  <p class="sec-sub">Open rāyik in the morning and it already has a thought waiting — with the reason attached. Agree, skip, or tell it why it&rsquo;s wrong. Every pixel drawn with Material 3 Expressive.</p>
   <div class="player-mock">
     <div class="art">&#127925;</div>
     <div>
@@ -97,13 +113,14 @@ const FEATURES = [
 </section>
 
 <section class="coming" id="download">
-  <div class="badge" id="dlBadge">Latest release</div>
+  <div class="badge" id="dlBadge">Latest release {TAG}</div>
   <h2>Get <span>rāyik.</span></h2>
-  <p class="sec-sub" style="margin:0 auto 22px;" id="dlMeta">Checking GitHub for the newest build…</p>
+  <p class="sec-sub" style="margin:0 auto 22px;" id="dlMeta">{APK_NAME}</p>
   <div class="cta-row">
-    <a class="btn btn-primary" id="dlMain" href="https://github.com/Aryan447/rayik/releases/latest">Download APK</a>
-    <a class="btn btn-ghost" href="https://github.com/Aryan447/rayik/releases">All releases</a>
+    <a class="btn btn-primary" id="dlMain" href={APK_URL}>Download {APK_NAME}</a>
+    <a class="btn btn-ghost" href={RELEASES_PAGE}>All releases</a>
   </div>
+  <p class="soon-note">Prefer the bundle? <a href={AAB_URL} style="color:var(--primary);">Download {AAB_NAME}</a></p>
   <p class="soon-note">Free forever &bull; GPL-3.0 &bull; No Play Store &mdash; unofficial clients get removed there. F-Droid is planned.<br>Unofficial community client. Not affiliated with Google or YouTube.</p>
 </section>
 
@@ -125,7 +142,6 @@ document.querySelectorAll('[data-theme-card]').forEach((c) => {
   c.addEventListener('click', () => setTheme(c.dataset.themeCard));
 });
 
-const RELEASES_LATEST = 'https://github.com/Aryan447/rayik/releases/latest';
 const RELEASES_API = 'https://api.github.com/Aryan447/rayik/releases/latest';
 function fmtMB(b) { return (b / 1048576).toFixed(1) + ' MB'; }
 function fmtDate(iso) {
@@ -147,20 +163,16 @@ async function loadRelease() {
     if (heroVer && tag) heroVer.textContent = tag;
     if (badge && tag) badge.textContent = 'Latest release ' + tag;
     if (apk) {
+      // A newer published release than the baked-in build: point at it.
       const label = 'rāyik ' + tag + ' • ' + fmtMB(apk.size || 0) + ' • ' + fmtDate(apk.updated_at || j.published_at);
       if (meta) meta.textContent = label;
       if (mainBtn) { mainBtn.href = apk.browser_download_url; mainBtn.textContent = 'Download ' + apk.name; }
       if (heroBtn) { heroBtn.href = apk.browser_download_url; }
       if (heroNote) heroNote.textContent = label + ' — tapped from GitHub Releases, always the newest build.';
-    } else {
-      throw new Error('no apk');
     }
-  } catch (e) {
-    if (meta) meta.textContent = 'Could not reach the GitHub API — grab the newest build from the releases page.';
-    if (heroNote) heroNote.textContent = 'Free. Get the newest build from GitHub Releases.';
-    if (mainBtn) mainBtn.href = RELEASES_LATEST;
-    if (heroBtn) heroBtn.href = RELEASES_LATEST;
-  }
+    // No direct asset (or API unreachable): the baked-in
+    // releases/download/ links from the build stay as they are.
+  } catch (e) { /* baked-in links stand */ }
 }
 loadRelease();
 </script>
