@@ -25,6 +25,10 @@ build/
 */*/build/
 # Kotlin daemon / compiler sessions
 .kotlin/
+# Astro site (Cloudflare Pages)
+site/node_modules/
+site/dist/
+site/.astro/
 # buildSrc outputs
 buildSrc/build/
 # Local IDE / profiling

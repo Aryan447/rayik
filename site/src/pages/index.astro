@@ -1,0 +1,168 @@
+---
+import '../styles/global.css';
+import Logo from '../components/Logo.astro';
+import { THEMES } from '../data/themes';
+
+const FEATURES = [
+  { icon: '&#127911;', h: 'Albums flow perfectly', p: 'Songs melt into each other exactly how the artist meant. No gaps, no jolts.' },
+  { icon: '&#128269;', h: 'Find it with one line', p: 'Only remember a single lyric? That\u2019s plenty — hum it, type it, hear it.' },
+  { icon: '&#128196;', h: "Lyrics and what's next, together", p: 'Sing along and see the queue on one screen. No tab-hopping mid-song.' },
+  { icon: '&#128268;', h: 'Bring your playlists', p: 'Years of Spotify playlists move with you in one tap. Nothing left behind.' },
+  { icon: '&#127959;', h: 'Offline for the metro', p: 'Pin favorites for tunnels and flights. rāyik tidies up the rest by itself.' },
+  { icon: '&#127863;', h: 'Sleep timer and sound shaping', p: "Drift off to slow songs. Tune bass and treble to your ears, not someone else's." },
+  { icon: '&#128663;', h: 'At home in your car', p: 'Plays nicely with your car screen and headphones — pause, skip, and go.' },
+  { icon: '&#129518;', h: 'Honest sound quality', p: "See exactly what quality you're hearing. No fine print, no fake badges." },
+  { icon: '&#127919;', h: 'A fresh mix every week', p: 'New discoveries every week, plus radio that never runs dry.' },
+];
+---
+<!DOCTYPE html>
+<html lang="en" data-theme="gold">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rāyik — music with opinions | Download for Android</title>
+<meta name="description" content="rāyik is a new music app with opinions. It tells you what it thinks and why — you always get the last word. Free download for Android.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <Logo />
+    <div class="badge"><span id="heroVersion">Android</span> &bull; Free forever</div>
+    <h1>r<span>ā</span>yik</h1>
+    <div class="tagline">Music with opinions.</div>
+    <p class="sub">rāyik doesn&rsquo;t just play what you ask — it tells you what it thinks, and why. You always get the last word.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" id="dlHero" href="https://github.com/Aryan447/rayik/releases/latest">Download for Android</a>
+      <a class="btn btn-ghost" href="#themes">Pick your vibe</a>
+    </div>
+    <p class="soon-note" id="dlHeroNote">Fetching the latest release…</p>
+  </div>
+</header>
+
+<div class="wrap">
+<section id="themes">
+  <h2>Pick your <span>vibe.</span></h2>
+  <p class="sec-sub">Sixteen handcrafted looks, from low-light vinyl to full Indian street color. Tap any name and this whole page changes — that&rsquo;s exactly how it will feel in the app.</p>
+  <div class="picker" id="picker" role="group" aria-label="Theme picker">
+    {THEMES.map((t) => (
+      <button data-k={t.k} data-theme-btn aria-pressed={t.k === 'gold' ? 'true' : 'false'}>
+        <span class="dot" style={`background:${t.c}`}></span>{t.n}
+      </button>
+    ))}
+  </div>
+  <div class="grid" id="themeGrid">
+    {THEMES.map((t) => (
+      <div class="card" data-theme-card={t.k} style="cursor:pointer;">
+        <div class="kind">{t.mood}</div>
+        <h3>{t.n}</h3>
+        <p>{t.d}</p>
+        <div class="swatches">
+          <div class="sw" style={`background:${t.c}`}></div>
+          <div class="sw" style={`background:${t.s}`}></div>
+          <div class="sw" style={`background:${t.t}`}></div>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
+
+<section id="player">
+  <h2>It has <span>taste.</span></h2>
+  <p class="sec-sub">Open rāyik in the morning and it already has a thought waiting — with the reason attached. Agree, skip, or tell it why it&rsquo;s wrong.</p>
+  <div class="player-mock">
+    <div class="art">&#127925;</div>
+    <div>
+      <div class="kind" style="font-size:12px;color:var(--tertiary);font-weight:700;letter-spacing:.08em;text-transform:uppercase;">This morning &bull; because you looped Arijit 12&times;</div>
+      <h3 style="font-size:22px;margin:4px 0;">Mehfil Mix — Rain Edition</h3>
+      <div class="bar"></div>
+      <div class="chips"><span class="chip hot">&#9654; Play</span><span class="chip">Something else</span><span class="chip">Why this?</span><span class="chip">More like this</span><span class="chip">Never this</span></div>
+    </div>
+  </div>
+  <div class="feat-grid" style="margin-top:14px;">
+    <div class="feat"><div class="icon">&#127783;</div><h3>Moods, not menus</h3><p>Focus, rain, drive, mehfil — your day already has a soundtrack, rāyik just follows it.</p></div>
+    <div class="feat"><div class="icon">&#27573;</div><h3>You train it</h3><p>Love it, skip it, bury it. Every tap sharpens tomorrow morning&rsquo;s pick.</p></div>
+    <div class="feat"><div class="icon">&#128172;</div><h3>It shows its work</h3><p>Every suggestion comes with its reason. No black-box shuffling.</p></div>
+  </div>
+</section>
+
+<section id="features">
+  <h2>Everything you <span>love.</span></h2>
+  <p class="sec-sub">The best bits of every music app you&rsquo;ve used — in one place, without the clutter.</p>
+  <div class="feat-grid">
+    {FEATURES.map((f) => (
+      <div class="feat"><div class="icon" set:html={f.icon}></div><h3>{f.h}</h3><p>{f.p}</p></div>
+    ))}
+  </div>
+</section>
+
+<section class="coming" id="download">
+  <div class="badge" id="dlBadge">Latest release</div>
+  <h2>Get <span>rāyik.</span></h2>
+  <p class="sec-sub" style="margin:0 auto 22px;" id="dlMeta">Checking GitHub for the newest build…</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" id="dlMain" href="https://github.com/Aryan447/rayik/releases/latest">Download APK</a>
+    <a class="btn btn-ghost" href="https://github.com/Aryan447/rayik/releases">All releases</a>
+  </div>
+  <p class="soon-note">Free forever &bull; GPL-3.0 &bull; No Play Store &mdash; unofficial clients get removed there. F-Droid is planned.<br>Unofficial community client. Not affiliated with Google or YouTube.</p>
+</section>
+
+<footer>rāyik &mdash; music with opinions. Free forever &bull; GPL-3.0.</footer>
+</div>
+
+<script is:inline>
+const rootEl = document.documentElement;
+function setTheme(k) {
+  rootEl.setAttribute('data-theme', k);
+  document.querySelectorAll('[data-theme-btn]').forEach((b) => {
+    b.setAttribute('aria-pressed', b.dataset.k === k ? 'true' : 'false');
+  });
+}
+document.querySelectorAll('[data-theme-btn]').forEach((b) => {
+  b.addEventListener('click', () => setTheme(b.dataset.k));
+});
+document.querySelectorAll('[data-theme-card]').forEach((c) => {
+  c.addEventListener('click', () => setTheme(c.dataset.themeCard));
+});
+
+const RELEASES_LATEST = 'https://github.com/Aryan447/rayik/releases/latest';
+const RELEASES_API = 'https://api.github.com/Aryan447/rayik/releases/latest';
+function fmtMB(b) { return (b / 1048576).toFixed(1) + ' MB'; }
+function fmtDate(iso) {
+  try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+  catch (e) { return ''; }
+}
+async function loadRelease() {
+  const heroBtn = document.getElementById('dlHero'), heroNote = document.getElementById('dlHeroNote');
+  const mainBtn = document.getElementById('dlMain'), meta = document.getElementById('dlMeta');
+  const badge = document.getElementById('dlBadge'), heroVer = document.getElementById('heroVersion');
+  try {
+    const r = await fetch(RELEASES_API, { headers: { 'Accept': 'application/vnd.github+json' } });
+    if (!r.ok) throw new Error('http ' + r.status);
+    const j = await r.json();
+    const assets = j.assets || [];
+    const apk = assets.find((a) => /\.apk$/i.test(a.name) && /universal/i.test(a.name))
+      || assets.find((a) => /\.apk$/i.test(a.name));
+    const tag = j.tag_name || '';
+    if (heroVer && tag) heroVer.textContent = tag;
+    if (badge && tag) badge.textContent = 'Latest release ' + tag;
+    if (apk) {
+      const label = 'rāyik ' + tag + ' • ' + fmtMB(apk.size || 0) + ' • ' + fmtDate(apk.updated_at || j.published_at);
+      if (meta) meta.textContent = label;
+      if (mainBtn) { mainBtn.href = apk.browser_download_url; mainBtn.textContent = 'Download ' + apk.name; }
+      if (heroBtn) { heroBtn.href = apk.browser_download_url; }
+      if (heroNote) heroNote.textContent = label + ' — tapped from GitHub Releases, always the newest build.';
+    } else {
+      throw new Error('no apk');
+    }
+  } catch (e) {
+    if (meta) meta.textContent = 'Could not reach the GitHub API — grab the newest build from the releases page.';
+    if (heroNote) heroNote.textContent = 'Free. Get the newest build from GitHub Releases.';
+    if (mainBtn) mainBtn.href = RELEASES_LATEST;
+    if (heroBtn) heroBtn.href = RELEASES_LATEST;
+  }
+}
+loadRelease();
+</script>
+</body>
+</html>
