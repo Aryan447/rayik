@@ -85,7 +85,7 @@ database/       Room entities/DAOs
 lyrics/         lyric providers (lrclib primary)
 spotifycore/    Spotify import/search/matching
 moriextractor/ + morideobfuscator/  signature decipher (playback-critical)
-docs/           static coming-soon site (GitHub Pages, no build)
+site/           Astro website (Cloudflare Pages, `bun run build`)
 gradle/         version catalog (libs.versions.toml)
 .github/        CI (unit tests + release assemble/bundle) and releases
 ```

@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 /**
- * Brand gradients ported stop-for-stop from `docs/index.html` so the app and
+ * Brand gradients ported stop-for-stop from `site/` so the app and
  * the site share one identity. Two families:
  * - **Fixed gold** ([goldVerticalBrush], [ringDiagonalBrush]): brand identity
  *   (logo bars, wordmark). Never theme-tinted — gold is gold in every theme.

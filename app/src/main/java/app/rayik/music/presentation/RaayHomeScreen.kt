@@ -681,7 +681,7 @@ private fun Chip(
 }
 
 /**
- * Brand mark from `docs/index.html`: five gold studio-EQ bars inside the
+ * Brand mark from `site/src/components/Logo.astro`: five gold studio-EQ bars inside the
  * acoustic ring on the dark radial tile. Symmetric, so RTL-safe.
  */
 @Composable
