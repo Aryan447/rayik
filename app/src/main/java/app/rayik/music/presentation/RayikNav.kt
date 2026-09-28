@@ -3,11 +3,8 @@ package app.rayik.music.presentation
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -20,6 +17,8 @@ import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -95,9 +94,10 @@ fun RayikNav() {
 }
 
 /**
- * Floating frosted nav pill: detached from the screen edges with a
- * translucent surface + hairline border, springy selection pills.
- * (True backdrop blur needs Haze — intentionally not vendored yet.)
+ * The standard M3 Expressive floating dock: [HorizontalFloatingToolbar]
+ * with the official container shape and opaque standard colors, so feed
+ * content can never bleed through it. Springy per-tab selection kept in
+ * our theme colors.
  */
 @Composable
 private fun FloatingNavPill(
@@ -105,75 +105,76 @@ private fun FloatingNavPill(
   onSelect: (Int) -> Unit,
 ) {
   val tabs = Tab.entries
-  Box(
+  HorizontalFloatingToolbar(
+    expanded = true,
     modifier = Modifier
       .fillMaxWidth()
       .navigationBarsPadding()
       .padding(horizontal = 20.dp, vertical = 10.dp),
-    contentAlignment = Alignment.Center,
+    colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
+    shape = FloatingToolbarDefaults.ContainerShape,
   ) {
-    Surface(
-      shape = RoundedCornerShape(30.dp),
-      color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
-      tonalElevation = 3.dp,
-      shadowElevation = 12.dp,
-      border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
+    tabs.forEachIndexed { index, tab ->
+      DockTab(
+        selected = selected == index,
+        tab = tab,
+        onClick = { onSelect(index) },
+      )
+    }
+  }
+}
+
+@Composable
+private fun RowScope.DockTab(
+  selected: Boolean,
+  tab: Tab,
+  onClick: () -> Unit,
+) {
+  val label = stringResource(tab.labelRes)
+  val container by animateColorAsState(
+    targetValue = if (selected) {
+      MaterialTheme.colorScheme.primaryContainer
+    } else {
+      Color.Transparent
+    },
+    animationSpec = spring(
+      dampingRatio = Spring.DampingRatioMediumBouncy,
+      stiffness = Spring.StiffnessMediumLow,
+    ),
+    label = "navPill",
+  )
+  Surface(
+    onClick = onClick,
+    shape = RoundedCornerShape(22.dp),
+    color = container,
+    modifier = Modifier.weight(1f),
+  ) {
+    Column(
+      modifier = Modifier.padding(vertical = 8.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      Row(
-        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-      ) {
-        tabs.forEachIndexed { index, tab ->
-          val isSelected = selected == index
-          val label = stringResource(tab.labelRes)
-          val container by animateColorAsState(
-            targetValue = if (isSelected) {
-              MaterialTheme.colorScheme.primaryContainer
-            } else {
-              Color.Transparent
-            },
-            animationSpec = spring(
-              dampingRatio = Spring.DampingRatioMediumBouncy,
-              stiffness = Spring.StiffnessMediumLow,
-            ),
-            label = "navPill",
-          )
-          Surface(
-            onClick = { onSelect(index) },
-            shape = RoundedCornerShape(22.dp),
-            color = container,
-            modifier = Modifier.weight(1f),
-          ) {
-            Column(
-              modifier = Modifier.padding(vertical = 8.dp),
-              horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-              Icon(
-                tab.icon,
-                contentDescription = label,
-                tint = if (isSelected) {
-                  MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                  MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.size(24.dp),
-              )
-              Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) {
-                  MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                  MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-              )
-            }
-          }
-        }
-      }
+      Icon(
+        tab.icon,
+        contentDescription = label,
+        tint = if (selected) {
+          MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+          MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        modifier = Modifier.size(24.dp),
+      )
+      Text(
+        label,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        color = if (selected) {
+          MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+          MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
     }
   }
 }

@@ -63,9 +63,7 @@ import app.rayik.music.innertube.models.SongItem
 import app.rayik.music.innertube.models.YTItem
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
-import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 /**
  * Raay home: greeting, jump-back-in tiles from your own history, the
@@ -275,27 +273,10 @@ private fun GreetingHeader() {
       else -> R.string.home_greeting_evening
     },
   )
-  val date = rememberDateLine()
   Row(verticalAlignment = Alignment.CenterVertically) {
     RayikMark(modifier = Modifier.size(48.dp))
     Spacer(Modifier.width(MaterialTheme.spacing.medium))
-    Column {
-      GradientHeadline(greeting)
-      Text(
-        date,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-    }
-  }
-}
-
-@Composable
-private fun rememberDateLine(): String {
-  return try {
-    LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d"))
-  } catch (_: Exception) {
-    ""
+    GradientHeadline(greeting)
   }
 }
 
