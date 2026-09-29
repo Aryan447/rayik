@@ -4,7 +4,7 @@
   <string name="pref_appearance_theme_picker_label">App Theme</string>
   <string name="theme_gold">Gold</string>
   <string name="theme_dynamic">Dynamic</string>
-  <string name="theme_barber">Indian Barber Shop</string>
+  <string name="theme_barber">Barber Shop</string>
   <string name="theme_local_bus">Local Bus</string>
   <string name="theme_peacock">Peacock</string>
   <string name="theme_chai">Cutting Chai</string>
@@ -96,6 +96,8 @@
   <string name="transport_shuffle_off">Shuffle off</string>
   <string name="transport_seek_forward">Forward 10 seconds</string>
   <string name="transport_seek_back">Back 10 seconds</string>
+  <string name="dock_show_navigation">Show navigation</string>
+  <string name="dock_show_player">Show player</string>
 
   <string name="home_greeting_morning">Good morning</string>
   <string name="home_greeting_afternoon">Good afternoon</string>

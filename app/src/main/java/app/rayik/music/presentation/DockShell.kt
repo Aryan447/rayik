@@ -43,3 +43,17 @@ fun dockSheetShape() = RoundedCornerShape(
   bottomStart = DockSheetBottomRadius,
   bottomEnd = DockSheetBottomRadius,
 )
+
+/** Artwork tile size in the collapsed transport dock. */
+val DockArtSize: Dp = 52.dp
+
+/** Touch target of the hero play/pause slot (icon itself is oversized). */
+val DockHeroTouch: Dp = 64.dp
+
+/** Selected-tab pill wash on the dock. */
+@Composable
+fun dockSelectedPill(): Color = onDock().copy(alpha = 0.16f)
+
+/** Dimmed dock icon/label (unselected tabs, hints). */
+@Composable
+fun onDockDim(): Color = onDock().copy(alpha = 0.6f)

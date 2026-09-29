@@ -11,7 +11,7 @@ export interface SiteTheme {
 export const THEMES: SiteTheme[] = [
   {k:"gold",n:"Gold",mood:"Festive",c:"#EAC453",s:"#C8A24A",t:"#F9E7A1",d:"Pure celebration. For wedding playlists and big wins."},
   {k:"dynamic",n:"Dynamic",mood:"Adaptive",c:"#D0BCFF",s:"#CCC2DC",t:"#EFB8C8",d:"Matches your wallpaper. Always in sync."},
-  {k:"barber",n:"Indian Barber Shop",mood:"Only on rāyik",c:"#4DB6AC",s:"#E57373",t:"#FFC93C",d:"Teal walls and brass mirrors — the mohalla shop, in your pocket."},
+  {k:"barber",n:"Barber Shop",mood:"Only on rāyik",c:"#4DB6AC",s:"#E57373",t:"#FFC93C",d:"Teal walls and brass mirrors — the mohalla shop, in your pocket."},
   {k:"localbus",n:"Local Bus",mood:"Only on rāyik",c:"#FF6659",s:"#81C784",t:"#FFD54F",d:"Bus-red and ticket-yellow. The whole city, singing along."},
   {k:"peacock",n:"Peacock",mood:"Only on rāyik",c:"#35A7E8",s:"#2FBF71",t:"#F2B705",d:"Shimmering blue-green, tipped with gold. A show-off, like the bird."},
   {k:"chai",n:"Cutting Chai",mood:"Only on rāyik",c:"#E8A93D",s:"#B65D2E",t:"#F5E6C8",d:"Kulhad brown and milky amber. One more sip."},
