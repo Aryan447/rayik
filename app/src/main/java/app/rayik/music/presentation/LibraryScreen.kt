@@ -100,6 +100,11 @@ fun LibraryScreen(
       state = listState,
       modifier = Modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+      // Bottom clearance so the last row clears the inset sheet's
+      // 28dp bottom curve instead of clipping into the dock.
+      contentPadding = PaddingValues(
+        bottom = DockSheetBottomRadius + MaterialTheme.spacing.large,
+      ),
     ) {
     item {
       Row(verticalAlignment = Alignment.CenterVertically) {

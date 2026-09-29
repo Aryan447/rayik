@@ -473,6 +473,9 @@ fun SettingsScreen(
           Text(stringResource(R.string.settings_github))
         }
       }
+      // Bottom clearance so the last card clears the inset sheet's
+      // 28dp bottom curve instead of clipping into the dock.
+      Spacer(Modifier.height(DockSheetBottomRadius + MaterialTheme.spacing.large))
     }
     if (showLogin) {
       Surface(Modifier.fillMaxSize()) {

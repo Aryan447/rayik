@@ -1,5 +1,8 @@
 package app.rayik.music.ui.theme
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.annotation.StringRes
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -10,10 +13,13 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import app.rayik.music.preferences.AppearancePreferences
 import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.R
@@ -73,6 +79,21 @@ fun RayikTheme(
     LocalSpacing provides Spacing(),
     LocalAppTheme provides appTheme,
   ) {
+    // Edge-to-edge icon contrast follows the *app* theme (not the system
+    // theme), so light schemes always get dark status/nav icons and dark
+    // schemes always get light icons — including inside the player
+    // ModalBottomSheet dialog window via LocalView.
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+      SideEffect {
+        // Unwrap dialog-themed contexts (ModalBottomSheet dialog window)
+        // to reach the Activity window that owns this view.
+        val window = view.context.findActivity()?.window ?: return@SideEffect
+        val controller = WindowCompat.getInsetsController(window, view)
+        controller.isAppearanceLightStatusBars = !useDarkTheme
+        controller.isAppearanceLightNavigationBars = !useDarkTheme
+      }
+    }
     MaterialTheme(
       colorScheme = colorScheme,
       typography = AppTypography,
@@ -89,3 +110,10 @@ enum class DarkMode(
   Light(R.string.pref_appearance_darkmode_light),
   System(R.string.pref_appearance_darkmode_system),
 }
+
+private tailrec fun Context.findActivity(): Activity? =
+  when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+  }

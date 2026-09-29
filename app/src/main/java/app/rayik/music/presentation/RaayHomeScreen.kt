@@ -171,6 +171,11 @@ fun RaayHomeScreen(
       LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large),
+        // Bottom clearance so the last shelf clears the inset sheet's
+        // 28dp bottom curve instead of clipping into the dock.
+        contentPadding = PaddingValues(
+          bottom = DockSheetBottomRadius + MaterialTheme.spacing.large,
+        ),
       ) {
         item {
           GreetingHeader()

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -66,14 +67,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -144,9 +141,10 @@ fun NowPlayingSheetContent(
       .fillMaxHeight(0.94f)
       .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
   ) {
-    // ---- Ambient background: artwork sharp on top, melting into blur ----
+    // ---- Ambient background: single blurred-artwork wash, melting
+    // top-to-bottom into surface. No sharp full-bleed twin — that ghost
+    // image behind the sheet is what peeked out at the edges.
     if (artwork.isNotBlank()) {
-      // Blurred base covering the whole sheet.
       AsyncImage(
         model = artwork,
         contentDescription = null,
@@ -154,29 +152,6 @@ fun NowPlayingSheetContent(
         modifier = Modifier
           .matchParentSize()
           .blur(72.dp),
-      )
-      // Sharp twin on top, masked out toward the controls so the art
-      // dissolves gradiently into the blur instead of cutting off.
-      AsyncImage(
-        model = artwork,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-          .matchParentSize()
-          .graphicsLayer {
-            compositingStrategy = CompositingStrategy.Offscreen
-          }
-          .drawWithContent {
-            drawContent()
-            drawRect(
-              brush = Brush.verticalGradient(
-                0f to Color.Black,
-                0.40f to Color.Black,
-                0.68f to Color.Transparent,
-              ),
-              blendMode = BlendMode.DstIn,
-            )
-          },
       )
     } else {
       Box(
@@ -231,7 +206,7 @@ fun NowPlayingSheetContent(
         horizontalAlignment = Alignment.CenterHorizontally,
       ) {
         item {
-          Spacer(Modifier.height(10.dp))
+          Spacer(Modifier.statusBarsPadding().height(10.dp))
           Box(
             Modifier
               .width(42.dp)
@@ -577,11 +552,13 @@ fun NowPlayingSheetContent(
 @Composable
 private fun HeroArtwork(artwork: String) {
   val scheme = MaterialTheme.colorScheme
+  val heroShape = RoundedCornerShape(32.dp)
   Box(
     contentAlignment = Alignment.Center,
     modifier = Modifier.fillMaxWidth(),
   ) {
-    // Glow: blurred twin of the art bleeding into the blur backdrop
+    // Glow: blurred twin clipped to the hero shape so no square halo
+    // leaks past the rounded corners.
     if (artwork.isNotBlank()) {
       AsyncImage(
         model = artwork,
@@ -589,25 +566,26 @@ private fun HeroArtwork(artwork: String) {
         contentScale = ContentScale.Crop,
         modifier = Modifier
           .size(300.dp)
-          .alpha(0.55f)
-          .blur(48.dp),
+          .blur(48.dp)
+          .clip(heroShape)
+          .alpha(0.55f),
       )
     }
     Surface(
-      shape = RoundedCornerShape(32.dp),
-      tonalElevation = 12.dp,
-      shadowElevation = 32.dp,
+      shape = heroShape,
+      tonalElevation = 0.dp,
+      shadowElevation = 0.dp,
       modifier = Modifier
         .size(292.dp)
         .shadow(
           40.dp,
-          RoundedCornerShape(32.dp),
+          heroShape,
           spotColor = scheme.primary.copy(alpha = 0.45f),
         )
         .border(
           1.dp,
           Color.White.copy(alpha = 0.22f),
-          RoundedCornerShape(32.dp),
+          heroShape,
         ),
     ) {
       Box {

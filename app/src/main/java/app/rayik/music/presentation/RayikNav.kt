@@ -55,8 +55,12 @@ fun RayikNav() {
         tonalElevation = 0.dp,
       ) {
         Column(
-          Modifier.fillMaxSize().padding(MaterialTheme.spacing.medium)
-            .padding(bottom = MaterialTheme.spacing.large),
+          Modifier.fillMaxSize()
+            .padding(horizontal = MaterialTheme.spacing.medium)
+            .padding(top = MaterialTheme.spacing.medium),
+          // No bottom padding here: each tab screen owns bottom clearance
+          // (DockSheetBottomRadius + large) so its last row clears the
+          // sheet's 28dp bottom curve instead of clipping into the dock.
         ) {
           when (NavTab.entries[tab]) {
             NavTab.Raay -> RaayHomeScreen(onPlayStarted = {})
@@ -72,10 +76,14 @@ fun RayikNav() {
   if (playerSheetOpen) {
     // No system drag handle: the sheet content already draws its own grab
     // pill, and two handles stacked reads broken, not premium.
+    // Explicit surface container + translucent scrim so the status-bar gap
+    // above the 94%-height sheet never reads as opaque black.
     ModalBottomSheet(
       onDismissRequest = { playerSheetOpen = false },
       sheetState = sheetState,
       dragHandle = {},
+      containerColor = MaterialTheme.colorScheme.surface,
+      scrimColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f),
     ) {
       NowPlayingSheetContent(onCollapse = { playerSheetOpen = false })
     }
