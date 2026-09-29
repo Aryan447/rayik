@@ -540,6 +540,7 @@ fun NowPlayingSheetContent(
           positionMs = positionMs,
           artworkUrl = artwork,
           onClose = { immersiveLyrics = false },
+          isPlaying = playbackState == PlaybackUiState.Playing,
           onSeek = player::seekTo,
         )
       }

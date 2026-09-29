@@ -9,13 +9,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,7 +38,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -50,6 +59,59 @@ import app.rayik.music.ui.theme.spacing
 /** Index of the line playing at [positionMs], or -1 when none matches yet. */
 fun activeLyricIndex(lines: List<LyricsEntry>, positionMs: Long): Int =
   lines.indexOfLast { it.time <= positionMs }.takeIf { it >= 0 } ?: -1
+
+/**
+ * Interpolated lyric clock: position polls arrive every 500ms, which
+ * quantizes karaoke to 2fps. Between polls this advances the last known
+ * position every frame while playing, snapping back to truth on each
+ * poll/seek/pause. Only rows that read the value recompose per frame.
+ */
+@Composable
+fun rememberSmoothLyricPosition(positionMs: Long, isPlaying: Boolean): Long {
+  var smooth by remember { mutableLongStateOf(positionMs) }
+  LaunchedEffect(isPlaying, positionMs) {
+    if (!isPlaying) {
+      smooth = positionMs
+      return@LaunchedEffect
+    }
+    val t0 = withFrameNanos { it }
+    val p0 = positionMs
+    while (true) {
+      val now = withFrameNanos { it }
+      smooth = p0 + (now - t0) / 1_000_000
+    }
+  }
+  return smooth
+}
+
+private val LyricCenterSpring = spring<Float>(stiffness = 260f, dampingRatio = 0.92f)
+
+/**
+ * Glides [index] to the vertical center of the viewport with a soft
+ * spring instead of snapping its top edge into view. Far jumps
+ * (seek/track change) land near center instantly, then settle exactly
+ * on the next frame — no fling, no overshoot wobble.
+ */
+suspend fun LazyListState.centerLyricOn(index: Int) {
+  if (index < 0) return
+  val viewportH = layoutInfo.viewportSize.height
+  if (viewportH <= 0) {
+    scrollToItem(maxOf(0, index - 1))
+    return
+  }
+  fun targetTopFor(size: Int) = (viewportH - size) / 2
+  val visible = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+  if (visible != null) {
+    animateScrollBy((visible.offset - targetTopFor(visible.size)).toFloat(), LyricCenterSpring)
+  } else {
+    scrollToItem(index, -(viewportH / 2 - 120))
+    withFrameNanos { }
+    val settled = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+    if (settled != null) {
+      animateScrollBy((settled.offset - targetTopFor(settled.size)).toFloat(), LyricCenterSpring)
+    }
+  }
+}
 
 /**
  * Spotify-style lyrics card for the player: a 3-line synced preview that
@@ -144,24 +206,33 @@ fun LyricsPreviewCard(
           active < 0 -> lines.take(3)
           else -> lines.drop(active).take(3)
         }
-        Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smaller)) {
-          preview.forEachIndexed { i, line ->
-            Text(
-              line.text,
-              style = if (i == 0) {
-                MaterialTheme.typography.titleMedium
-              } else {
-                MaterialTheme.typography.bodyMedium
-              },
-              fontWeight = if (i == 0) FontWeight.Bold else FontWeight.Normal,
-              color = if (i == 0) {
-                MaterialTheme.colorScheme.onSurface
-              } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-              },
-              maxLines = 2,
-              overflow = TextOverflow.Ellipsis,
-            )
+        // Crossfade between stanzas instead of hard-swapping the text.
+        AnimatedContent(
+          targetState = active,
+          transitionSpec = {
+            fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(220))
+          },
+          label = "lyricPreviewSwap",
+        ) {
+          Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smaller)) {
+            preview.forEachIndexed { i, line ->
+              Text(
+                line.text,
+                style = if (i == 0) {
+                  MaterialTheme.typography.titleMedium
+                } else {
+                  MaterialTheme.typography.bodyMedium
+                },
+                fontWeight = if (i == 0) FontWeight.Bold else FontWeight.Normal,
+                color = if (i == 0) {
+                  MaterialTheme.colorScheme.onSurface
+                } else {
+                  MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+              )
+            }
           }
         }
       } else {
@@ -209,7 +280,8 @@ fun LyricLines(
   val active = remember(lines, positionMs) { activeLyricIndex(lines, positionMs) }
 
   LaunchedEffect(active) {
-    if (active >= 0) listState.animateScrollToItem(maxOf(0, active - 2))
+    // Never fight the user's finger: a skipped line centers on the next change.
+    if (!listState.isScrollInProgress) listState.centerLyricOn(active)
   }
 
   LazyColumn(
