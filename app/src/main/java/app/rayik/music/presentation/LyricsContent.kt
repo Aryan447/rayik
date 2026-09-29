@@ -9,6 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -26,16 +31,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.rayik.music.R
-import app.rayik.music.lyrics.LrcParser
+import app.rayik.music.lyrics.LyricDisplayParser
 import app.rayik.music.lyrics.LyricsEntry
 import app.rayik.music.ui.theme.spacing
 
@@ -56,6 +64,7 @@ fun LyricsPreviewCard(
   modifier: Modifier = Modifier,
   onShareCard: (() -> Unit)? = null,
   onOpenImmersive: (() -> Unit)? = null,
+  onSeek: ((Long) -> Unit)? = null,
 ) {
   Surface(
     tonalElevation = 0.dp,
@@ -120,10 +129,10 @@ fun LyricsPreviewCard(
         return@Column
       }
 
-      val lines = remember(raw) { LrcParser.parseLyrics(raw) }
+      val lines = remember(raw) { LyricDisplayParser.parseTimed(raw) }
       if (lines.isEmpty()) {
         Text(
-          LrcParser.displayLyricsText(raw),
+          LyricDisplayParser.plainText(raw),
           style = MaterialTheme.typography.bodyLarge,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           maxLines = if (expanded) Int.MAX_VALUE else 4,
@@ -160,10 +169,11 @@ fun LyricsPreviewCard(
           lines = lines,
           positionMs = positionMs,
           modifier = Modifier.heightIn(max = 320.dp),
+          onSeek = onSeek,
         )
       }
 
-      if (lines.isNotEmpty() || LrcParser.displayLyricsText(raw).isNotBlank()) {
+      if (lines.isNotEmpty() || LyricDisplayParser.plainText(raw).isNotBlank()) {
         TextButton(
           onClick = onToggleExpand,
           modifier = Modifier.align(Alignment.Start),
@@ -183,12 +193,17 @@ fun LyricsPreviewCard(
   }
 }
 
-/** Synced lines: the active line highlights and the list follows playback. */
+/**
+ * Synced lines: the active line highlights and the list follows playback.
+ * Tapping any line seeks the song there; style changes crossfade instead
+ * of popping.
+ */
 @Composable
 fun LyricLines(
   lines: List<LyricsEntry>,
   positionMs: Long,
   modifier: Modifier = Modifier,
+  onSeek: ((Long) -> Unit)? = null,
 ) {
   val listState = rememberLazyListState()
   val active = remember(lines, positionMs) { activeLyricIndex(lines, positionMs) }
@@ -204,23 +219,64 @@ fun LyricLines(
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     itemsIndexed(lines, key = { index, line -> "$index-${line.time}" }) { index, line ->
-      val isActive = index == active
-      Text(
-        line.text,
-        style = if (isActive) {
-          MaterialTheme.typography.titleMedium
-        } else {
-          MaterialTheme.typography.bodyLarge
-        },
-        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-        color = if (isActive) {
-          MaterialTheme.colorScheme.primary
-        } else {
-          MaterialTheme.colorScheme.onSurfaceVariant
-        },
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth(),
+      LyricRow(
+        line = line,
+        isActive = index == active,
+        onSeek = onSeek?.let { seek -> { seek(line.time) } },
+        modifier = Modifier.animateItem(),
       )
     }
   }
 }
+
+@Composable
+private fun LyricRow(
+  line: LyricsEntry,
+  isActive: Boolean,
+  onSeek: (() -> Unit)?,
+  modifier: Modifier = Modifier,
+) {
+  val color by animateColorAsState(
+    targetValue = if (isActive) {
+      MaterialTheme.colorScheme.primary
+    } else {
+      MaterialTheme.colorScheme.onSurfaceVariant
+    },
+    animationSpec = LYRIC_FOLLOW_COLOR_SPEC,
+    label = "lyricColor",
+  )
+  val scale by animateFloatAsState(
+    targetValue = if (isActive) 1.04f else 1f,
+    animationSpec = LYRIC_FOLLOW_FLOAT_SPEC,
+    label = "lyricScale",
+  )
+  Text(
+    line.text,
+    style = if (isActive) {
+      MaterialTheme.typography.titleMedium
+    } else {
+      MaterialTheme.typography.bodyLarge
+    },
+    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+    color = color,
+    textAlign = TextAlign.Center,
+    modifier = modifier
+      .fillMaxWidth()
+      .graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+      }
+      .then(if (onSeek != null) Modifier.clickable(onClick = onSeek) else Modifier)
+      .padding(horizontal = MaterialTheme.spacing.medium),
+  )
+}
+
+private val LYRIC_FOLLOW_FLOAT_SPEC = tween<Float>(
+  durationMillis = 450,
+  easing = FastOutSlowInEasing,
+)
+
+private val LYRIC_FOLLOW_COLOR_SPEC = tween<Color>(
+  durationMillis = 450,
+  easing = FastOutSlowInEasing,
+)

@@ -3,11 +3,11 @@ package app.rayik.music.presentation
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,25 +57,47 @@ fun RayikNav() {
   var playerSheetOpen by rememberSaveable { mutableStateOf(false) }
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   val tabs = Tab.entries
+  // Inset-sheet layout: content is a rounded sheet sitting on the dark/grey
+  // dock. Player-only in dock (per plan); the floating nav pill stays over
+  // the content, never on the dock.
   // No FOLDERS tab: local files are pinned-offline fallback only.
   // No player tab either: the mini-player opens the full player sheet.
+  val dock = dockContainer()
   Scaffold(
+    containerColor = dock,
+    contentColor = MaterialTheme.colorScheme.onSurface,
     bottomBar = {
-      Column {
-        MiniPlayer(onOpenPlayer = { playerSheetOpen = true })
-        FloatingNavPill(
-          selected = tab,
-          onSelect = { tab = it },
-        )
-      }
+      MiniPlayer(onOpenPlayer = { playerSheetOpen = true })
     }
   ) { inner ->
-    Column(Modifier.fillMaxSize().padding(inner).padding(MaterialTheme.spacing.medium)) {
-      when (tabs[tab]) {
-        Tab.Raay -> RaayHomeScreen(onPlayStarted = {})
-        Tab.Search -> SearchScreen(onPlayStarted = {})
-        Tab.Library -> LibraryScreen()
-        Tab.Settings -> SettingsScreen()
+    Box(
+      Modifier.fillMaxSize().padding(inner),
+    ) {
+      Surface(
+        modifier = Modifier.fillMaxSize(),
+        shape = dockSheetShape(),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+      ) {
+        Box(Modifier.fillMaxSize()) {
+          Column(
+            Modifier.fillMaxSize().padding(MaterialTheme.spacing.medium)
+              // Clearance so the floating pill never covers list content.
+              .padding(bottom = 96.dp),
+          ) {
+            when (tabs[tab]) {
+              Tab.Raay -> RaayHomeScreen(onPlayStarted = {})
+              Tab.Search -> SearchScreen(onPlayStarted = {})
+              Tab.Library -> LibraryScreen()
+              Tab.Settings -> SettingsScreen()
+            }
+          }
+          FloatingNavPill(
+            selected = tab,
+            onSelect = { tab = it },
+            modifier = Modifier.align(Alignment.BottomCenter),
+          )
+        }
       }
     }
   }
@@ -103,13 +125,13 @@ fun RayikNav() {
 private fun FloatingNavPill(
   selected: Int,
   onSelect: (Int) -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   val tabs = Tab.entries
   HorizontalFloatingToolbar(
     expanded = true,
-    modifier = Modifier
+    modifier = modifier
       .fillMaxWidth()
-      .navigationBarsPadding()
       .padding(horizontal = 20.dp, vertical = 10.dp),
     colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
     shape = FloatingToolbarDefaults.ContainerShape,

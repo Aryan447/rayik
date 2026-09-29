@@ -2,6 +2,15 @@ package app.rayik.music.presentation
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -441,6 +450,7 @@ fun NowPlayingSheetContent(
               artworkUrl = artwork,
             ),
             onOpenImmersive = { immersiveLyrics = true },
+            onSeek = player::seekTo,
           )
           Spacer(Modifier.height(MaterialTheme.spacing.medium))
         }
@@ -538,13 +548,24 @@ fun NowPlayingSheetContent(
       }
     }
 
-    if (immersiveLyrics) {
+    // Animated in AND out: the overlay stays composed through exit so
+    // closing glides back to the player instead of blinking away.
+    AnimatedVisibility(
+      visible = immersiveLyrics,
+      enter = fadeIn(animationSpec = tween(350)) +
+        scaleIn(initialScale = 0.96f, animationSpec = tween(350, easing = FastOutSlowInEasing)) +
+        slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(350, easing = FastOutSlowInEasing)),
+      exit = fadeOut(animationSpec = tween(300)) +
+        scaleOut(targetScale = 0.97f, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+        slideOutVertically(targetOffsetY = { it / 10 }, animationSpec = tween(300, easing = FastOutSlowInEasing)),
+    ) {
       Surface(Modifier.fillMaxSize()) {
         ImmersiveLyrics(
           raw = rawLyrics,
           positionMs = positionMs,
           artworkUrl = artwork,
           onClose = { immersiveLyrics = false },
+          onSeek = player::seekTo,
         )
       }
     }

@@ -18,7 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
-import app.rayik.music.lyrics.LrcParser
+import app.rayik.music.lyrics.LyricDisplayParser
 import coil3.BitmapImage
 import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
@@ -61,7 +61,7 @@ fun rememberShareLyricCard(
     val lines = if (raw.isNullOrBlank()) {
       emptyList()
     } else {
-      LrcParser.parseLyrics(raw)
+      LyricDisplayParser.parseTimed(raw)
     }
     lines.getOrNull(activeLyricIndex(lines, positionMs))?.text.orEmpty()
   }

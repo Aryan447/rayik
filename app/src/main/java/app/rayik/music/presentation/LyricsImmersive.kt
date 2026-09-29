@@ -1,7 +1,11 @@
 package app.rayik.music.presentation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,7 +47,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.rayik.music.R
-import app.rayik.music.lyrics.LrcParser
+import app.rayik.music.lyrics.LyricDisplayParser
+import app.rayik.music.lyrics.LyricsEntry
 import app.rayik.music.ui.theme.spacing
 import coil3.compose.AsyncImage
 
@@ -57,20 +63,11 @@ fun ImmersiveLyrics(
   positionMs: Long,
   artworkUrl: String,
   onClose: () -> Unit,
+  onSeek: ((Long) -> Unit)? = null,
 ) {
-  val lines = remember(raw) {
-    if (raw.isNullOrBlank() || raw == "LYRICS_NOT_FOUND") {
-      emptyList()
-    } else {
-      LrcParser.parseLyrics(raw)
-    }
-  }
+  val lines = remember(raw) { LyricDisplayParser.parseTimed(raw) }
   val plainText = remember(raw) {
-    if (lines.isEmpty() && !raw.isNullOrBlank() && raw != "LYRICS_NOT_FOUND") {
-      LrcParser.displayLyricsText(raw)
-    } else {
-      ""
-    }
+    if (lines.isEmpty()) LyricDisplayParser.plainText(raw) else ""
   }
   val active = remember(lines, positionMs) { activeLyricIndex(lines, positionMs) }
   val listState = rememberLazyListState()
@@ -167,27 +164,12 @@ fun ImmersiveLyrics(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
           ) {
             itemsIndexed(lines, key = { index, line -> "$index-${line.time}" }) { index, line ->
-              val isActive = index == active
-              val isPast = active >= 0 && index < active
-              Text(
-                line.text,
-                fontSize = if (isActive) 34.sp else 28.sp,
-                lineHeight = if (isActive) 42.sp else 36.sp,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Start,
-                color = when {
-                  isActive -> Color.White
-                  isPast -> Color.White.copy(alpha = 0.42f)
-                  else -> Color.White.copy(alpha = 0.55f)
-                },
-                style = MaterialTheme.typography.headlineSmall.copy(
-                  shadow = if (isActive) {
-                    Shadow(color = Color.White.copy(alpha = 0.55f), offset = Offset.Zero, blurRadius = 28f)
-                  } else {
-                    null
-                  },
-                ),
-                modifier = Modifier.fillMaxWidth(),
+              ImmersiveLyricRow(
+                line = line,
+                isActive = index == active,
+                isPast = active >= 0 && index < active,
+                onSeek = onSeek?.let { seek -> { seek(line.time) } },
+                modifier = Modifier.animateItem(),
               )
             }
           }
@@ -196,4 +178,44 @@ fun ImmersiveLyrics(
       }
     }
   }
+}
+
+@Composable
+private fun ImmersiveLyricRow(
+  line: LyricsEntry,
+  isActive: Boolean,
+  isPast: Boolean,
+  onSeek: (() -> Unit)?,
+  modifier: Modifier = Modifier,
+) {
+  val color by animateColorAsState(
+    targetValue = when {
+      isActive -> Color.White
+      isPast -> Color.White.copy(alpha = 0.42f)
+      else -> Color.White.copy(alpha = 0.55f)
+    },
+    animationSpec = tween(
+      durationMillis = 450,
+      easing = FastOutSlowInEasing,
+    ),
+    label = "immersiveLyricColor",
+  )
+  Text(
+    line.text,
+    fontSize = if (isActive) 34.sp else 28.sp,
+    lineHeight = if (isActive) 42.sp else 36.sp,
+    fontWeight = FontWeight.ExtraBold,
+    textAlign = TextAlign.Start,
+    color = color,
+    style = MaterialTheme.typography.headlineSmall.copy(
+      shadow = if (isActive) {
+        Shadow(color = Color.White.copy(alpha = 0.55f), offset = Offset.Zero, blurRadius = 28f)
+      } else {
+        null
+      },
+    ),
+    modifier = modifier
+      .fillMaxWidth()
+      .then(if (onSeek != null) Modifier.clickable(onClick = onSeek) else Modifier),
+  )
 }
