@@ -1,5 +1,6 @@
 package app.rayik.music.presentation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,10 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -33,6 +32,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,8 +40,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -49,6 +51,7 @@ import kotlinx.coroutines.launch
 import app.rayik.music.R
 import app.rayik.music.db.entities.Song
 import app.rayik.music.player.PlayerViewModel
+import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.spacing
 
 /**
@@ -87,14 +90,18 @@ fun LibraryScreen(
         modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.extraLarge),
         horizontalAlignment = Alignment.CenterHorizontally,
       ) {
+        MarkTile(size = 72.dp)
+        Spacer(Modifier.height(MaterialTheme.spacing.medium))
         Text(
           stringResource(R.string.library_empty_title),
-          style = MaterialTheme.typography.titleMedium,
+          style = MaterialTheme.typography.headlineSmall,
+          textAlign = TextAlign.Center,
         )
         Text(
           stringResource(R.string.library_empty_body),
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
+          textAlign = TextAlign.Center,
           modifier = Modifier.padding(top = MaterialTheme.spacing.small),
         )
       }
@@ -104,6 +111,7 @@ fun LibraryScreen(
 
   var showWrapped by remember { mutableStateOf(false) }
   var showImport by remember { mutableStateOf(false) }
+  var selectedShelf by rememberSaveable { mutableIntStateOf(0) }
 
   Box(Modifier.fillMaxSize()) {
     LazyColumn(
@@ -119,7 +127,7 @@ fun LibraryScreen(
     item {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-          GradientHeadline(stringResource(R.string.library_title))
+          GradientHeadline(stringResource(R.string.library_headline))
           Text(
             stringResource(
               R.string.library_counts,
@@ -143,23 +151,35 @@ fun LibraryScreen(
     item {
       Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
         FilterChip(
-          selected = false,
-          onClick = { scope.launch { listState.animateScrollToItem(0) } },
+          selected = selectedShelf == 0,
+          onClick = {
+            selectedShelf = 0
+            scope.launch { listState.animateScrollToItem(0) }
+          },
           label = { Text(stringResource(R.string.library_filter_all)) },
         )
         FilterChip(
-          selected = false,
-          onClick = { scope.launch { listState.animateScrollToItem(2) } },
+          selected = selectedShelf == 1,
+          onClick = {
+            selectedShelf = 1
+            scope.launch { listState.animateScrollToItem(2) }
+          },
           label = { Text(stringResource(R.string.library_filter_liked)) },
         )
         FilterChip(
-          selected = false,
-          onClick = { scope.launch { listState.animateScrollToItem(3) } },
+          selected = selectedShelf == 2,
+          onClick = {
+            selectedShelf = 2
+            scope.launch { listState.animateScrollToItem(3) }
+          },
           label = { Text(stringResource(R.string.library_filter_recent)) },
         )
         FilterChip(
-          selected = false,
-          onClick = { scope.launch { listState.animateScrollToItem(4) } },
+          selected = selectedShelf == 3,
+          onClick = {
+            selectedShelf = 3
+            scope.launch { listState.animateScrollToItem(4) }
+          },
           label = { Text(stringResource(R.string.library_filter_most)) },
         )
       }
@@ -239,8 +259,7 @@ private fun LibraryShelf(
     if (songs.isEmpty()) {
       if (emptyHint != null) {
         Surface(
-          tonalElevation = 1.dp,
-          shape = RoundedCornerShape(16.dp),
+          shape = AppShapes.cardShape,
           modifier = Modifier.fillMaxWidth(),
         ) {
           Text(
@@ -274,39 +293,36 @@ private fun LibraryCard(
   isCurrent: Boolean,
   onClick: () -> Unit,
 ) {
-  Surface(
-    onClick = onClick,
-    shape = RoundedCornerShape(16.dp),
-    tonalElevation = if (isCurrent) 3.dp else 1.dp,
-    modifier = Modifier.width(132.dp),
+  Column(
+    modifier = Modifier
+      .width(132.dp)
+      .clickable(onClick = onClick),
   ) {
-    Column(modifier = Modifier.padding(MaterialTheme.spacing.small)) {
-      TrackArt(
-        artworkUrl = song.song.thumbnailUrl.orEmpty(),
-        corner = 12.dp,
-        modifier = Modifier.size(116.dp),
-      )
-      Spacer(Modifier.height(MaterialTheme.spacing.small))
-      Text(
-        song.song.title,
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-        color = if (isCurrent) {
-          MaterialTheme.colorScheme.primary
-        } else {
-          MaterialTheme.colorScheme.onSurface
-        },
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-      Text(
-        song.artists.joinToString { it.name }.ifBlank { "Unknown artist" },
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-    }
+    TrackArt(
+      artworkUrl = song.song.thumbnailUrl.orEmpty(),
+      corner = AppShapes.art,
+      modifier = Modifier.size(132.dp),
+    )
+    Spacer(Modifier.height(MaterialTheme.spacing.small))
+    Text(
+      song.song.title,
+      style = MaterialTheme.typography.bodyMedium,
+      fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+      color = if (isCurrent) {
+        MaterialTheme.colorScheme.primary
+      } else {
+        MaterialTheme.colorScheme.onSurface
+      },
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+    Text(
+      song.artists.joinToString { it.name }.ifBlank { stringResource(R.string.common_unknown_artist) },
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
   }
 }
 
@@ -345,7 +361,7 @@ fun ImportScreen(
       }
       IconButton(onClick = onClose) {
         Icon(
-          Icons.Filled.Close,
+          RayikIcons.Close,
           contentDescription = stringResource(R.string.import_close),
         )
       }
@@ -431,8 +447,8 @@ fun ImportScreen(
     } else {
       playlists.forEach { playlist ->
         ImportRow(
-          title = playlist.name.ifBlank { "Untitled" },
-          subtitle = playlist.tracks?.total?.let { "$it tracks" },
+          title = playlist.name.ifBlank { stringResource(R.string.import_untitled) },
+          subtitle = playlist.tracks?.total?.let { pluralStringResource(R.plurals.import_tracks_count, it, it) },
           busy = progress.running,
           onImport = { vm.importPlaylist(playlist.id, playlist.name) },
         )
@@ -464,8 +480,7 @@ private fun ImportRow(
   onImport: () -> Unit,
 ) {
   Surface(
-    tonalElevation = 1.dp,
-    shape = RoundedCornerShape(16.dp),
+    shape = AppShapes.cardShape,
     modifier = Modifier.fillMaxWidth(),
   ) {
     Row(
@@ -473,7 +488,7 @@ private fun ImportRow(
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Icon(
-        Icons.Filled.Download,
+        Icons.Outlined.Download,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.primary,
       )
@@ -507,8 +522,7 @@ private fun ImportProgressCard(
   onDismiss: () -> Unit,
 ) {
   Surface(
-    tonalElevation = 2.dp,
-    shape = RoundedCornerShape(16.dp),
+    shape = AppShapes.cardShape,
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {

@@ -18,17 +18,35 @@ const APK_URL = `https://github.com/${REPO}/releases/download/${TAG}/${APK_NAME}
 const AAB_URL = `https://github.com/${REPO}/releases/download/${TAG}/${AAB_NAME}`;
 const RELEASES_PAGE = `https://github.com/${REPO}/releases`;
 
-const FEATURES = [
-  { icon: '&#127911;', h: 'Albums flow perfectly', p: 'Songs melt into each other exactly how the artist meant. No gaps, no jolts.' },
-  { icon: '&#128269;', h: 'Find it with one line', p: 'Only remember a single lyric? That\u2019s plenty — hum it, type it, hear it.' },
-  { icon: '&#128196;', h: "Lyrics and what's next, together", p: 'Sing along and see the queue on one screen. No tab-hopping mid-song.' },
-  { icon: '&#128268;', h: 'Bring your playlists', p: 'Years of Spotify playlists move with you in one tap. Nothing left behind.' },
-  { icon: '&#127959;', h: 'Offline for the metro', p: 'Pin favorites for tunnels and flights. rāyik tidies up the rest by itself.' },
-  { icon: '&#127863;', h: 'Sleep timer and sound shaping', p: "Drift off to slow songs. Tune bass and treble to your ears, not someone else's." },
-  { icon: '&#128663;', h: 'At home in your car', p: 'Plays nicely with your car screen and headphones — pause, skip, and go.' },
-  { icon: '&#129518;', h: 'Honest sound quality', p: "See exactly what quality you're hearing. No fine print, no fake badges." },
-  { icon: '&#127919;', h: 'A fresh mix every week', p: 'New discoveries every week, plus radio that never runs dry.' },
-  { icon: '&#10024;', h: 'Expressive by design', p: 'The whole app is drawn with Material 3 Expressive — springy pills, glass sheets, motion with intent.' },
+// Stroke icons in the mark's language: 24 grid, 1.75 stroke, round caps.
+const STROKE = 'fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
+const svg = (inner: string) => `<svg viewBox="0 0 24 24" ${STROKE} aria-hidden="true">${inner}</svg>`;
+const ICONS: Record<string, string> = {
+  bars: svg('<path d="M5 8v8M8.5 5v14M12 2v20M15.5 5v14M19 8v8"/>'),
+  search: svg('<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>'),
+  lyrics: svg('<path d="M4 7h16M4 12h16M4 17h10"/>'),
+  download: svg('<path d="M12 4v10M7.5 10.5L12 15l4.5-4.5M4.5 19h15"/>'),
+  pin: svg('<path d="M12 21s-7-7.6-7-12a7 7 0 0 1 14 0c0 4.4-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>'),
+  calendar: svg('<rect x="4.5" y="6" width="15" height="14" rx="2"/><path d="M4.5 10h15M9 3.5V7M15 3.5V7"/>'),
+  car: svg('<path d="M5 16l1.5-5h11L19 16M4 16h16v2.5H4z"/><circle cx="8" cy="18.5" r="1.4"/><circle cx="16" cy="18.5" r="1.4"/>'),
+  gauge: svg('<path d="M5 19a8 8 0 0 1 14 0"/><path d="M12 19l3.5-6.5"/><circle cx="12" cy="19" r="1.2" fill="currentColor"/>'),
+  spark: svg('<path d="M12 3l1.8 7.2L21 12l-7.2 1.8L12 21l-1.8-7.2L3 12l7.2-1.8z"/>'),
+  heart: svg('<path d="M12 20.6C6.8 16.2 3.8 13 3.8 9.4 3.8 6.9 5.8 5 8.3 5c1.6 0 2.9.9 3.7 2.2C12.8 5.9 14.1 5 15.7 5c2.5 0 4.5 1.9 4.5 4.4 0 3.6-3 6.8-8.2 11.2z"/>'),
+  quote: svg('<path d="M5 6h12v9H9.5L7 18.5V15H5z"/>'),
+};
+const BARS_ART = `<svg viewBox="0 0 108 108" aria-hidden="true"><defs><linearGradient id="mg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF5D4"/><stop offset=".3" stop-color="#F2CE62"/><stop offset=".7" stop-color="#DEAC33"/><stop offset="1" stop-color="#9C6E15"/></linearGradient></defs><rect x="31.25" y="44" width="5.5" height="20" rx="2.75" fill="url(#mg)"/><rect x="41.25" y="37" width="5.5" height="34" rx="2.75" fill="url(#mg)"/><rect x="51.25" y="30" width="5.5" height="48" rx="2.75" fill="url(#mg)"/><rect x="61.25" y="37" width="5.5" height="34" rx="2.75" fill="url(#mg)"/><rect x="71.25" y="44" width="5.5" height="20" rx="2.75" fill="url(#mg)"/></svg>`;
+
+const FEATURES: { icon: string; tag?: string; h: string; p: string }[] = [
+  { icon: 'bars', h: 'Albums flow perfectly', p: 'Songs melt into each other exactly how the artist meant. No gaps, no jolts.' },
+  { icon: 'search', h: 'Find it with one line', p: 'Only remember a single lyric? That\u2019s plenty — type it, hear it.' },
+  { icon: 'lyrics', h: "Lyrics and what's next, together", p: 'Sing along and see the queue on one screen. No tab-hopping mid-song.' },
+  { icon: 'download', h: 'Bring your playlists', p: 'Years of Spotify playlists move with you in one tap. Nothing left behind.' },
+  { icon: 'pin', h: 'Offline for the metro', p: 'Pin favorites for tunnels and flights. rāyik tidies up the rest by itself.' },
+  { icon: 'calendar', h: 'A year in review', p: 'Wrapped turns your on-device history into story pages — minutes, top songs, peak hour.' },
+  { icon: 'car', tag: 'Planned', h: 'At home in your car', p: 'Car screen support is on the roadmap — pause, skip, and go, coming after v1.' },
+  { icon: 'gauge', h: 'Honest streaming quality', p: 'Saver, Auto, or High — your call, everywhere. No fine print, no fake badges.' },
+  { icon: 'calendar', tag: 'Planned', h: 'A fresh mix every week', p: 'Weekly mixes plus radio that never runs dry. Coming after v1.' },
+  { icon: 'spark', h: 'Expressive by design', p: 'The whole app is drawn with Material 3 Expressive — springy pills, glass sheets, motion with intent.' },
 ];
 ---
 <!DOCTYPE html>
@@ -87,18 +105,19 @@ const FEATURES = [
   <h2>It has <span>taste.</span></h2>
   <p class="sec-sub">Open rāyik in the morning and it already has a thought waiting — with the reason attached. Agree, skip, or tell it why it&rsquo;s wrong. Every pixel drawn with Material 3 Expressive.</p>
   <div class="player-mock">
-    <div class="art">&#127925;</div>
+    <div class="art" set:html={BARS_ART}></div>
     <div>
-      <div class="kind" style="font-size:12px;color:var(--tertiary);font-weight:700;letter-spacing:.08em;text-transform:uppercase;">This morning &bull; because you looped Arijit 12&times;</div>
-      <h3 style="font-size:22px;margin:4px 0;">Mehfil Mix — Rain Edition</h3>
+      <div class="reason">A slow morning pour, strings first</div>
+      <h3>Mehfil Mix — Rain Edition</h3>
+      <div class="mock-bars" aria-hidden="true"><i style="height:40%"></i><i style="height:70%"></i><i style="height:100%"></i><i style="height:70%"></i><i style="height:40%"></i></div>
       <div class="bar"></div>
-      <div class="chips"><span class="chip hot">&#9654; Play</span><span class="chip">Something else</span><span class="chip">Why this?</span><span class="chip">More like this</span><span class="chip">Never this</span></div>
+      <div class="chips"><span class="chip hot"><svg viewBox="0 0 24 24" width="10" height="10" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="currentColor"/></svg> Play</span><span class="chip">Something else</span></div>
     </div>
   </div>
   <div class="feat-grid" style="margin-top:14px;">
-    <div class="feat"><div class="icon">&#127783;</div><h3>Moods, not menus</h3><p>Focus, rain, drive, mehfil — your day already has a soundtrack, rāyik just follows it.</p></div>
-    <div class="feat"><div class="icon">&#27573;</div><h3>You train it</h3><p>Love it, skip it, bury it. Every tap sharpens tomorrow morning&rsquo;s pick.</p></div>
-    <div class="feat"><div class="icon">&#128172;</div><h3>It shows its work</h3><p>Every suggestion comes with its reason. No black-box shuffling.</p></div>
+    <div class="feat"><div class="icon" set:html={ICONS.bars}></div><h3>Moods, not menus</h3><p>Focus, rain, drive, mehfil — your day already has a soundtrack, rāyik just follows it.</p></div>
+    <div class="feat"><div class="icon" set:html={ICONS.heart}></div><h3>You train it</h3><p>Love it, skip it. Every tap sharpens tomorrow morning&rsquo;s pick.</p></div>
+    <div class="feat"><div class="icon" set:html={ICONS.quote}></div><h3>It shows its work</h3><p>Every suggestion comes with its reason. No black-box shuffling.</p></div>
   </div>
 </section>
 
@@ -107,7 +126,7 @@ const FEATURES = [
   <p class="sec-sub">The best bits of every music app you&rsquo;ve used — in one place, without the clutter.</p>
   <div class="feat-grid">
     {FEATURES.map((f) => (
-      <div class="feat"><div class="icon" set:html={f.icon}></div><h3>{f.h}</h3><p>{f.p}</p></div>
+      <div class="feat"><div class="icon" set:html={ICONS[f.icon]}></div><h3>{f.h}{f.tag && <span class="tag">{f.tag}</span>}</h3><p>{f.p}</p></div>
     ))}
   </div>
 </section>

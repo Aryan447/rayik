@@ -1,7 +1,5 @@
 package app.rayik.music.presentation
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,14 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,12 +36,7 @@ import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,7 +48,8 @@ import app.rayik.music.innertube.models.ArtistItem
 import app.rayik.music.innertube.models.PlaylistItem
 import app.rayik.music.innertube.models.SongItem
 import app.rayik.music.innertube.models.YTItem
-import app.rayik.music.ui.theme.BrandGradient
+import app.rayik.music.ui.theme.AppShapes
+import app.rayik.music.ui.theme.FrauncesItalicFamily
 import app.rayik.music.ui.theme.spacing
 import app.rayik.music.utils.isLocalMediaId
 import java.time.LocalTime
@@ -82,37 +70,38 @@ data class RaayPick(
   val artworkUrl: String? = null,
 )
 
-private val RAAY_PICKS = listOf(
+@Composable
+private fun defaultPicks(): List<RaayPick> = listOf(
   RaayPick(
-    title = "Mehfil Mix — Rain Edition",
-    reason = "This morning • because you looped Arijit 12×",
+    title = stringResource(R.string.home_pick_mehfil_title),
+    reason = stringResource(R.string.home_pick_mehfil_reason),
     videoId = "BddP6PYo2gs",
-    trackTitle = "Kesariya",
-    trackArtist = "Pritam, Arijit Singh",
+    trackTitle = stringResource(R.string.home_pick_mehfil_track),
+    trackArtist = stringResource(R.string.home_pick_mehfil_artist),
     mood = "Mehfil",
   ),
   RaayPick(
-    title = "Monsoon Rain Session",
-    reason = "Grey skies, wet earth, acoustic strings",
+    title = stringResource(R.string.home_pick_rain_title),
+    reason = stringResource(R.string.home_pick_rain_reason),
     videoId = "MJyKN-8UncM",
-    trackTitle = "Shayad",
-    trackArtist = "Pritam, Arijit Singh",
+    trackTitle = stringResource(R.string.home_pick_rain_track),
+    trackArtist = stringResource(R.string.home_pick_rain_artist),
     mood = "Rain",
   ),
   RaayPick(
-    title = "Deep Focus Flow",
-    reason = "Zero distraction, repetitive cadence",
+    title = stringResource(R.string.home_pick_focus_title),
+    reason = stringResource(R.string.home_pick_focus_reason),
     videoId = "6mr4cYJ7yew",
-    trackTitle = "Kesariya (Film Version)",
-    trackArtist = "Pritam, Arijit Singh",
+    trackTitle = stringResource(R.string.home_pick_focus_track),
+    trackArtist = stringResource(R.string.home_pick_focus_artist),
     mood = "Focus",
   ),
   RaayPick(
-    title = "Late Night Drive",
-    reason = "Empty highways, cool breeze",
+    title = stringResource(R.string.home_pick_drive_title),
+    reason = stringResource(R.string.home_pick_drive_reason),
     videoId = "O5gwxm3NxFU",
-    trackTitle = "Best Of Arijit Singh",
-    trackArtist = "Arijit Singh",
+    trackTitle = stringResource(R.string.home_pick_drive_track),
+    trackArtist = stringResource(R.string.home_pick_drive_artist),
     mood = "Drive",
   ),
 )
@@ -125,7 +114,12 @@ private fun pickArtwork(videoId: String): String = "https://i.ytimg.com/vi/$vide
  * so they never become the playable pick. Null when there is no
  * streamable history — the caller keeps the static slot.
  */
-private fun historyPick(history: List<Song>, slot: RaayPick): RaayPick {
+private fun historyPick(
+  history: List<Song>,
+  slot: RaayPick,
+  dayparts: List<String>,
+  unknownArtist: String,
+): RaayPick {
   val candidates = history.filterNot { it.song.id.isLocalMediaId() }
   if (candidates.isEmpty()) return slot
   val top = candidates.maxByOrNull { it.song.totalPlayTime } ?: return slot
@@ -135,15 +129,15 @@ private fun historyPick(history: List<Song>, slot: RaayPick): RaayPick {
   }.coerceAtLeast(1)
   val hour = LocalTime.now().hour
   val daypart = when (hour) {
-    in 5..11 -> "This morning"
-    in 12..16 -> "This afternoon"
-    else -> "Tonight"
+    in 5..11 -> dayparts[0]
+    in 12..16 -> dayparts[1]
+    else -> dayparts[2]
   }
   return slot.copy(
     reason = "$daypart • because you looped $artistName ${loopCount}×",
     videoId = top.song.id,
     trackTitle = top.song.title,
-    trackArtist = top.artists.joinToString { it.name }.ifBlank { "Unknown artist" },
+    trackArtist = top.artists.joinToString { it.name }.ifBlank { unknownArtist },
     artworkUrl = top.song.thumbnailUrl,
   )
 }
@@ -165,13 +159,21 @@ fun RaayHomeScreen(
   val playbackState by player.playbackState.collectAsState()
   val connected by player.connected.collectAsState()
 
-  val currentPick = RAAY_PICKS[pickIndex % RAAY_PICKS.size]
+  val picks = defaultPicks()
+  val currentPick = picks[pickIndex % picks.size]
   // Alive pick: the slot keeps its curated title/mood, but the reason,
   // track, and art come from real listening history when there is any —
   // so the card is about *their* week, not a hardcoded Arijit loop.
   val libraryMostPlayed by library.mostPlayed.collectAsState()
-  val effectivePick = remember(currentPick, libraryMostPlayed) {
-    historyPick(libraryMostPlayed.orEmpty(), currentPick)
+  val dayparts = listOf(
+    stringResource(R.string.home_daypart_morning),
+    stringResource(R.string.home_daypart_afternoon),
+    stringResource(R.string.home_daypart_evening),
+  )
+  val unknownArtist = stringResource(R.string.common_unknown_artist)
+  val playerWait = stringResource(R.string.home_player_wait)
+  val effectivePick = remember(currentPick, libraryMostPlayed, dayparts, unknownArtist) {
+    historyPick(libraryMostPlayed.orEmpty(), currentPick, dayparts, unknownArtist)
   }
   val isPickPlaying = currentMediaId == effectivePick.videoId &&
     playbackState == PlaybackUiState.Playing
@@ -183,7 +185,7 @@ fun RaayHomeScreen(
       return
     }
     if (!connected) {
-      startError = "Player isn't connected yet — try again in a moment"
+      startError = playerWait
       return
     }
     starting = true
@@ -245,14 +247,14 @@ fun RaayHomeScreen(
             error = startError,
             onPlayClick = { playPick(effectivePick) },
             onNextPick = {
-              pickIndex = (pickIndex + 1) % RAAY_PICKS.size
+              pickIndex = (pickIndex + 1) % picks.size
               startError = null
             },
             onSelectMood = { mood ->
-              val found = RAAY_PICKS.indexOfFirst { it.mood.equals(mood, ignoreCase = true) }
+              val found = picks.indexOfFirst { it.mood.equals(mood, ignoreCase = true) }
               if (found >= 0) {
                 pickIndex = found
-                playPick(RAAY_PICKS[found])
+                playPick(picks[found])
               }
             },
             onRetry = { playPick(effectivePick) },
@@ -321,7 +323,7 @@ private fun GreetingHeader() {
   Row(verticalAlignment = Alignment.CenterVertically) {
     RayikMark(modifier = Modifier.size(48.dp))
     Spacer(Modifier.width(MaterialTheme.spacing.medium))
-    GradientHeadline(greeting)
+    GradientHeadline(greeting, maxLines = 1)
   }
 }
 
@@ -371,8 +373,7 @@ private fun QuickTile(
 ) {
   Surface(
     onClick = onClick,
-    tonalElevation = 2.dp,
-    shape = RoundedCornerShape(16.dp),
+    shape = AppShapes.cardShape,
     modifier = modifier,
   ) {
     Row(
@@ -381,8 +382,8 @@ private fun QuickTile(
     ) {
       TrackArt(
         artworkUrl = song.song.thumbnailUrl.orEmpty(),
-        corner = 12.dp,
-        modifier = Modifier.size(48.dp),
+        corner = AppShapes.art,
+        modifier = Modifier.size(56.dp),
       )
       Spacer(Modifier.width(MaterialTheme.spacing.small))
       Column(Modifier.weight(1f)) {
@@ -399,7 +400,7 @@ private fun QuickTile(
           overflow = TextOverflow.Ellipsis,
         )
         Text(
-          song.artists.joinToString { it.name }.ifBlank { "Unknown artist" },
+          song.artists.joinToString { it.name }.ifBlank { stringResource(R.string.common_unknown_artist) },
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           maxLines = 1,
@@ -425,8 +426,7 @@ private fun RaayPickCard(
   onRetry: () -> Unit,
 ) {
   Surface(
-    shape = RoundedCornerShape(24.dp),
-    tonalElevation = 2.dp,
+    shape = AppShapes.cardShape,
     border = androidx.compose.foundation.BorderStroke(
       1.dp,
       MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
@@ -438,66 +438,78 @@ private fun RaayPickCard(
         .fillMaxWidth()
         .padding(MaterialTheme.spacing.large),
     ) {
+      // The stage: reason first in serif italic, then the title.
+      Text(
+        pick.reason,
+        style = MaterialTheme.typography.titleSmall.copy(
+          fontFamily = FrauncesItalicFamily,
+          fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+        ),
+        color = MaterialTheme.colorScheme.tertiary,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+      )
+      Text(
+        pick.title,
+        style = MaterialTheme.typography.headlineSmall,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
+      )
+      Spacer(Modifier.height(MaterialTheme.spacing.medium))
       Row(verticalAlignment = Alignment.CenterVertically) {
         TrackArt(
           artworkUrl = pick.artworkUrl ?: pickArtwork(pick.videoId),
-          corner = 16.dp,
-          modifier = Modifier.size(96.dp),
+          corner = AppShapes.art,
+          modifier = Modifier.size(148.dp),
         )
         Spacer(Modifier.width(MaterialTheme.spacing.medium))
         Column(Modifier.weight(1f)) {
           Text(
-            pick.reason,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.tertiary,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
+            pick.trackTitle,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
           )
           Text(
-            pick.title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
-          )
-          Text(
-            "${pick.trackTitle} • ${pick.trackArtist}",
-            style = MaterialTheme.typography.bodyMedium,
+            pick.trackArtist,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
           )
-        }
-      }
-      Spacer(Modifier.height(MaterialTheme.spacing.medium))
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(
-          onClick = onPlayClick,
-          modifier = Modifier.size(48.dp),
-        ) {
-          Icon(
-            imageVector = if (isPlaying) {
-              Icons.Filled.Pause
-            } else {
-              Icons.Filled.PlayArrow
-            },
-            contentDescription = stringResource(
-              if (isPlaying) R.string.transport_pause else R.string.transport_play,
-            ),
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(32.dp),
-          )
-        }
-        IconButton(onClick = onNextPick, modifier = Modifier.size(48.dp)) {
-          Icon(Icons.Filled.SkipNext, contentDescription = null)
-        }
-        Spacer(Modifier.width(MaterialTheme.spacing.small))
-        if (resolving) {
-          Text(
-            "Tuning…",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
+          Spacer(Modifier.height(MaterialTheme.spacing.small))
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            // Hero play: filled primary circle, the mark's loudest cousin.
+            Surface(
+              onClick = onPlayClick,
+              shape = AppShapes.pill,
+              color = MaterialTheme.colorScheme.primary,
+              modifier = Modifier.size(56.dp),
+            ) {
+              Box(contentAlignment = Alignment.Center) {
+                Icon(
+                  imageVector = if (isPlaying) RayikIcons.Pause else RayikIcons.Play,
+                  contentDescription = stringResource(
+                    if (isPlaying) R.string.transport_pause else R.string.transport_play,
+                  ),
+                  tint = MaterialTheme.colorScheme.onPrimary,
+                  modifier = Modifier.size(26.dp),
+                )
+              }
+            }
+            Spacer(Modifier.width(MaterialTheme.spacing.small))
+            // Something else: the skip, quieter.
+            TextButtonLiteQuiet(onClick = onNextPick)
+          }
+          if (resolving) {
+            Text(
+              stringResource(R.string.home_tuning),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
+            )
+          }
         }
       }
       if (!resolving) {
@@ -524,6 +536,19 @@ private fun RaayPickCard(
   }
 }
 
+@Composable
+private fun TextButtonLiteQuiet(onClick: () -> Unit) {
+  TextButton(onClick = onClick) {
+    Icon(
+      RayikIcons.Next,
+      contentDescription = null,
+      modifier = Modifier.size(18.dp),
+    )
+    Spacer(Modifier.width(MaterialTheme.spacing.extraSmall))
+    Text(stringResource(R.string.home_something_else))
+  }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MoodChips(onSelectMood: (String) -> Unit) {
@@ -531,8 +556,13 @@ private fun MoodChips(onSelectMood: (String) -> Unit) {
     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
   ) {
-    listOf("Mehfil", "Rain", "Focus", "Drive").forEach { mood ->
-      Chip(label = mood, onClick = { onSelectMood(mood) })
+    listOf(
+      stringResource(R.string.home_mood_mehfil) to "Mehfil",
+      stringResource(R.string.home_mood_rain) to "Rain",
+      stringResource(R.string.home_mood_focus) to "Focus",
+      stringResource(R.string.home_mood_drive) to "Drive",
+    ).forEach { (label, mood) ->
+      Chip(label = label, onClick = { onSelectMood(mood) })
     }
   }
 }
@@ -540,7 +570,7 @@ private fun MoodChips(onSelectMood: (String) -> Unit) {
 @Composable
 private fun TextButtonLite(onClick: () -> Unit) {
   TextButton(onClick = onClick) {
-    Text("Try again")
+    Text(stringResource(R.string.common_retry))
   }
 }
 
@@ -582,7 +612,6 @@ private fun ShelfCard(
       Column(
         modifier = Modifier
           .width(112.dp)
-          .clip(RoundedCornerShape(16.dp))
           .clickable(onClick = onClick)
           .padding(MaterialTheme.spacing.small),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -625,14 +654,12 @@ private fun ShelfCard(
       Column(
         modifier = Modifier
           .width(140.dp)
-          .clip(RoundedCornerShape(16.dp))
-          .clickable(onClick = onClick)
-          .padding(MaterialTheme.spacing.small),
+          .clickable(onClick = onClick),
       ) {
         TrackArt(
           artworkUrl = item.thumbnail.orEmpty(),
-          corner = 16.dp,
-          modifier = Modifier.size(124.dp),
+          corner = AppShapes.art,
+          modifier = Modifier.size(140.dp),
         )
         Spacer(Modifier.height(MaterialTheme.spacing.small))
         Text(
@@ -664,11 +691,9 @@ private fun Chip(
 ) {
   if (hot) {
     Surface(
-      shape = RoundedCornerShape(999.dp),
+      shape = AppShapes.pill,
       color = MaterialTheme.colorScheme.primary,
-      modifier = Modifier
-        .clip(RoundedCornerShape(999.dp))
-        .clickable(onClick = onClick),
+      modifier = Modifier.clickable(onClick = onClick),
     ) {
       Text(
         label,
@@ -683,15 +708,13 @@ private fun Chip(
     }
   } else {
     Surface(
-      shape = RoundedCornerShape(999.dp),
+      shape = AppShapes.pill,
       color = Color.Transparent,
       border = androidx.compose.foundation.BorderStroke(
         1.dp,
         MaterialTheme.colorScheme.outlineVariant,
       ),
-      modifier = Modifier
-        .clip(RoundedCornerShape(999.dp))
-        .clickable(onClick = onClick),
+      modifier = Modifier.clickable(onClick = onClick),
     ) {
       Text(
         label,
@@ -701,40 +724,6 @@ private fun Chip(
           horizontal = MaterialTheme.spacing.medium,
           vertical = MaterialTheme.spacing.small,
         ),
-      )
-    }
-  }
-}
-
-/**
- * Brand mark from `site/src/components/Logo.astro`: five gold studio-EQ bars inside the
- * acoustic ring on the dark radial tile. Symmetric, so RTL-safe.
- */
-@Composable
-private fun RayikMark(modifier: Modifier = Modifier) {
-  Canvas(
-    modifier
-      .clip(RoundedCornerShape(16.dp))
-      .background(BrandGradient.markBackdropBrush),
-  ) {
-    val unit = size.width / 108f
-    drawCircle(
-      brush = BrandGradient.ringDiagonalBrush,
-      radius = 29f * unit,
-      center = center,
-      alpha = 0.35f,
-      style = Stroke(width = 1.4f * unit),
-    )
-    val barWidth = 5.5f * unit
-    val barXs = listOf(31.25f, 41.25f, 51.25f, 61.25f, 71.25f)
-    val barHeights = listOf(20f, 34f, 48f, 34f, 20f)
-    barXs.forEachIndexed { i, x ->
-      val barHeight = barHeights[i] * unit
-      drawRoundRect(
-        brush = BrandGradient.goldVerticalBrush,
-        topLeft = Offset(x * unit, center.y - barHeight / 2f),
-        size = Size(barWidth, barHeight),
-        cornerRadius = CornerRadius(2.75f * unit, 2.75f * unit),
       )
     }
   }

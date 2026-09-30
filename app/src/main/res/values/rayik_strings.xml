@@ -29,6 +29,7 @@
   <string name="tab_settings">Settings</string>
 
   <string name="library_counts">%1$d liked • %2$d recent</string>
+  <string name="library_headline">Library</string>
   <string name="library_loading">Opening your library…</string>
   <string name="library_filter_all">All</string>
   <string name="library_filter_liked">Liked</string>
@@ -39,6 +40,7 @@
   <string name="library_most_title">Most played</string>
   <string name="library_liked_hint">Songs you heart will wait for you here.</string>
   <string name="wrapped_title">Your Wrapped</string>
+  <string name="wrapped_close">Close Wrapped</string>
   <string name="wrapped_open">Wrapped</string>
   <string name="wrapped_window_month">Last 30 days</string>
   <string name="wrapped_window_all">All time</string>
@@ -55,6 +57,14 @@
   <string name="wrapped_plays_count">%1$d plays</string>
   <string name="wrapped_none_yet">Not enough history for this one yet.</string>
   <string name="wrapped_share">Share my Wrapped</string>
+  <string name="wrapped_minutes_hours">%1$dh %2$dm</string>
+  <string name="wrapped_minutes_short">%1$dm</string>
+  <string name="wrapped_hour">%1$d %2$s</string>
+  <string name="wrapped_share_text">My rāyik Wrapped: %1$s of music%2$s%3$s — Music with opinions.</string>
+  <string name="wrapped_share_top_song">, top song %1$s (%2$s)</string>
+  <string name="wrapped_share_top_artist">, top artist %1$s</string>
+
+  <string name="share_card_footer">rāyik • Music with opinions.</string>
 
   <string name="library_empty_title">Quiet shelves, for now</string>
   <string name="library_empty_body">Play something worth keeping and it will line up here.</string>
@@ -63,7 +73,7 @@
   <string name="import_title">Import music</string>
   <string name="import_close">Close import</string>
   <string name="import_howto_title">From Spotify, with love</string>
-  <string name="import_howto_body">Open open.spotify.com in a browser, sign in, open developer tools → Application → Cookies, and copy sp_dc (sp_key too, if you see it). We only read your playlists and liked songs — nothing else leaves your device except the searches that match them.</string>
+  <string name="import_howto_body">Sign in at open.spotify.com in a browser, then copy the sp_dc cookie (sp_key too, if you see it) from developer tools → Application → Cookies. We only read your playlists and liked songs — nothing else leaves your device except the searches that match them.</string>
   <string name="import_spdc_label">sp_dc cookie</string>
   <string name="import_spkey_label">sp_key (optional)</string>
   <string name="import_connect">Connect Spotify</string>
@@ -78,6 +88,11 @@
   <string name="import_unmatched_title">Couldn\'t match these</string>
   <string name="import_dismiss">Done</string>
   <string name="import_empty_playlists">No playlists found — hit refresh after connecting.</string>
+  <string name="import_untitled">Untitled</string>
+  <plurals name="import_tracks_count">
+    <item quantity="one">%1$d track</item>
+    <item quantity="other">%1$d tracks</item>
+  </plurals>
 
   <string name="deviceflow_requesting">Contacting Google…</string>
   <string name="deviceflow_code_label">Enter this code on Google\'s page</string>
@@ -96,6 +111,9 @@
   <string name="player_up_next_count">%1$d in line</string>
   <string name="playing_from">Playing from %1$s</string>
   <string name="action_unlike">Unlike</string>
+  <string name="action_like">Like</string>
+  <string name="action_liked">Liked</string>
+  <string name="action_queue">Queue</string>
   <string name="action_share">Share</string>
   <string name="action_open_queue">Jump to Up next</string>
   <string name="action_collapse">Close player</string>
@@ -126,6 +144,52 @@
   <string name="home_new_title">New releases</string>
   <string name="home_all">All</string>
   <string name="home_loading">Tuning your home…</string>
+  <string name="home_tuning">Tuning…</string>
+  <string name="home_something_else">Something else</string>
+  <string name="home_player_wait">Player isn\'t connected yet — try again in a moment</string>
+  <string name="home_mood_mehfil">Mehfil</string>
+  <string name="home_mood_rain">Rain</string>
+  <string name="home_mood_focus">Focus</string>
+  <string name="home_mood_drive">Drive</string>
+  <string name="home_daypart_morning">This morning</string>
+  <string name="home_daypart_afternoon">This afternoon</string>
+  <string name="home_daypart_evening">Tonight</string>
+
+  <string name="home_pick_mehfil_title">Mehfil Mix — Rain Edition</string>
+  <string name="home_pick_mehfil_reason">A slow morning pour, strings first</string>
+  <string name="home_pick_mehfil_track">Kesariya</string>
+  <string name="home_pick_mehfil_artist">Pritam, Arijit Singh</string>
+  <string name="home_pick_rain_title">Monsoon Rain Session</string>
+  <string name="home_pick_rain_reason">Grey skies, wet earth, acoustic strings</string>
+  <string name="home_pick_rain_track">Shayad</string>
+  <string name="home_pick_rain_artist">Pritam, Arijit Singh</string>
+  <string name="home_pick_focus_title">Deep Focus Flow</string>
+  <string name="home_pick_focus_reason">Zero distraction, repetitive cadence</string>
+  <string name="home_pick_focus_track">Kesariya (Film Version)</string>
+  <string name="home_pick_focus_artist">Pritam, Arijit Singh</string>
+  <string name="home_pick_drive_title">Late Night Drive</string>
+  <string name="home_pick_drive_reason">Empty highways, cool breeze</string>
+  <string name="home_pick_drive_track">Best Of Arijit Singh</string>
+  <string name="home_pick_drive_artist">Arijit Singh</string>
+
+  <string name="common_unknown_artist">Unknown artist</string>
+
+  <string name="search_browse_bollywood">Bollywood Hits</string>
+  <string name="search_browse_bollywood_q">bollywood hits</string>
+  <string name="search_browse_punjabi">Punjabi</string>
+  <string name="search_browse_punjabi_q">punjabi songs</string>
+  <string name="search_browse_lofi">Lo-Fi Chill</string>
+  <string name="search_browse_lofi_q">lofi chill</string>
+  <string name="search_browse_arijit">Arijit Special</string>
+  <string name="search_browse_arijit_q">arijit singh</string>
+  <string name="search_browse_workout">Workout</string>
+  <string name="search_browse_workout_q">workout music</string>
+  <string name="search_browse_rainy">Rainy Day</string>
+  <string name="search_browse_rainy_q">rainy day songs</string>
+  <string name="search_browse_party">Party</string>
+  <string name="search_browse_party_q">party songs</string>
+  <string name="search_browse_y2k">2000s</string>
+  <string name="search_browse_y2k_q">2000s hits</string>
 
   <string name="search_browse_title">Browse all</string>
   <string name="search_recents">Recent searches</string>
@@ -154,6 +218,7 @@
   <string name="settings_section_privacy">Privacy &amp; content</string>
   <string name="settings_section_connected">Connected accounts</string>
   <string name="settings_section_about_app">About</string>
+  <string name="settings_about_body">rāyik %1$s • GPL-3.0-only\nPlayback core: ArchiveTune (© Rukamori).\nUnofficial client — not affiliated with Google/YouTube.</string>
 
   <string name="settings_gapless_label">Gapless preload</string>
   <string name="settings_gapless_body">Start loading the next song early</string>
@@ -207,4 +272,20 @@
   <string name="pref_quality_auto">Auto</string>
   <string name="pref_quality_high">High</string>
   <string name="pref_quality_saver">Data saver</string>
+
+  <string name="common_retry">Try again</string>
+  <string name="common_unavailable_title">Can\'t play this right now</string>
+  <string name="common_details_copied">Details copied — paste them into your report</string>
+  <string name="common_copy_details">Copy details</string>
+
+  <string name="import_connect_empty">Paste your sp_dc cookie value first</string>
+  <string name="import_connect_failed">Could not connect — check the cookie and try again</string>
+  <string name="import_load_failed">Could not load playlist</string>
+
+  <string name="deviceflow_signin_failed">Couldn\'t finish signing in — try again</string>
+  <string name="deviceflow_denied">Sign-in was denied</string>
+  <string name="deviceflow_expired">The code expired</string>
+  <string name="deviceflow_offline">Couldn\'t reach Google — check your connection and try again</string>
+
+  <string name="search_failed">Search failed — try again</string>
 </resources>

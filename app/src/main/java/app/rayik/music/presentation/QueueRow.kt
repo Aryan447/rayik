@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.rayik.music.player.QueueRow as QueueRowData
+import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.spacing
 
 /**
@@ -46,7 +46,7 @@ fun UpNextRow(
   Row(
     modifier = modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(16.dp))
+      .clip(AppShapes.cardShape)
       .clickable(onClick = onClick)
       .padding(
         horizontal = MaterialTheme.spacing.small,
@@ -54,7 +54,7 @@ fun UpNextRow(
       ),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    TrackArt(artworkUrl = item.artworkUrl, corner = 12.dp, modifier = Modifier.size(56.dp))
+    TrackArt(artworkUrl = item.artworkUrl, corner = AppShapes.art, modifier = Modifier.size(56.dp))
     Spacer(Modifier.width(MaterialTheme.spacing.medium))
     Column(Modifier.weight(1f)) {
       Text(
@@ -81,11 +81,7 @@ fun UpNextRow(
     if (isPlaying) {
       PlayingIndicator()
     } else if (item.isCurrent) {
-      Text(
-        "❚❚",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
+      PausedIndicator()
     }
   }
 }
@@ -125,7 +121,30 @@ fun PlayingIndicator(
         Modifier
           .width(3.dp)
           .height((5 + 13 * scale).dp)
-          .clip(RoundedCornerShape(2.dp))
+          .clip(AppShapes.pill)
+          .background(color),
+      )
+    }
+  }
+}
+
+/** Twin-bar paused mark — a pill, never a text glyph. */
+@Composable
+private fun PausedIndicator(
+  modifier: Modifier = Modifier,
+  color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+  Row(
+    modifier = modifier.height(12.dp),
+    horizontalArrangement = Arrangement.spacedBy(3.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    repeat(2) {
+      Box(
+        Modifier
+          .width(3.dp)
+          .height(12.dp)
+          .clip(AppShapes.pill)
           .background(color),
       )
     }

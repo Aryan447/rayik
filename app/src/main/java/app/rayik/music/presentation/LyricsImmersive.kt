@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
@@ -29,7 +30,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import app.rayik.music.ui.theme.AppShapes
+import app.rayik.music.ui.theme.BrandGradient
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -147,22 +149,24 @@ fun ImmersiveLyrics(
         ) {
           Surface(
             onClick = onClose,
-            shape = androidx.compose.foundation.shape.CircleShape,
-            color = Color.White.copy(alpha = 0.18f),
-            modifier = Modifier.size(44.dp),
+            shape = AppShapes.pill,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+            modifier = Modifier
+              .size(44.dp)
+              .border(1.dp, BrandGradient.hairline(), AppShapes.pill),
           ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
               Icon(
-                Icons.Filled.Close,
+                RayikIcons.Close,
                 contentDescription = stringResource(R.string.action_collapse),
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onSurface,
               )
             }
           }
           Spacer(Modifier.weight(1f))
           TrackArt(
             artworkUrl = artworkUrl,
-            corner = 16.dp,
+            corner = AppShapes.art,
             modifier = Modifier.size(64.dp),
           )
         }

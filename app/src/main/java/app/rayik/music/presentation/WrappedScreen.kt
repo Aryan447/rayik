@@ -17,9 +17,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -41,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import app.rayik.music.R
+import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.spacing
 
 private const val WRAPPED_PAGES = 5
@@ -65,7 +63,7 @@ fun WrappedScreen(
         verticalAlignment = Alignment.CenterVertically,
       ) {
         IconButton(onClick = onClose) {
-          Icon(Icons.Filled.Close, contentDescription = null)
+          Icon(RayikIcons.Close, contentDescription = stringResource(R.string.wrapped_close))
         }
         Text(
           stringResource(R.string.wrapped_title),
@@ -103,9 +101,11 @@ fun WrappedScreen(
             modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.extraLarge),
             horizontalAlignment = Alignment.CenterHorizontally,
           ) {
+            MarkTile(size = 72.dp)
+            Spacer(Modifier.height(MaterialTheme.spacing.medium))
             Text(
               stringResource(R.string.wrapped_empty_title),
-              style = MaterialTheme.typography.titleMedium,
+              style = MaterialTheme.typography.headlineSmall,
               textAlign = TextAlign.Center,
             )
             Text(
@@ -176,7 +176,7 @@ private fun WrappedPage(
         if (top != null) {
           TrackArt(
             artworkUrl = top.thumbnailUrl.orEmpty(),
-            corner = 24.dp,
+            corner = AppShapes.art,
             modifier = Modifier.size(168.dp),
           )
           Spacer(Modifier.height(MaterialTheme.spacing.medium))
@@ -254,7 +254,7 @@ private fun WrappedPage(
         }
         Spacer(Modifier.height(MaterialTheme.spacing.medium))
         Button(onClick = onShare, modifier = Modifier.fillMaxWidth()) {
-          Icon(Icons.Filled.Share, contentDescription = null)
+          Icon(RayikIcons.Share, contentDescription = null)
           Spacer(Modifier.width(MaterialTheme.spacing.small))
           Text(stringResource(R.string.wrapped_share))
         }
@@ -266,7 +266,7 @@ private fun WrappedPage(
 @Composable
 private fun StoryKicker(text: String) {
   Text(
-    text.uppercase(),
+    text.uppercase(java.util.Locale.getDefault()),
     style = MaterialTheme.typography.labelLarge,
     fontWeight = FontWeight.Bold,
     color = MaterialTheme.colorScheme.primary,
@@ -339,13 +339,24 @@ internal fun formatHour(slot: Int): String {
   return "$h12 $amPm"
 }
 
+@Composable
 private fun buildWrappedShareText(data: WrappedData): String {
   val top = data.topSongs.firstOrNull()
   val artist = data.topArtists.firstOrNull()
-  return buildString {
-    append("My rāyik Wrapped: ${formatMinutes(data.totals.totalTimeListened)} of music")
-    if (top != null) append(", top song ${top.title} (${top.songCountListened} plays)")
-    if (artist != null) append(", top artist ${artist.title}")
-    append(" — Music with opinions.")
+  val minutes = formatMinutes(data.totals.totalTimeListened)
+  val topBit = if (top != null) {
+    stringResource(
+      R.string.wrapped_share_top_song,
+      top.title,
+      stringResource(R.string.wrapped_plays_count, top.songCountListened),
+    )
+  } else {
+    ""
   }
+  val artistBit = if (artist != null) {
+    stringResource(R.string.wrapped_share_top_artist, artist.title)
+  } else {
+    ""
+  }
+  return stringResource(R.string.wrapped_share_text, minutes, topBit, artistBit)
 }

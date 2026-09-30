@@ -22,18 +22,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,6 +49,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import app.rayik.music.R
 import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
+import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.spacing
 import kotlinx.coroutines.delay
 import kotlin.math.min
@@ -68,10 +60,10 @@ private const val MORPH_EXIT_MS = 180
 
 /** Bottom-nav destinations. Icon-only in the expanded dock; labels survive in TalkBack. */
 internal enum class NavTab(val labelRes: Int, val icon: ImageVector) {
-  Raay(R.string.tab_raay, Icons.Filled.Home),
-  Search(R.string.tab_search, Icons.Filled.Search),
-  Library(R.string.tab_library, Icons.Filled.LibraryMusic),
-  Settings(R.string.tab_settings, Icons.Filled.Settings),
+  Raay(R.string.tab_raay, RayikIcons.Raay),
+  Search(R.string.tab_search, RayikIcons.SearchNav),
+  Library(R.string.tab_library, RayikIcons.LibraryNav),
+  Settings(R.string.tab_settings, RayikIcons.SettingsNav),
 }
 
 /**
@@ -181,10 +173,10 @@ private fun DockTransportRow(
     MorphSlot(index = 0, modeKey = modeKey) {
       TrackArt(
         artworkUrl = artworkUrl,
-        corner = 12.dp,
+        corner = AppShapes.art,
         modifier = Modifier
           .size(DockArtSize)
-          .clip(RoundedCornerShape(12.dp))
+          .clip(AppShapes.artShape)
           .clickable(onClick = onArtClick),
       )
     }
@@ -197,7 +189,7 @@ private fun DockTransportRow(
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
           IconButton(onClick = onPrevious, enabled = buttonsEnabled, modifier = Modifier.size(52.dp)) {
             Icon(
-              Icons.Filled.SkipPrevious,
+              RayikIcons.Previous,
               contentDescription = stringResource(R.string.transport_previous),
               tint = content,
               modifier = Modifier.size(30.dp),
@@ -219,7 +211,7 @@ private fun DockTransportRow(
               modifier = Modifier.size(DockHeroTouch),
             ) {
               Icon(
-                Icons.Filled.Pause,
+                RayikIcons.Pause,
                 contentDescription = stringResource(R.string.transport_pause),
                 tint = content,
                 modifier = Modifier.size(40.dp),
@@ -235,7 +227,7 @@ private fun DockTransportRow(
               modifier = Modifier.size(DockHeroTouch),
             ) {
               Icon(
-                Icons.Filled.PlayArrow,
+                RayikIcons.Play,
                 contentDescription = stringResource(R.string.transport_play),
                 tint = content,
                 modifier = Modifier.size(40.dp),
@@ -248,7 +240,7 @@ private fun DockTransportRow(
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
           IconButton(onClick = onNext, enabled = buttonsEnabled, modifier = Modifier.size(52.dp)) {
             Icon(
-              Icons.Filled.SkipNext,
+              RayikIcons.Next,
               contentDescription = stringResource(R.string.transport_next),
               tint = content,
               modifier = Modifier.size(30.dp),
@@ -260,7 +252,7 @@ private fun DockTransportRow(
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
           IconButton(onClick = onShowTabs, enabled = buttonsEnabled, modifier = Modifier.size(52.dp)) {
             Icon(
-              Icons.Filled.KeyboardArrowUp,
+              Icons.Outlined.KeyboardArrowUp,
               contentDescription = stringResource(R.string.dock_show_navigation),
               tint = content,
               modifier = Modifier.size(28.dp),
@@ -302,7 +294,7 @@ private fun DockTabsRow(
               if (index == selected) onCollapse() else onSelect(index)
             },
             enabled = buttonsEnabled,
-            shape = RoundedCornerShape(20.dp),
+            shape = AppShapes.pill,
             color = if (isSelected) pill else Color.Transparent,
           ) {
             Row(
@@ -330,7 +322,7 @@ private fun DockTabsRow(
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
           IconButton(onClick = onCollapse, enabled = buttonsEnabled, modifier = Modifier.size(52.dp)) {
             Icon(
-              Icons.Filled.KeyboardArrowDown,
+              Icons.Outlined.KeyboardArrowDown,
               contentDescription = stringResource(R.string.dock_show_player),
               tint = content,
               modifier = Modifier.size(28.dp),

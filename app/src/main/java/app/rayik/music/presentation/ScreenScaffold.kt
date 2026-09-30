@@ -9,15 +9,16 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import app.rayik.music.R
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 
@@ -31,6 +32,7 @@ fun GradientHeadline(
   text: String,
   style: TextStyle = MaterialTheme.typography.headlineSmall,
   modifier: Modifier = Modifier,
+  maxLines: Int = Int.MAX_VALUE,
 ) {
   Text(
     text,
@@ -38,6 +40,8 @@ fun GradientHeadline(
       brush = BrandGradient.gradientTextBrush(),
       fontWeight = FontWeight.Bold,
     ),
+    maxLines = maxLines,
+    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
     modifier = modifier,
   )
 }
@@ -46,7 +50,7 @@ fun GradientHeadline(
 fun copyDiagnostics(context: Context, details: String) {
   val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
   clipboard.setPrimaryClip(ClipData.newPlainText("rayik diagnostics", details))
-  Toast.makeText(context, "Details copied — paste them into your report", Toast.LENGTH_SHORT).show()
+  Toast.makeText(context, context.getString(R.string.common_details_copied), Toast.LENGTH_SHORT).show()
 }
 
 /** Every streaming screen must handle loading / unavailable / retry — never blank or crash. */
@@ -72,7 +76,7 @@ fun ScreenScaffold(
       verticalArrangement = Arrangement.Center,
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      CircularProgressIndicator()
+      BarLoader()
       Text(
         loadingText,
         style = MaterialTheme.typography.bodyMedium,
@@ -85,7 +89,10 @@ fun ScreenScaffold(
       verticalArrangement = Arrangement.Center,
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      Text("Can\'t play this right now", style = MaterialTheme.typography.titleMedium)
+      Text(
+        stringResource(R.string.common_unavailable_title),
+        style = MaterialTheme.typography.titleMedium,
+      )
       Text(
         state.reason,
         style = MaterialTheme.typography.bodyMedium,
@@ -93,7 +100,7 @@ fun ScreenScaffold(
         modifier = Modifier.padding(top = MaterialTheme.spacing.small),
       )
       Button(onClick = onRetry, modifier = Modifier.padding(top = MaterialTheme.spacing.medium)) {
-        Text("Try again")
+        Text(stringResource(R.string.common_retry))
       }
       if (secondaryLabel != null && onSecondary != null) {
         TextButton(onClick = onSecondary) {

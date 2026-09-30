@@ -1,8 +1,10 @@
 package app.rayik.music.presentation
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import app.rayik.music.auth.CompleteOAuthLoginUseCase
 import app.rayik.music.auth.OAuthSessionManager
 import app.rayik.music.innertube.auth.OAuthException
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import app.rayik.music.R
 import javax.inject.Inject
 
 sealed interface DeviceFlowState {
@@ -41,6 +44,7 @@ sealed interface DeviceFlowState {
  */
 @HiltViewModel
 class DeviceFlowViewModel @Inject constructor(
+  @ApplicationContext private val context: Context,
   private val sessionManager: OAuthSessionManager,
   private val completeOAuthLogin: CompleteOAuthLoginUseCase,
 ) : ViewModel() {
@@ -76,7 +80,7 @@ class DeviceFlowViewModel @Inject constructor(
           .onFailure { throwable ->
             Timber.w(throwable, "OAuth login completion failed")
             _state.value = DeviceFlowState.Error(
-              throwable.message?.takeIf { it.isNotBlank() } ?: "Couldn't finish signing in — try again",
+              throwable.message?.takeIf { it.isNotBlank() } ?: context.getString(R.string.deviceflow_signin_failed),
               canRetry = true,
             )
           }
@@ -84,12 +88,12 @@ class DeviceFlowViewModel @Inject constructor(
         throw e
       } catch (e: OAuthException.AccessDenied) {
         _state.value = DeviceFlowState.Error(
-          e.message ?: "Sign-in was denied",
+          e.message ?: context.getString(R.string.deviceflow_denied),
           canRetry = true,
         )
       } catch (e: OAuthException.CodeExpired) {
         _state.value = DeviceFlowState.Error(
-          e.message ?: "The code expired",
+          e.message ?: context.getString(R.string.deviceflow_expired),
           canRetry = true,
         )
       } catch (e: Exception) {
@@ -108,5 +112,5 @@ class DeviceFlowViewModel @Inject constructor(
   }
 
   private fun networkError(): String =
-    "Couldn't reach Google — check your connection and try again"
+    context.getString(R.string.deviceflow_offline)
 }

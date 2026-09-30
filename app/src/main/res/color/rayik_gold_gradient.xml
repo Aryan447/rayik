@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- rāyik gold gradient for the launcher bars — matches BrandGradient.goldVerticalBrush. -->
+<gradient xmlns:android="http://schemas.android.com/apk/res/android"
+    android:type="linear"
+    android:startX="0"
+    android:startY="0"
+    android:endX="0"
+    android:endY="108"
+    android:tileMode="clamp">
+    <item android:color="#FFF5D4" android:offset="0" />
+    <item android:color="#F2CE62" android:offset="0.3" />
+    <item android:color="#DEAC33" android:offset="0.7" />
+    <item android:color="#9C6E15" android:offset="1" />
+</gradient>

@@ -20,30 +20,29 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.Contrast
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Radio
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Chat
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Contrast
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.LibraryMusic
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Radio
+import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Shuffle
+import androidx.compose.material.icons.outlined.SkipNext
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.outlined.VolumeOff
+import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -78,6 +77,7 @@ import app.rayik.music.preferences.AppearancePreferences
 import app.rayik.music.preferences.StreamQuality
 import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.preferences.components.ThemePicker
+import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.DarkMode
 import app.rayik.music.ui.theme.spacing
 import dagger.hilt.android.EntryPointAccessors
@@ -227,7 +227,7 @@ fun SettingsScreen(
         onValueChange = { query = it },
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text(stringResource(R.string.settings_search_hint)) },
-        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+        leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
         singleLine = true,
       )
 
@@ -251,14 +251,14 @@ fun SettingsScreen(
             }
           }
           SwitchSetting(
-            icon = Icons.Filled.Contrast,
+            icon = Icons.Outlined.Contrast,
             title = stringResource(R.string.pref_amoled_label),
             subtitle = null,
             checked = amoledMode,
             onChecked = { preferences.amoledMode.set(it) },
           )
           SwitchSetting(
-            icon = Icons.Filled.AutoAwesome,
+            icon = Icons.Outlined.AutoAwesome,
             title = stringResource(R.string.pref_album_art_label),
             subtitle = null,
             checked = albumArtDynamic,
@@ -269,7 +269,7 @@ fun SettingsScreen(
 
       if (matches("playback", "quality", "streaming", "gapless", "preload", "autoplay", "queue", "restore", "shuffle", "error", "skip")) {
         SettingsCard(title = stringResource(R.string.settings_section_playback)) {
-          IconLabel(icon = Icons.Filled.Palette, title = stringResource(R.string.pref_quality_label))
+          IconLabel(icon = Icons.Outlined.Palette, title = stringResource(R.string.pref_quality_label))
           RadioRow(
             options = StreamQuality.entries.map { it to stringResource(it.titleRes) },
             selected = streamQuality,
@@ -281,35 +281,35 @@ fun SettingsScreen(
             },
           )
           SwitchSetting(
-            icon = Icons.Filled.Bolt,
+            icon = Icons.Outlined.Bolt,
             title = stringResource(R.string.settings_gapless_label),
             subtitle = stringResource(R.string.settings_gapless_body),
             checked = gapless,
             onChecked = { gapless = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.Repeat,
+            icon = Icons.Outlined.Repeat,
             title = stringResource(R.string.settings_autoplay_label),
             subtitle = stringResource(R.string.settings_autoplay_body),
             checked = autoplay,
             onChecked = { autoplay = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.History,
+            icon = Icons.Outlined.History,
             title = stringResource(R.string.settings_restore_label),
             subtitle = stringResource(R.string.settings_restore_body),
             checked = restoreQueue,
             onChecked = { restoreQueue = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.SkipNext,
+            icon = Icons.Outlined.SkipNext,
             title = stringResource(R.string.settings_skiperror_label),
             subtitle = stringResource(R.string.settings_skiperror_body),
             checked = skipOnError,
             onChecked = { skipOnError = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.Shuffle,
+            icon = Icons.Outlined.Shuffle,
             title = stringResource(R.string.settings_keepshuffle_label),
             subtitle = stringResource(R.string.settings_keepshuffle_body),
             checked = keepShuffle,
@@ -321,28 +321,28 @@ fun SettingsScreen(
       if (matches("audio", "volume", "normalize", "loudness", "silence", "crossfade", "offload", "battery", "sound")) {
         SettingsCard(title = stringResource(R.string.settings_section_audio)) {
           SwitchSetting(
-            icon = Icons.Filled.VolumeUp,
+            icon = Icons.Outlined.VolumeUp,
             title = stringResource(R.string.settings_normalize_label),
             subtitle = stringResource(R.string.settings_normalize_body),
             checked = normalize,
             onChecked = { normalize = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.VolumeOff,
+            icon = Icons.Outlined.VolumeOff,
             title = stringResource(R.string.settings_silence_label),
             subtitle = stringResource(R.string.settings_silence_body),
             checked = skipSilence,
             onChecked = { skipSilence = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.Tune,
+            icon = Icons.Outlined.Tune,
             title = stringResource(R.string.settings_crossfade_label),
             subtitle = stringResource(R.string.settings_crossfade_body),
             checked = crossfade,
             onChecked = { crossfade = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.Speed,
+            icon = Icons.Outlined.Speed,
             title = stringResource(R.string.settings_offload_label),
             subtitle = stringResource(R.string.settings_offload_body),
             checked = offload,
@@ -354,14 +354,14 @@ fun SettingsScreen(
       if (matches("offline", "download", "storage", "cache", "data", "pin")) {
         SettingsCard(title = stringResource(R.string.settings_section_offline)) {
           SwitchSetting(
-            icon = Icons.Filled.Download,
+            icon = Icons.Outlined.Download,
             title = stringResource(R.string.settings_autodl_label),
             subtitle = stringResource(R.string.settings_autodl_body),
             checked = autoDownloadLiked,
             onChecked = { autoDownloadLiked = it },
           )
           ActionSetting(
-            icon = Icons.Filled.Storage,
+            icon = Icons.Outlined.Storage,
             title = stringResource(R.string.settings_cache_label),
             subtitle = stringResource(R.string.settings_cache_body, songCacheMb),
             actionLabel = if (clearingCache) {
@@ -395,21 +395,21 @@ fun SettingsScreen(
       if (matches("privacy", "history", "explicit", "low-data", "lowdata", "metered", "content")) {
         SettingsCard(title = stringResource(R.string.settings_section_privacy)) {
           SwitchSetting(
-            icon = Icons.Filled.VisibilityOff,
+            icon = Icons.Outlined.VisibilityOff,
             title = stringResource(R.string.settings_history_label),
             subtitle = stringResource(R.string.settings_history_body),
             checked = pauseHistory,
             onChecked = { pauseHistory = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.Block,
+            icon = Icons.Outlined.Block,
             title = stringResource(R.string.settings_explicit_label),
             subtitle = stringResource(R.string.settings_explicit_body),
             checked = hideExplicit,
             onChecked = { hideExplicit = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.CloudOff,
+            icon = Icons.Outlined.CloudOff,
             title = stringResource(R.string.settings_lowdata_label),
             subtitle = stringResource(R.string.settings_lowdata_body),
             checked = lowData,
@@ -421,21 +421,21 @@ fun SettingsScreen(
       if (matches("connected", "account", "lastfm", "last.fm", "listenbrainz", "discord", "scrobble")) {
         SettingsCard(title = stringResource(R.string.settings_section_connected)) {
           SwitchSetting(
-            icon = Icons.Filled.Radio,
+            icon = Icons.Outlined.Radio,
             title = stringResource(R.string.settings_lastfm_label),
             subtitle = stringResource(R.string.settings_lastfm_body),
             checked = lastfm,
             onChecked = { lastfm = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.LibraryMusic,
+            icon = Icons.Outlined.LibraryMusic,
             title = stringResource(R.string.settings_listenbrainz_label),
             subtitle = stringResource(R.string.settings_listenbrainz_body),
             checked = listenBrainz,
             onChecked = { listenBrainz = it },
           )
           SwitchSetting(
-            icon = Icons.Filled.Chat,
+            icon = Icons.Outlined.Chat,
             title = stringResource(R.string.settings_discord_label),
             subtitle = stringResource(R.string.settings_discord_body),
             checked = discord,
@@ -447,15 +447,13 @@ fun SettingsScreen(
       SettingsCard(title = stringResource(R.string.settings_section_about_app)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Icon(
-            Icons.Filled.Info,
+            Icons.Outlined.Info,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
           )
           Spacer(Modifier.width(MaterialTheme.spacing.medium))
           Text(
-            "rāyik ${BuildConfig.VERSION_NAME} • GPL-3.0-only\n" +
-              "Playback core: ArchiveTune (© Rukamori).\n" +
-              "Unofficial client — not affiliated with Google/YouTube.",
+            stringResource(R.string.settings_about_body, BuildConfig.VERSION_NAME),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
@@ -486,8 +484,7 @@ private fun ProfileCard(
   onSignOut: () -> Unit,
 ) {
   Surface(
-    tonalElevation = 2.dp,
-    shape = RoundedCornerShape(24.dp),
+    shape = AppShapes.cardShape,
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(
@@ -496,26 +493,30 @@ private fun ProfileCard(
         .padding(MaterialTheme.spacing.large),
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        val initial = (accountName.ifBlank { accountEmail }.firstOrNull()?.uppercase()
-          ?: "R")
-        Box(
-          modifier = Modifier
-            .size(56.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .border(
-              2.dp,
-              MaterialTheme.colorScheme.tertiary,
-              CircleShape,
-            ),
-          contentAlignment = Alignment.Center,
-        ) {
-          Text(
-            initial,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-          )
+        if (loggedIn) {
+          val initial = (accountName.ifBlank { accountEmail }.firstOrNull()?.uppercase()
+            ?: "R")
+          Box(
+            modifier = Modifier
+              .size(56.dp)
+              .clip(CircleShape)
+              .background(MaterialTheme.colorScheme.primaryContainer)
+              .border(
+                2.dp,
+                MaterialTheme.colorScheme.tertiary,
+                CircleShape,
+              ),
+            contentAlignment = Alignment.Center,
+          ) {
+            Text(
+              initial,
+              style = MaterialTheme.typography.headlineSmall,
+              fontWeight = FontWeight.Bold,
+              color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+          }
+        } else {
+          RayikMark(size = 56.dp)
         }
         Spacer(Modifier.width(MaterialTheme.spacing.medium))
         Column(Modifier.weight(1f)) {
@@ -559,8 +560,7 @@ private fun SettingsCard(
   content: @Composable () -> Unit,
 ) {
   Surface(
-    tonalElevation = 1.dp,
-    shape = RoundedCornerShape(20.dp),
+    shape = AppShapes.cardShape,
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(

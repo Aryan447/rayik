@@ -228,17 +228,21 @@ enum class AppTheme(
 
   fun getLightColorScheme(): ColorScheme {
     val surfaceTint = primaryLight.copy(alpha = 0.05f).compositeOver(backgroundLight)
+    // Ink is the theme's dark paper (the dark background) so Gold reads as
+    // brass-on-brown-paper and Hacker as green-black — never M3 cool grey.
+    val ink = backgroundDark
+    val muted = ink.copy(alpha = 0.68f).compositeOver(backgroundLight)
     return lightColorScheme(
       primary = primaryLight,
-      onPrimary = Color.White,
+      onPrimary = pickOn(primaryLight, ink, Color.White),
       primaryContainer = primaryLight.copy(alpha = 0.15f).compositeOver(Color.White),
       onPrimaryContainer = primaryLight.darken(0.3f),
       secondary = secondaryLight,
-      onSecondary = Color.White,
+      onSecondary = pickOn(secondaryLight, ink, Color.White),
       secondaryContainer = secondaryLight.copy(alpha = 0.15f).compositeOver(Color.White),
       onSecondaryContainer = secondaryLight.darken(0.3f),
       tertiary = tertiaryLight,
-      onTertiary = Color.White,
+      onTertiary = pickOn(tertiaryLight, ink, Color.White),
       tertiaryContainer = tertiaryLight.copy(alpha = 0.15f).compositeOver(Color.White),
       onTertiaryContainer = tertiaryLight.darken(0.3f),
       error = Color(0xFFBA1A1A),
@@ -246,15 +250,15 @@ enum class AppTheme(
       errorContainer = Color(0xFFFFDAD6),
       onErrorContainer = Color(0xFF93000A),
       background = backgroundLight,
-      onBackground = Color(0xFF1C1B1F),
+      onBackground = ink,
       surface = backgroundLight,
-      onSurface = Color(0xFF1C1B1F),
+      onSurface = ink,
       surfaceVariant = primaryLight.copy(alpha = 0.08f).compositeOver(Color(0xFFF0F0F0)),
-      onSurfaceVariant = Color(0xFF49454F),
+      onSurfaceVariant = muted,
       outline = secondaryLight.copy(alpha = 0.5f).compositeOver(Color(0xFF79747E)),
       outlineVariant = primaryLight.copy(alpha = 0.12f).compositeOver(Color(0xFFCAC4D0)),
       inverseSurface = backgroundDark,
-      inverseOnSurface = Color(0xFFF4EFF4),
+      inverseOnSurface = backgroundLight.darken(0.06f),
       inversePrimary = primaryDark,
       surfaceContainerLowest = backgroundLight,
       surfaceContainerLow = surfaceTint,
@@ -266,17 +270,21 @@ enum class AppTheme(
 
   fun getDarkColorScheme(): ColorScheme {
     val surfaceTint = primaryDark.copy(alpha = 0.05f).compositeOver(backgroundDark)
+    // Paper matched to the theme's light background (warm/cool), not M3 grey.
+    val paper = backgroundLight.darken(0.06f)
+    val ink = backgroundDark
+    val muted = paper.copy(alpha = 0.68f).compositeOver(backgroundDark)
     return darkColorScheme(
       primary = primaryDark,
-      onPrimary = primaryLight.darken(0.5f),
+      onPrimary = pickOn(primaryDark, ink, paper),
       primaryContainer = primaryLight.darken(0.3f),
       onPrimaryContainer = primaryDark.lighten(0.1f),
       secondary = secondaryDark,
-      onSecondary = secondaryLight.darken(0.5f),
+      onSecondary = pickOn(secondaryDark, ink, paper),
       secondaryContainer = secondaryLight.darken(0.3f),
       onSecondaryContainer = secondaryDark.lighten(0.1f),
       tertiary = tertiaryDark,
-      onTertiary = tertiaryLight.darken(0.5f),
+      onTertiary = pickOn(tertiaryDark, ink, paper),
       tertiaryContainer = tertiaryLight.darken(0.3f),
       onTertiaryContainer = tertiaryDark.lighten(0.1f),
       error = Color(0xFFFFB4AB),
@@ -284,15 +292,15 @@ enum class AppTheme(
       errorContainer = Color(0xFF93000A),
       onErrorContainer = Color(0xFFFFDAD6),
       background = backgroundDark,
-      onBackground = Color(0xFFE6E1E5),
+      onBackground = paper,
       surface = backgroundDark,
-      onSurface = Color(0xFFE6E1E5),
+      onSurface = paper,
       surfaceVariant = primaryDark.copy(alpha = 0.12f).compositeOver(Color(0xFF2A2A2A)),
-      onSurfaceVariant = Color(0xFFCAC4D0),
+      onSurfaceVariant = muted,
       outline = secondaryDark.copy(alpha = 0.4f).compositeOver(Color(0xFF938F99)),
       outlineVariant = primaryDark.copy(alpha = 0.15f).compositeOver(Color(0xFF49454F)),
       inverseSurface = backgroundLight,
-      inverseOnSurface = Color(0xFF313033),
+      inverseOnSurface = backgroundDark,
       inversePrimary = primaryLight,
       surfaceContainerLowest = backgroundDark.darken(0.2f),
       surfaceContainerLow = surfaceTint,
@@ -345,6 +353,25 @@ private fun Color.lighten(factor: Float): Color {
     alpha = alpha
   )
 }
+
+private fun Color.luminance(): Float {
+  fun channel(c: Float): Float =
+    if (c <= 0.03928f) c / 12.92f else Math.pow(((c + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
+  return 0.2126f * channel(red) + 0.7152f * channel(green) + 0.0722f * channel(blue)
+}
+
+private fun contrastRatio(a: Color, b: Color): Float {
+  val l1 = a.luminance()
+  val l2 = b.luminance()
+  val (hi, lo) = if (l1 >= l2) l1 to l2 else l2 to l1
+  return (hi + 0.05f) / (lo + 0.05f)
+}
+
+/** Pick ink vs paper by WCAG contrast — fixes the Rangoli trap (rice-white
+ * primary) and pale tertiaries without a magic luminance cut. Gold #EAC453
+ * (lum ~0.58) correctly resolves to dark ink (11:1) over paper (1.4:1). */
+private fun pickOn(background: Color, ink: Color, paper: Color): Color =
+  if (contrastRatio(background, ink) >= contrastRatio(background, paper)) ink else paper
 
 private fun Color.compositeOver(background: Color): Color {
   val bgAlpha = background.alpha

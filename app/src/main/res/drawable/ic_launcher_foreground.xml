@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- rāyik launcher foreground: "The Pro Harmonic Spectrum"
-     Minimalist audiophile design based on "sane defaults, pro-level control".
-     Five precision studio faders centered inside concentric acoustic rings.
-     Strict 66dp adaptive safe zone on 108x108 grid. Zero letters. -->
+<!-- rāyik launcher foreground: the one mark — five gradient gold bars inside
+     two acoustic rings (site Logo.astro, in-app RayikMark). The dark radial
+     tile comes from ic_launcher_background. Strict 66dp safe zone, 108 grid. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -23,39 +22,10 @@
         android:strokeLineCap="round"
         android:pathData="M 29,54 a 25,25 0 1,0 50,0 a 25,25 0 1,0 -50,0" />
 
-    <!-- Five precision studio equalizer faders (pro-level control) -->
-    <!-- Bar 1 (outer left): height 20 -->
-    <path
-        android:strokeColor="#EAC453"
-        android:strokeWidth="5.5"
-        android:strokeLineCap="round"
-        android:pathData="M 34,46.75 V 61.25" />
-
-    <!-- Bar 2 (inner left): height 34 -->
-    <path
-        android:strokeColor="#EAC453"
-        android:strokeWidth="5.5"
-        android:strokeLineCap="round"
-        android:pathData="M 44,39.75 V 68.25" />
-
-    <!-- Bar 3 (center peak): height 48 -->
-    <path
-        android:strokeColor="#EAC453"
-        android:strokeWidth="5.5"
-        android:strokeLineCap="round"
-        android:pathData="M 54,32.75 V 75.25" />
-
-    <!-- Bar 4 (inner right): height 34 -->
-    <path
-        android:strokeColor="#EAC453"
-        android:strokeWidth="5.5"
-        android:strokeLineCap="round"
-        android:pathData="M 64,39.75 V 68.25" />
-
-    <!-- Bar 5 (outer right): height 20 -->
-    <path
-        android:strokeColor="#EAC453"
-        android:strokeWidth="5.5"
-        android:strokeLineCap="round"
-        android:pathData="M 74,46.75 V 61.25" />
+    <!-- Five gold equalizer bars (heights 20 / 34 / 48 / 34 / 20) -->
+    <path android:fillColor="@color/rayik_gold_gradient" android:pathData="M 31.25,46.75 a2.75,2.75 0 0 1 2.75,-2.75 a2.75,2.75 0 0 1 2.75,2.75 L 36.75,61.25 a2.75,2.75 0 0 1 -2.75,2.75 a2.75,2.75 0 0 1 -2.75,-2.75 Z" />
+    <path android:fillColor="@color/rayik_gold_gradient" android:pathData="M 41.25,39.75 a2.75,2.75 0 0 1 2.75,-2.75 a2.75,2.75 0 0 1 2.75,2.75 L 46.75,68.25 a2.75,2.75 0 0 1 -2.75,2.75 a2.75,2.75 0 0 1 -2.75,-2.75 Z" />
+    <path android:fillColor="@color/rayik_gold_gradient" android:pathData="M 51.25,32.75 a2.75,2.75 0 0 1 2.75,-2.75 a2.75,2.75 0 0 1 2.75,2.75 L 56.75,75.25 a2.75,2.75 0 0 1 -2.75,2.75 a2.75,2.75 0 0 1 -2.75,-2.75 Z" />
+    <path android:fillColor="@color/rayik_gold_gradient" android:pathData="M 61.25,39.75 a2.75,2.75 0 0 1 2.75,-2.75 a2.75,2.75 0 0 1 2.75,2.75 L 66.75,68.25 a2.75,2.75 0 0 1 -2.75,2.75 a2.75,2.75 0 0 1 -2.75,-2.75 Z" />
+    <path android:fillColor="@color/rayik_gold_gradient" android:pathData="M 71.25,46.75 a2.75,2.75 0 0 1 2.75,-2.75 a2.75,2.75 0 0 1 2.75,2.75 L 76.75,61.25 a2.75,2.75 0 0 1 -2.75,2.75 a2.75,2.75 0 0 1 -2.75,-2.75 Z" />
 </vector>

@@ -88,6 +88,17 @@ defaults Idle, no UI entry point) and `discord/` backend (RPC
 defaults OFF, no OAuth UI) — retained to avoid high-risk surgery in
 playback-critical paths; no user-facing surface.
 
+## Brand type (rāyik addition, not vendored)
+
+- **Fraunces** (display serif) + **Outfit** (grotesque), both SIL Open
+  Font License 1.1, sourced from `google/fonts` (`ofl/fraunces`,
+  `ofl/outfit`). App ships variable TTFs in `app/src/main/res/font/`
+  (`fraunces.ttf`, `fraunces_italic.ttf`, `outfit.ttf`); the site
+  self-hosts matching woff2 in `site/public/fonts/`. No Google Fonts
+  runtime request anywhere.
+- Removed at the same time (never shipped, proprietary licenses):
+  `google_sans_*.ttf`, `sfprodisplaybold.ttf` (Apple), `poppins.ttf`.
+
 ## Playback-hardening gap (honest)
 
 The prior tree's Jio-class hardening (multi-client fallback walk,

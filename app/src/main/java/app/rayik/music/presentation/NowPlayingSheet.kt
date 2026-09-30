@@ -33,21 +33,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.QueueMusic
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.RepeatOne
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.HighQuality
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -98,7 +86,9 @@ import app.rayik.music.player.buildPlaybackDiagnostics
 import app.rayik.music.player.formatMs
 import app.rayik.music.preferences.StreamQuality
 import app.rayik.music.preferences.preference.collectAsState
+import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.BrandGradient
+import app.rayik.music.ui.theme.FrauncesItalicFamily
 import app.rayik.music.ui.theme.spacing
 
 /** Lazy-list indices of the scroll targets; header sections above are always emitted. */
@@ -230,33 +220,28 @@ fun NowPlayingSheetContent(
           ) {
             GlassIconButton(onClick = onCollapse) {
               Icon(
-                Icons.Filled.KeyboardArrowDown,
+                Icons.Outlined.KeyboardArrowDown,
                 contentDescription = stringResource(R.string.action_collapse),
               )
             }
             Spacer(Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // The playing-from line in serif italic — or nothing when there
+            // is no source. A fake live badge is the opposite of the voice.
+            if (!queueTitle.isNullOrBlank()) {
               Text(
-                stringResource(R.string.player_now_playing).uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.2.sp,
+                stringResource(R.string.playing_from, queueTitle!!),
+                style = MaterialTheme.typography.titleSmall.copy(
+                  fontFamily = FrauncesItalicFamily,
+                  fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                ),
                 color = scheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(2f),
+                textAlign = TextAlign.Center,
               )
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(top = 4.dp),
-              ) {
-                LiveDot(isPlaying = playbackState == PlaybackUiState.Playing)
-                Text(
-                  if (playbackState == PlaybackUiState.Playing) "LIVE MIX" else "RAYIK",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = scheme.onSurfaceVariant.copy(alpha = 0.8f),
-                  fontWeight = FontWeight.SemiBold,
-                  letterSpacing = 1.4.sp,
-                )
-              }
+            } else {
+              Spacer(Modifier.weight(2f))
             }
             Spacer(Modifier.weight(1f))
             GlassIconButton(
@@ -265,7 +250,7 @@ fun NowPlayingSheetContent(
               },
               enabled = current != null,
             ) {
-              Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.action_share))
+              Icon(RayikIcons.Share, contentDescription = stringResource(R.string.action_share))
             }
           }
         }
@@ -319,12 +304,12 @@ fun NowPlayingSheetContent(
                 },
               ) {
                 Icon(
-                  Icons.Filled.Share,
+                  RayikIcons.Share,
                   contentDescription = stringResource(R.string.action_share),
                   modifier = Modifier.size(17.dp),
                 )
                 Spacer(Modifier.width(6.dp))
-                Text("Share", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.action_share), style = MaterialTheme.typography.labelLarge)
               }
               Spacer(Modifier.width(10.dp))
               GlassPill(
@@ -333,12 +318,12 @@ fun NowPlayingSheetContent(
                 },
               ) {
                 Icon(
-                  Icons.Filled.QueueMusic,
+                  RayikIcons.Queue,
                   contentDescription = stringResource(R.string.action_open_queue),
                   modifier = Modifier.size(17.dp),
                 )
                 Spacer(Modifier.width(6.dp))
-                Text("Queue", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.action_queue), style = MaterialTheme.typography.labelLarge)
               }
             }
           }
@@ -382,7 +367,7 @@ fun NowPlayingSheetContent(
                 ),
                 loadingText = "",
                 onRetry = player::retry,
-                secondaryLabel = "Copy details",
+                secondaryLabel = stringResource(R.string.common_copy_details),
                 onSecondary = {
                   copyDiagnostics(
                     context,
@@ -416,7 +401,7 @@ fun NowPlayingSheetContent(
                   scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) }
                 },
               ) {
-                Icon(Icons.Filled.QueueMusic, contentDescription = null)
+                Icon(RayikIcons.Queue, contentDescription = null)
                 Spacer(Modifier.width(MaterialTheme.spacing.smaller))
                 Text(stringResource(R.string.action_open_queue))
               }
@@ -529,7 +514,7 @@ fun NowPlayingSheetContent(
                   },
                 ) {
                   Icon(
-                    Icons.Filled.QueueMusic,
+                    RayikIcons.Queue,
                     contentDescription = stringResource(R.string.action_open_queue),
                     modifier = Modifier.size(22.dp),
                   )
@@ -613,7 +598,7 @@ private fun GlassIconButton(
     tonalElevation = 0.dp,
     modifier = Modifier
       .size(44.dp)
-      .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape),
+      .border(1.dp, BrandGradient.hairline(), AppShapes.pill),
   ) {
     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
       content()
@@ -638,14 +623,14 @@ private fun QualityMenu(
       onClick = { expanded = true },
       shape = CircleShape,
       color = scheme.surface.copy(alpha = 0.5f),
-      modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape),
+      modifier = Modifier.border(1.dp, BrandGradient.hairline(), AppShapes.pill),
     ) {
       Row(
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
       ) {
         Icon(
-          Icons.Filled.HighQuality,
+          Icons.Outlined.HighQuality,
           contentDescription = stringResource(R.string.pref_quality_label),
           modifier = Modifier.size(15.dp),
         )
@@ -659,7 +644,7 @@ private fun QualityMenu(
     DropdownMenu(
       expanded = expanded,
       onDismissRequest = { expanded = false },
-      shape = RoundedCornerShape(16.dp),
+      shape = AppShapes.cardShape,
     ) {
       StreamQuality.entries.forEach { option ->
         DropdownMenuItem(
@@ -671,7 +656,7 @@ private fun QualityMenu(
           trailingIcon = if (option == quality) {
             {
               Icon(
-                Icons.Filled.Check,
+                Icons.Outlined.Check,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
               )
@@ -695,7 +680,7 @@ private fun GlassPill(
     onClick = onClick,
     shape = CircleShape,
     color = scheme.surface.copy(alpha = 0.5f),
-    modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape),
+    modifier = Modifier.border(1.dp, BrandGradient.hairline(), AppShapes.pill),
   ) {
     Row(
       modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -722,7 +707,7 @@ private fun LikePill(
     modifier = Modifier
       .border(
         1.dp,
-        if (isLiked) scheme.primary.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.16f),
+        if (isLiked) scheme.primary.copy(alpha = 0.4f) else BrandGradient.hairline(),
         CircleShape,
       )
       .shadow(
@@ -736,7 +721,7 @@ private fun LikePill(
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Icon(
-        imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+        imageVector = if (isLiked) RayikIcons.HeartFilled else RayikIcons.Heart,
         contentDescription = stringResource(
           if (isLiked) R.string.action_unlike else R.string.action_like,
         ),
@@ -745,7 +730,7 @@ private fun LikePill(
       )
       Spacer(Modifier.width(6.dp))
       Text(
-        if (isLiked) "Liked" else "Like",
+        stringResource(if (isLiked) R.string.action_liked else R.string.action_like),
         style = MaterialTheme.typography.labelLarge,
         color = contentColor,
       )
@@ -761,11 +746,11 @@ fun GlassCard(
 ) {
   Surface(
     tonalElevation = 2.dp,
-    shape = RoundedCornerShape(26.dp),
+    shape = AppShapes.cardShape,
     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
     modifier = modifier
       .fillMaxWidth()
-      .border(1.dp, Color.White.copy(alpha = 0.13f), RoundedCornerShape(26.dp)),
+      .border(1.dp, BrandGradient.hairline(), AppShapes.cardShape),
   ) {
     content()
   }
@@ -779,35 +764,23 @@ private fun GlassQueueWrapper(
   val scheme = MaterialTheme.colorScheme
   if (isCurrent) {
     Surface(
-      shape = RoundedCornerShape(18.dp),
+      shape = AppShapes.cardShape,
       color = scheme.primaryContainer.copy(alpha = 0.55f),
       modifier = Modifier
         .fillMaxWidth()
-        .border(1.dp, scheme.primary.copy(alpha = 0.35f), RoundedCornerShape(18.dp)),
+        .border(1.dp, scheme.primary.copy(alpha = 0.35f), AppShapes.cardShape),
     ) {
       content()
     }
   } else {
     Surface(
-      shape = RoundedCornerShape(18.dp),
+      shape = AppShapes.cardShape,
       color = scheme.surface.copy(alpha = 0.38f),
       modifier = Modifier.fillMaxWidth(),
     ) {
       content()
     }
   }
-}
-
-@Composable
-private fun LiveDot(isPlaying: Boolean) {
-  Box(
-    Modifier
-      .size(7.dp)
-      .clip(CircleShape)
-      .background(
-        if (isPlaying) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-      ),
-  )
 }
 
 @Composable
@@ -863,14 +836,14 @@ private fun SheetSlider(
           Modifier
             .fillMaxWidth()
             .height(4.dp)
-            .clip(RoundedCornerShape(2.dp))
+            .clip(AppShapes.pill)
             .background(activeSlider.copy(alpha = 0.28f)),
         ) {
           Box(
             Modifier
               .fillMaxWidth(fraction)
               .fillMaxHeight()
-              .clip(RoundedCornerShape(2.dp))
+              .clip(AppShapes.pill)
               .background(activeSlider)
               .align(Alignment.CenterStart),
           )
@@ -916,7 +889,7 @@ private fun ControlDock(
   ) {
     IconButton(onClick = onToggleShuffle, modifier = Modifier.size(40.dp)) {
       Icon(
-        imageVector = Icons.Filled.Shuffle,
+        imageVector = RayikIcons.Shuffle,
         contentDescription = stringResource(
           if (shuffleEnabled) R.string.transport_shuffle_on else R.string.transport_shuffle_off,
         ),
@@ -929,11 +902,11 @@ private fun ControlDock(
       onClick = onPrevious,
       enabled = state != PlaybackUiState.Loading,
       containerColor = scheme.surface.copy(alpha = 0.5f),
-      borderColor = Color.White.copy(alpha = 0.16f),
+      borderColor = BrandGradient.hairline(),
       modifier = Modifier.size(width = 60.dp, height = 58.dp),
     ) {
       Icon(
-        Icons.Filled.SkipPrevious,
+        RayikIcons.Previous,
         contentDescription = stringResource(R.string.transport_previous),
         tint = scheme.onSurface,
         modifier = Modifier.size(28.dp),
@@ -941,7 +914,7 @@ private fun ControlDock(
     }
     Spacer(Modifier.width(6.dp))
     if (state == PlaybackUiState.Loading) {
-      CircularProgressIndicator(modifier = Modifier.size(70.dp))
+      BarLoader(modifier = Modifier.size(width = 92.dp, height = 70.dp))
     } else {
       TransportPill(
         onClick = onToggle,
@@ -954,9 +927,9 @@ private fun ControlDock(
       ) {
         Icon(
           imageVector = if (state == PlaybackUiState.Playing) {
-            Icons.Filled.Pause
+            RayikIcons.Pause
           } else {
-            Icons.Filled.PlayArrow
+            RayikIcons.Play
           },
           contentDescription = stringResource(
             if (state == PlaybackUiState.Playing) {
@@ -975,11 +948,11 @@ private fun ControlDock(
       onClick = onNext,
       enabled = state != PlaybackUiState.Loading,
       containerColor = scheme.surface.copy(alpha = 0.5f),
-      borderColor = Color.White.copy(alpha = 0.16f),
+      borderColor = BrandGradient.hairline(),
       modifier = Modifier.size(width = 60.dp, height = 58.dp),
     ) {
       Icon(
-        Icons.Filled.SkipNext,
+        RayikIcons.Next,
         contentDescription = stringResource(R.string.transport_next),
         tint = scheme.onSurface,
         modifier = Modifier.size(28.dp),
@@ -988,7 +961,7 @@ private fun ControlDock(
     Spacer(Modifier.width(6.dp))
     IconButton(onClick = onCycleRepeat, modifier = Modifier.size(40.dp)) {
       Icon(
-        imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+        imageVector = if (repeatMode == RepeatMode.ONE) RayikIcons.RepeatOne else RayikIcons.Repeat,
         contentDescription = stringResource(R.string.transport_repeat, repeatMode.name),
         tint = if (repeatMode == RepeatMode.OFF) {
           scheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -1013,11 +986,11 @@ private fun TransportPill(
   Surface(
     onClick = onClick,
     enabled = enabled,
-    shape = RoundedCornerShape(24.dp),
+    shape = AppShapes.pill,
     color = containerColor,
     modifier = modifier
-      .shadow(20.dp, RoundedCornerShape(24.dp), spotColor = shadowColor)
-      .border(1.dp, borderColor, RoundedCornerShape(24.dp)),
+      .shadow(20.dp, AppShapes.pill, spotColor = shadowColor)
+      .border(1.dp, borderColor, AppShapes.pill),
   ) {
     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
       content()

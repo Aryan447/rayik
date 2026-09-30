@@ -21,6 +21,9 @@ import app.rayik.music.spotify.SpotifyLibraryRepository
 import app.rayik.music.spotify.models.SpotifyTrack
 import java.time.LocalDateTime
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import app.rayik.music.R
 
 /** Progress of a running import: resolved count, failures, completion. */
 data class ImportProgress(
@@ -39,6 +42,7 @@ data class ImportProgress(
  */
 @HiltViewModel
 class ImportViewModel @Inject constructor(
+  @ApplicationContext private val context: Context,
   private val spotify: SpotifyLibraryRepository,
   private val database: MusicDatabase,
 ) : ViewModel() {
@@ -65,7 +69,7 @@ class ImportViewModel @Inject constructor(
   fun connect(spDc: String, spKey: String) {
     val dc = spDc.trim()
     if (dc.isEmpty()) {
-      _connectError.value = "Paste your sp_dc cookie value first"
+      _connectError.value = context.getString(R.string.import_connect_empty)
       return
     }
     viewModelScope.launch(Dispatchers.IO) {
@@ -75,7 +79,7 @@ class ImportViewModel @Inject constructor(
           _session.value = it
           spotify.refreshPlaylists()
         }
-        .onFailure { _connectError.value = it.message ?: "Could not connect — check the cookie and try again" }
+        .onFailure { _connectError.value = it.message ?: context.getString(R.string.import_connect_failed) }
     }
   }
 
@@ -93,14 +97,14 @@ class ImportViewModel @Inject constructor(
   fun importLiked() {
     viewModelScope.launch(Dispatchers.IO) {
       val tracks = fetchAllLiked()
-      importTracks(tracks, "Liked songs")
+      importTracks(tracks, context.getString(R.string.import_liked))
     }
   }
 
   fun importPlaylist(playlistId: String, name: String) {
     viewModelScope.launch(Dispatchers.IO) {
       val tracks = runCatching { spotify.playlistTracks(playlistId) }.getOrElse {
-        _progress.value = ImportProgress(label = name, failures = listOf(it.message ?: "Could not load playlist"), done = true)
+        _progress.value = ImportProgress(label = name, failures = listOf(it.message ?: context.getString(R.string.import_load_failed)), done = true)
         return@launch
       }
       importTracks(tracks, name)

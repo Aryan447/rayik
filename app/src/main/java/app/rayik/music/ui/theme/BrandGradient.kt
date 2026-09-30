@@ -107,6 +107,37 @@ object BrandGradient {
     )
   }
 
+  /**
+   * Luminance-aware hairline: paper at 14% on dark schemes, ink at 10% on
+   * light schemes. Replaces every `Color.White.copy(alpha)` stroke so Gold
+   * light keeps a visible hairline. Read the scheme — never hardcode white.
+   */
+  @Composable
+  @ReadOnlyComposable
+  fun hairline(
+    alphaDark: Float = 0.14f,
+    alphaLight: Float = 0.10f,
+  ): Color {
+    val scheme = MaterialTheme.colorScheme
+    val isDark = scheme.background.luminance() < 0.5f
+    return if (isDark) scheme.onSurface.copy(alpha = alphaDark)
+    else scheme.onSurface.copy(alpha = alphaLight)
+  }
+
   /** Frosted-glass hairline used on elevated pills, cards and the nav. */
   fun glassHairline(alpha: Float = 0.14f): Color = Color.White.copy(alpha = alpha)
+
+  /** Non-composable overload for previews / canvas work with a known scheme. */
+  fun hairlineFor(scheme: androidx.compose.material3.ColorScheme): Color {
+    val isDark = scheme.background.luminance() < 0.5f
+    return if (isDark) scheme.onSurface.copy(alpha = 0.14f)
+    else scheme.onSurface.copy(alpha = 0.10f)
+  }
+}
+
+private fun Color.luminance(): Float {
+  fun channel(c: Float): Float =
+    if (c <= 0.03928f) c / 12.92f else Math.pow(((c + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
+  return 0.2126f * channel(red) + 0.7152f * channel(green) + 0.0722f * channel(blue)
+}
 }

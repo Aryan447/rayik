@@ -2,10 +2,7 @@ package app.rayik.music.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -14,30 +11,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import app.rayik.music.ui.theme.AppShapes
+import app.rayik.music.ui.theme.BrandGradient
+import app.rayik.music.ui.theme.RayikIcons
 import coil3.compose.AsyncImage
+import androidx.compose.foundation.layout.fillMaxSize
 
 /**
- * Shared artwork tile: themed note placeholder underneath, remote art on
- * top when present. Graceful when art fails — never a grey box.
+ * Shared artwork tile: five bars on the theme sweep underneath, remote art
+ * on top when present. Graceful when art fails — never a grey box.
  */
 @Composable
 fun TrackArt(
   artworkUrl: String,
   modifier: Modifier = Modifier,
-  corner: Dp = 8.dp,
+  corner: Dp = AppShapes.art,
 ) {
   Box(
     modifier = modifier
       .clip(RoundedCornerShape(corner))
-      .background(MaterialTheme.colorScheme.surfaceVariant),
+      .background(BrandGradient.artSweepBrush()),
     contentAlignment = Alignment.Center,
   ) {
     Icon(
-      imageVector = Icons.Filled.MusicNote,
+      imageVector = RayikIcons.Raay,
       contentDescription = null,
-      tint = MaterialTheme.colorScheme.onSurfaceVariant,
-      modifier = Modifier.padding(10.dp),
+      tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f),
+      modifier = Modifier.fillMaxSize(0.45f),
     )
     if (artworkUrl.isNotBlank()) {
       AsyncImage(

@@ -20,15 +20,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,27 +52,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import app.rayik.music.player.formatMs
+import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 import app.rayik.music.R
 import app.rayik.music.innertube.models.SongItem
 
-private data class BrowseMood(
-  val label: String,
-  val query: String,
-  val start: Color,
-  val end: Color,
-)
-
 private val BROWSE_MOODS = listOf(
-  BrowseMood("Bollywood Hits", "bollywood hits", Color(0xFFE91E63), Color(0xFF7B1FA2)),
-  BrowseMood("Punjabi", "punjabi songs", Color(0xFFFF9800), Color(0xFFF44336)),
-  BrowseMood("Lo-Fi Chill", "lofi chill", Color(0xFF3F51B5), Color(0xFF00BCD4)),
-  BrowseMood("Arijit Special", "arijit singh", Color(0xFF9C27B0), Color(0xFFE91E63)),
-  BrowseMood("Workout", "workout music", Color(0xFFF44336), Color(0xFFFF5722)),
-  BrowseMood("Rainy Day", "rainy day songs", Color(0xFF03A9F4), Color(0xFF3F51B5)),
-  BrowseMood("Party", "party songs", Color(0xFFFF5722), Color(0xFFFFC107)),
-  BrowseMood("2000s", "2000s hits", Color(0xFF009688), Color(0xFF8BC34A)),
+  R.string.search_browse_bollywood to R.string.search_browse_bollywood_q,
+  R.string.search_browse_punjabi to R.string.search_browse_punjabi_q,
+  R.string.search_browse_lofi to R.string.search_browse_lofi_q,
+  R.string.search_browse_arijit to R.string.search_browse_arijit_q,
+  R.string.search_browse_workout to R.string.search_browse_workout_q,
+  R.string.search_browse_rainy to R.string.search_browse_rainy_q,
+  R.string.search_browse_party to R.string.search_browse_party_q,
+  R.string.search_browse_y2k to R.string.search_browse_y2k_q,
 )
 
 /**
@@ -138,16 +126,16 @@ fun SearchScreen(
         onValueChange = { query = it },
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text(stringResource(R.string.search_hint)) },
-        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+        leadingIcon = { Icon(RayikIcons.SearchNav, contentDescription = null) },
         trailingIcon = {
           if (query.isNotBlank()) {
             IconButton(onClick = { query = "" }) {
-              Icon(Icons.Filled.Close, contentDescription = null)
+              Icon(RayikIcons.Close, contentDescription = null)
             }
           }
         },
         singleLine = true,
-        shape = RoundedCornerShape(28.dp),
+        shape = AppShapes.pill,
         colors = TextFieldDefaults.colors(
           focusedIndicatorColor = Color.Transparent,
           unfocusedIndicatorColor = Color.Transparent,
@@ -180,7 +168,7 @@ fun SearchScreen(
                 Row(
                   modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(AppShapes.cardShape)
                     .clickable {
                       query = recent
                       searchViewModel.searchAndRemember(recent)
@@ -189,7 +177,7 @@ fun SearchScreen(
                   verticalAlignment = Alignment.CenterVertically,
                 ) {
                   Icon(
-                    Icons.Filled.History,
+                    RayikIcons.History,
                     contentDescription = null,
                     tint = scheme.onSurfaceVariant,
                   )
@@ -222,12 +210,16 @@ fun SearchScreen(
               verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
               userScrollEnabled = false,
             ) {
-              items(BROWSE_MOODS) { mood ->
+              items(BROWSE_MOODS.size) { index ->
+                val (labelRes, queryRes) = BROWSE_MOODS[index]
+                val label = stringResource(labelRes)
+                val queryText = stringResource(queryRes)
                 MoodCard(
-                  mood = mood,
+                  index = index,
+                  label = label,
                   onClick = {
-                    query = mood.query
-                    searchViewModel.searchAndRemember(mood.query)
+                    query = queryText
+                    searchViewModel.searchAndRemember(queryText)
                   },
                 )
               }
@@ -294,29 +286,39 @@ fun SearchScreen(
 
 @Composable
 private fun MoodCard(
-  mood: BrowseMood,
+  index: Int,
+  label: String,
   onClick: () -> Unit,
 ) {
+  // Theme-colored sweep, rotated so neighbors differ — never fixed pinks.
+  val scheme = MaterialTheme.colorScheme
+  val sweep = remember(index, scheme) {
+    val stops = listOf(scheme.primary, scheme.secondary, scheme.tertiary, scheme.primary)
+    val shift = index % stops.size
+    Brush.sweepGradient(stops.drop(shift) + stops.take(shift))
+  }
   Box(
     modifier = Modifier
       .fillMaxWidth()
       .height(92.dp)
-      .clip(RoundedCornerShape(20.dp))
-      .background(Brush.linearGradient(listOf(mood.start, mood.end)))
+      .clip(AppShapes.cardShape)
+      .background(sweep)
       .clickable(onClick = onClick)
       .padding(MaterialTheme.spacing.medium),
   ) {
     Text(
-      mood.label,
+      label,
       style = MaterialTheme.typography.titleMedium,
       fontWeight = FontWeight.Bold,
-      color = Color.White,
+      color = scheme.onPrimary,
+      maxLines = 2,
+      overflow = TextOverflow.Ellipsis,
       modifier = Modifier.align(Alignment.BottomStart),
     )
     Icon(
-      Icons.Filled.MusicNote,
+      RayikIcons.MusicNote,
       contentDescription = null,
-      tint = Color.White.copy(alpha = 0.35f),
+      tint = scheme.onPrimary.copy(alpha = 0.35f),
       modifier = Modifier
         .size(64.dp)
         .align(Alignment.TopEnd)
@@ -333,8 +335,7 @@ private fun TopResultCard(
 ) {
   Surface(
     onClick = onClick,
-    tonalElevation = 2.dp,
-    shape = RoundedCornerShape(24.dp),
+    shape = AppShapes.cardShape,
     border = androidx.compose.foundation.BorderStroke(
       1.dp,
       MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
@@ -345,7 +346,7 @@ private fun TopResultCard(
       modifier = Modifier.padding(MaterialTheme.spacing.medium),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      TrackArt(artworkUrl = track.thumbnail, corner = 20.dp, modifier = Modifier.size(96.dp))
+      TrackArt(artworkUrl = track.thumbnail, corner = AppShapes.art, modifier = Modifier.size(96.dp))
       Spacer(Modifier.width(MaterialTheme.spacing.medium))
       Column(Modifier.weight(1f)) {
         Text(
@@ -378,7 +379,7 @@ private fun TopResultCard(
         ),
       ) {
         Icon(
-          Icons.Filled.PlayArrow,
+          RayikIcons.Play,
           contentDescription = stringResource(R.string.transport_play),
           modifier = Modifier.size(30.dp),
         )
@@ -395,12 +396,12 @@ private fun SearchRow(
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(16.dp))
+      .clip(AppShapes.cardShape)
       .clickable(onClick = onClick)
       .padding(MaterialTheme.spacing.small),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    TrackArt(artworkUrl = track.thumbnail, corner = 14.dp, modifier = Modifier.size(52.dp))
+    TrackArt(artworkUrl = track.thumbnail, corner = AppShapes.art, modifier = Modifier.size(52.dp))
     Spacer(Modifier.width(MaterialTheme.spacing.medium))
     Column(Modifier.weight(1f)) {
       Text(

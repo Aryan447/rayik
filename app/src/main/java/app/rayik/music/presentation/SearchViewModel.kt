@@ -1,8 +1,10 @@
 package app.rayik.music.presentation
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +22,7 @@ import app.rayik.music.models.toMediaMetadata
 import app.rayik.music.playback.PlayerConnectionHolder
 import app.rayik.music.playback.queues.YouTubeQueue
 import app.rayik.music.innertube.models.WatchEndpoint
+import app.rayik.music.R
 import javax.inject.Inject
 
 sealed interface SearchUiState {
@@ -31,6 +34,7 @@ sealed interface SearchUiState {
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
+  @ApplicationContext private val context: Context,
   private val holder: PlayerConnectionHolder,
   private val database: MusicDatabase,
 ) : ViewModel() {
@@ -79,7 +83,7 @@ class SearchViewModel @Inject constructor(
           val songs = result.items.filterIsInstance<SongItem>()
           _state.value = SearchUiState.Results(songs)
         }
-        .onFailure { _state.value = SearchUiState.Unavailable(it.message ?: "Search failed — try again") }
+        .onFailure { _state.value = SearchUiState.Unavailable(it.message ?: context.getString(R.string.search_failed)) }
     }
   }
 

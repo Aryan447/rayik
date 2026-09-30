@@ -97,6 +97,7 @@ fun RayikTheme(
     MaterialTheme(
       colorScheme = colorScheme,
       typography = AppTypography,
+      shapes = AppMaterialShapes,
       content = content,
       motionScheme = MotionScheme.expressive(),
     )

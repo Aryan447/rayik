@@ -22,13 +22,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,11 +49,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.rayik.music.R
 import app.rayik.music.innertube.utils.hasCompleteYouTubeLoginCookies
+import app.rayik.music.ui.theme.AppShapes
+import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 import app.rayik.music.utils.resetAuthWebViewSession
 
@@ -141,11 +146,13 @@ private fun DeviceFlowContent(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center,
     ) {
+      RayikMark(size = 64.dp)
+      Spacer(Modifier.height(MaterialTheme.spacing.large))
       when (val current = state) {
         DeviceFlowState.Idle,
         DeviceFlowState.RequestingCode,
         -> {
-          CircularProgressIndicator()
+          BarLoader()
           Spacer(Modifier.height(MaterialTheme.spacing.medium))
           Text(
             stringResource(R.string.deviceflow_requesting),
@@ -155,30 +162,42 @@ private fun DeviceFlowContent(
           )
         }
         is DeviceFlowState.AwaitingApproval -> {
-          Text(
-            stringResource(R.string.deviceflow_code_label),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-          )
-          Spacer(Modifier.height(MaterialTheme.spacing.medium))
-          Text(
-            current.userCode,
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center,
-          )
-          Spacer(Modifier.height(MaterialTheme.spacing.medium))
-          Button(
-            onClick = { openVerificationPage(context, current.verificationUrl) },
-            modifier = Modifier.fillMaxWidth(),
+          Surface(
+            shape = AppShapes.cardShape,
+            modifier = Modifier
+              .fillMaxWidth()
+              .border(1.dp, BrandGradient.hairline(), AppShapes.cardShape),
           ) {
-            Text(stringResource(R.string.deviceflow_continue))
-          }
-          TextButton(onClick = { copyCode(context, current.userCode) }) {
-            Icon(Icons.Filled.ContentCopy, contentDescription = null)
-            Text(stringResource(R.string.deviceflow_copy))
+            Column(
+              modifier = Modifier.padding(MaterialTheme.spacing.large),
+              horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+              Text(
+                stringResource(R.string.deviceflow_code_label),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+              )
+              Spacer(Modifier.height(MaterialTheme.spacing.medium))
+              Text(
+                current.userCode,
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+              )
+              Spacer(Modifier.height(MaterialTheme.spacing.medium))
+              Button(
+                onClick = { openVerificationPage(context, current.verificationUrl) },
+                modifier = Modifier.fillMaxWidth(),
+              ) {
+                Text(stringResource(R.string.deviceflow_continue))
+              }
+              TextButton(onClick = { copyCode(context, current.userCode) }) {
+                Icon(Icons.Outlined.ContentCopy, contentDescription = null)
+                Text(stringResource(R.string.deviceflow_copy))
+              }
+            }
           }
           Spacer(Modifier.height(MaterialTheme.spacing.medium))
           LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -195,7 +214,7 @@ private fun DeviceFlowContent(
           }
         }
         DeviceFlowState.Completing -> {
-          CircularProgressIndicator()
+          BarLoader()
           Spacer(Modifier.height(MaterialTheme.spacing.medium))
           Text(
             stringResource(R.string.deviceflow_completing),
@@ -205,7 +224,7 @@ private fun DeviceFlowContent(
           )
         }
         is DeviceFlowState.Success -> {
-          CircularProgressIndicator()
+          BarLoader()
         }
         is DeviceFlowState.Error -> {
           Text(

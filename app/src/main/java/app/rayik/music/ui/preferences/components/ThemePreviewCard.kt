@@ -6,25 +6,19 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.AppTheme
 
 /**
@@ -50,9 +45,9 @@ fun ThemePreviewCard(
 
   val selectionColor = MaterialTheme.colorScheme.primary
 
-  val borderWidth = if (isSelected) 3.dp else 1.dp
-  val borderColor = if (isSelected) selectionColor else Color.Transparent
-  val elevation = if (isSelected) 8.dp else 2.dp
+  // Constant geometry — selection changes color only, never layout.
+  val borderWidth = if (isSelected) 2.dp else 1.dp
+  val borderColor = if (isSelected) selectionColor else colorScheme.outlineVariant
 
   Column(
     modifier = modifier
@@ -67,85 +62,46 @@ fun ThemePreviewCard(
     Box(
       modifier = Modifier
         .size(width = 90.dp, height = 140.dp)
-        .shadow(
-          elevation = elevation,
-          shape = RoundedCornerShape(12.dp),
-          ambientColor = if (isSelected) selectionColor.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.2f),
-          spotColor = if (isSelected) selectionColor.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.2f),
-        )
-        .clip(RoundedCornerShape(12.dp))
-        .background(Brush.verticalGradient(listOf(colorScheme.surface, colorScheme.surface)))
-        .border(
-          width = borderWidth,
-          color = borderColor,
-          shape = RoundedCornerShape(12.dp)
-        ),
+        .shadow(elevation = 4.dp, shape = AppShapes.cardShape)
+        .clip(AppShapes.cardShape)
+        .background(colorScheme.surface)
+        .border(width = borderWidth, color = borderColor, shape = AppShapes.cardShape),
     ) {
+      // A tiny version of the real card: serif title, one art block, one
+      // pill — so Gold versus Hacker previews the actual app.
       Column(
         modifier = Modifier
           .matchParentSize()
-          .padding(if (isSelected) 3.dp else 1.dp)
-          .clip(RoundedCornerShape(if (isSelected) 9.dp else 11.dp))
           .background(colorScheme.background)
           .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
       ) {
+        Text(
+          text = "Aa",
+          style = MaterialTheme.typography.headlineSmall,
+          color = colorScheme.onSurface,
+          maxLines = 1,
+        )
         Box(
           modifier = Modifier
             .fillMaxWidth()
-            .height(16.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(colorScheme.surfaceVariant)
+            .height(56.dp)
+            .clip(AppShapes.artShape)
+            .background(colorScheme.primary.copy(alpha = 0.35f)),
         )
-
-        Surface(
+        Box(
           modifier = Modifier
-            .fillMaxWidth()
-            .height(32.dp),
-          color = colorScheme.surfaceVariant,
-          shape = RoundedCornerShape(6.dp),
-        ) {
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-          ) {
-            Box(
-              modifier = Modifier
-                .size(width = 24.dp, height = 12.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(colorScheme.primary)
-            )
-            Box(
-              modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(colorScheme.tertiary)
-            )
-          }
-        }
-
+            .size(width = 40.dp, height = 14.dp)
+            .clip(AppShapes.pill)
+            .background(colorScheme.primary),
+        )
         Box(
           modifier = Modifier
             .fillMaxWidth()
-            .height(14.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(colorScheme.surfaceVariant)
+            .height(8.dp)
+            .clip(AppShapes.pill)
+            .background(colorScheme.onSurface.copy(alpha = 0.18f)),
         )
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.Center,
-        ) {
-          Box(
-            modifier = Modifier
-              .size(10.dp)
-              .clip(CircleShape)
-              .background(colorScheme.secondary)
-          )
-        }
       }
     }
 

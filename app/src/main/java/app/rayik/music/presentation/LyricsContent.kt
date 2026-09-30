@@ -24,12 +24,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -55,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import app.rayik.music.R
 import app.rayik.music.lyrics.LyricDisplayParser
 import app.rayik.music.lyrics.LyricsEntry
+import app.rayik.music.ui.theme.AppShapes
+import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 
 /** Index of the line playing at [positionMs], or -1 when none matches yet. */
@@ -130,15 +130,11 @@ fun LyricsPreviewCard(
 ) {
   Surface(
     tonalElevation = 0.dp,
-    shape = RoundedCornerShape(26.dp),
+    shape = AppShapes.cardShape,
     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
     modifier = modifier
       .fillMaxWidth()
-      .border(
-        1.dp,
-        androidx.compose.ui.graphics.Color.White.copy(alpha = 0.13f),
-        RoundedCornerShape(26.dp),
-      ),
+      .border(1.dp, BrandGradient.hairline(), AppShapes.cardShape),
   ) {
     Column(
       modifier = Modifier
@@ -161,7 +157,7 @@ fun LyricsPreviewCard(
             modifier = Modifier.size(40.dp),
           ) {
             Icon(
-              imageVector = Icons.Filled.Fullscreen,
+              imageVector = Icons.Outlined.Fullscreen,
               contentDescription = stringResource(R.string.lyrics_fullscreen),
               modifier = Modifier.size(20.dp),
             )
@@ -173,7 +169,7 @@ fun LyricsPreviewCard(
             modifier = Modifier.size(40.dp),
           ) {
             Icon(
-              imageVector = Icons.Filled.Share,
+              imageVector = RayikIcons.Share,
               contentDescription = stringResource(R.string.action_share),
               modifier = Modifier.size(20.dp),
             )
@@ -223,9 +219,9 @@ fun LyricsPreviewCard(
                 } else {
                   MaterialTheme.typography.bodyMedium
                 },
-                fontWeight = if (i == 0) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (i == 0) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (i == 0) {
-                  MaterialTheme.colorScheme.onSurface
+                  MaterialTheme.colorScheme.primary
                 } else {
                   MaterialTheme.colorScheme.onSurfaceVariant
                 },
@@ -250,7 +246,7 @@ fun LyricsPreviewCard(
           modifier = Modifier.align(Alignment.Start),
         ) {
           Icon(
-            imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+            imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
             contentDescription = null,
           )
           Text(
@@ -340,7 +336,7 @@ private fun LyricRow(
     } else {
       MaterialTheme.typography.bodyLarge
     },
-    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
     color = color,
     textAlign = TextAlign.Center,
     modifier = modifier

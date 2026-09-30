@@ -18,6 +18,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
+import androidx.core.content.res.ResourcesCompat
+import app.rayik.music.R
 import app.rayik.music.lyrics.LyricDisplayParser
 import coil3.BitmapImage
 import coil3.SingletonImageLoader
@@ -97,6 +99,9 @@ fun rememberShareLyricCard(
  * Renders shareable story cards (1080×1350, Gold brand) with android.graphics
  * — no Compose-capture tricks, deterministic on every density. Artwork is
  * fetched through Coil with hardware bitmaps off so it can draw to canvas.
+ * The shell stays brand-gold (launcher tile, not the active theme) so a
+ * shared image is recognizable as rāyik anywhere; type is Fraunces/Outfit
+ * and the placeholder is the five bars.
  */
 object ShareCardRenderer {
   suspend fun renderLyricCard(
@@ -107,13 +112,14 @@ object ShareCardRenderer {
     artist: String,
   ): Bitmap = withContext(Dispatchers.IO) {
     val art = loadArt(context, artworkUrl)
-    drawShell(art = art) { canvas, cursorY ->
+    val fonts = CardFonts.load(context)
+    drawShell(art = art, fonts = fonts, footer = context.getString(R.string.share_card_footer)) { canvas, cursorY ->
       var y = cursorY
       y = drawCenteredText(
         canvas = canvas,
         text = lyric.ifBlank { title },
         sizePx = 64f,
-        bold = true,
+        typeface = fonts.serif,
         color = CREAM,
         maxLines = 4,
         y = y,
@@ -123,7 +129,7 @@ object ShareCardRenderer {
         canvas = canvas,
         text = if (artist.isBlank()) title else "$title • $artist",
         sizePx = 40f,
-        bold = false,
+        typeface = fonts.sans,
         color = GOLD,
         maxLines = 1,
         y = y,
@@ -138,13 +144,14 @@ object ShareCardRenderer {
     lines: List<String>,
   ): Bitmap = withContext(Dispatchers.IO) {
     val art = loadArt(context, artworkUrl, ART_SIZE / 2)
-    drawShell(art = art) { canvas, cursorY ->
+    val fonts = CardFonts.load(context)
+    drawShell(art = art, fonts = fonts, footer = context.getString(R.string.share_card_footer)) { canvas, cursorY ->
       var y = cursorY
       y = drawCenteredText(
         canvas = canvas,
         text = headline,
         sizePx = 96f,
-        bold = true,
+        typeface = fonts.serif,
         color = GOLD,
         maxLines = 2,
         y = y,
@@ -155,7 +162,7 @@ object ShareCardRenderer {
           canvas = canvas,
           text = line,
           sizePx = 44f,
-          bold = false,
+          typeface = fonts.sans,
           color = CREAM,
           maxLines = 2,
           y = y + 8f,
@@ -202,8 +209,19 @@ object ShareCardRenderer {
     }.getOrNull()
   }
 
+  private data class CardFonts(val serif: Typeface?, val sans: Typeface?) {
+    companion object {
+      fun load(context: Context): CardFonts = CardFonts(
+        serif = runCatching { ResourcesCompat.getFont(context, R.font.fraunces) }.getOrNull(),
+        sans = runCatching { ResourcesCompat.getFont(context, R.font.outfit) }.getOrNull(),
+      )
+    }
+  }
+
   private fun drawShell(
     art: Bitmap?,
+    fonts: CardFonts,
+    footer: String,
     content: (Canvas, Float) -> Unit,
   ): Bitmap {
     val bitmap = Bitmap.createBitmap(CARD_W, CARD_H, Bitmap.Config.ARGB_8888)
@@ -235,27 +253,40 @@ object ShareCardRenderer {
       if (scaled !== art) scaled.recycle()
       cursorY += ART_SIZE + 64f
     } else {
-      // Note glyph placeholder — never a grey box.
-      val note = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = GOLD_DIM
-        textSize = 320f
-        textAlign = Paint.Align.CENTER
-        typeface = Typeface.DEFAULT_BOLD
+      // Five gold bars placeholder — never a grey box, never a note glyph.
+      val barPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = android.graphics.LinearGradient(
+          0f, cursorY, 0f, cursorY + ART_SIZE,
+          intArrayOf(0xFFFFF5D4.toInt(), 0xFFF2CE62.toInt(), 0xFFDEAC33.toInt(), 0xFF9C6E15.toInt()),
+          floatArrayOf(0f, 0.3f, 0.7f, 1f),
+          android.graphics.Shader.TileMode.CLAMP,
+        )
       }
-      canvas.drawText("♪", CARD_W / 2f, cursorY + 560f, note)
+      val unit = 6f
+      val barW = 5.5f * unit
+      val gap = 4.25f * unit
+      val heights = listOf(20f, 34f, 48f, 34f, 20f)
+      val totalW = barW * 5 + gap * 4
+      var bx = CARD_W / 2f - totalW / 2f
+      val cy = cursorY + ART_SIZE / 2f
+      heights.forEach { h ->
+        val bh = h * unit
+        canvas.drawRoundRect(RectF(bx, cy - bh / 2f, bx + barW, cy + bh / 2f), barW / 2f, barW / 2f, barPaint)
+        bx += barW + gap
+      }
       cursorY += ART_SIZE + 64f
     }
 
     content(canvas, cursorY)
 
     // Footer brand line.
-    val footer = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+    val footerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
       color = GOLD_DIM
       textSize = 34f
       textAlign = Paint.Align.CENTER
-      typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      typeface = fonts.sans ?: Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
-    canvas.drawText("rāyik • Music with opinions.", CARD_W / 2f, CARD_H - 72f, footer)
+    canvas.drawText(footer, CARD_W / 2f, CARD_H - 72f, footerPaint)
     return bitmap
   }
 
@@ -263,7 +294,7 @@ object ShareCardRenderer {
     canvas: Canvas,
     text: String,
     sizePx: Float,
-    bold: Boolean,
+    typeface: Typeface?,
     color: Int,
     maxLines: Int,
     y: Float,
@@ -272,7 +303,7 @@ object ShareCardRenderer {
       this.color = color
       textSize = sizePx
       textAlign = Paint.Align.CENTER
-      typeface = Typeface.create(Typeface.DEFAULT, if (bold) Typeface.BOLD else Typeface.NORMAL)
+      typeface?.let { this.typeface = it }
     }
     val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, CONTENT_WIDTH)
       .setAlignment(android.text.Layout.Alignment.ALIGN_CENTER)
