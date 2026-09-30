@@ -111,7 +111,6 @@
   <string name="player_up_next_count">%1$d in line</string>
   <string name="playing_from">Playing from %1$s</string>
   <string name="action_unlike">Unlike</string>
-  <string name="action_like">Like</string>
   <string name="action_liked">Liked</string>
   <string name="action_queue">Queue</string>
   <string name="action_share">Share</string>
