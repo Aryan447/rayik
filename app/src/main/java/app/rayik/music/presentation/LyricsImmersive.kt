@@ -8,6 +8,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,15 +39,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -85,9 +91,22 @@ fun ImmersiveLyrics(
   val smoothPositionMs = rememberSmoothLyricPosition(positionMs, isPlaying)
   val listState = rememberLazyListState()
 
+  // True only while the finger is down: programmatic glides must never
+  // count as "scrolling", or every line change during a glide gets skipped
+  // and the active line sinks to the bottom.
+  var userScrolling by remember { mutableStateOf(false) }
+  LaunchedEffect(listState) {
+    listState.interactionSource.interactions.collect { interaction ->
+      when (interaction) {
+        is DragInteraction.Start -> userScrolling = true
+        is DragInteraction.Stop, is DragInteraction.Cancel -> userScrolling = false
+        else -> Unit
+      }
+    }
+  }
+
   LaunchedEffect(active) {
-    // Never fight the user's finger: a skipped line centers on the next change.
-    if (!listState.isScrollInProgress) listState.centerLyricOn(active)
+    if (!userScrolling) listState.centerLyricOn(active)
   }
   BackHandler(onBack = onClose)
 
@@ -171,7 +190,10 @@ fun ImmersiveLyrics(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(
               horizontal = MaterialTheme.spacing.extraLarge,
-              vertical = edgePadding,
+              top = edgePadding,
+              // Extra line-height past the edge so the upcoming line is
+              // always fully readable, never half-clipped at the bottom.
+              bottom = edgePadding + 72.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
           ) {
@@ -259,11 +281,12 @@ private fun ImmersiveLyricRow(
 }
 
 /**
- * Apple-style word-by-word fill for the active line. Each word lights up
- * as its timestamp passes on the interpolated clock — a crisp karaoke
- * step, not a fade, so timing feels locked to the vocal. Background
- * (duet) words cap dimmer. Falls back to the plain line above when the
- * provider ships no word timings.
+ * Apple-style word-by-word fill for the active line. Past words sit bright,
+ * upcoming words dim — and the currently-sung word fills progressively: a
+ * bright layer sweeps through its glyphs with playback progress, so a long
+ * "aiiiir" visibly fills instead of flashing white at its first millisecond.
+ * Falls back to whole-word steps for zero-duration words and to the plain
+ * line above when the provider ships no word timings.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -273,30 +296,67 @@ private fun WordKaraokeLine(
   fontSize: Float,
   modifier: Modifier = Modifier,
 ) {
+  val density = LocalDensity.current
+  val glow = Shadow(color = Color.White.copy(alpha = 0.55f), offset = Offset.Zero, blurRadius = 28f)
   FlowRow(modifier = modifier) {
     words.forEach { word ->
       val wordStartMs = (word.startTime * 1000).toLong()
-      val sung = positionMs >= wordStartMs
+      val wordEndMs = (word.endTime * 1000).toLong()
       val cap = if (word.isBackground) 0.7f else 1f
-      Text(
-        text = word.text + " ",
-        fontSize = fontSize.sp,
-        lineHeight = (fontSize * 1.25f).sp,
-        fontWeight = FontWeight.ExtraBold,
-        textAlign = TextAlign.Start,
-        color = if (sung) {
-          Color.White.copy(alpha = cap)
-        } else {
-          Color.White.copy(alpha = 0.35f * cap)
-        },
-        style = MaterialTheme.typography.headlineSmall.copy(
-          shadow = if (sung) {
-            Shadow(color = Color.White.copy(alpha = 0.55f), offset = Offset.Zero, blurRadius = 28f)
+      val sung = positionMs >= wordStartMs
+      val finished = positionMs >= wordEndMs || wordEndMs <= wordStartMs
+      if (!sung || finished) {
+        Text(
+          text = word.text + " ",
+          fontSize = fontSize.sp,
+          lineHeight = (fontSize * 1.25f).sp,
+          fontWeight = FontWeight.ExtraBold,
+          textAlign = TextAlign.Start,
+          color = if (sung) {
+            Color.White.copy(alpha = cap)
           } else {
-            null
+            Color.White.copy(alpha = 0.35f * cap)
           },
-        ),
-      )
+          style = MaterialTheme.typography.headlineSmall.copy(
+            shadow = if (sung) glow else null,
+          ),
+        )
+      } else {
+        var wordWidthPx by remember(word.text) { mutableStateOf(0) }
+        val fraction =
+          ((positionMs - wordStartMs).toFloat() / (wordEndMs - wordStartMs)).coerceIn(0f, 1f)
+        Box {
+          Text(
+            text = word.text + " ",
+            fontSize = fontSize.sp,
+            lineHeight = (fontSize * 1.25f).sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Start,
+            color = Color.White.copy(alpha = 0.35f * cap),
+            onTextLayout = { wordWidthPx = it.size.width },
+          )
+          // Overlay starts at the line-start edge (mirrored automatically
+          // for RTL) and widens with progress, clipped to the glyphs.
+          if (wordWidthPx > 0 && fraction > 0f) {
+            Box(
+              Modifier
+                .width(with(density) { (wordWidthPx * fraction).toDp() })
+                .clipToBounds(),
+            ) {
+              Text(
+                text = word.text + " ",
+                fontSize = fontSize.sp,
+                lineHeight = (fontSize * 1.25f).sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Start,
+                color = Color.White.copy(alpha = cap),
+                style = MaterialTheme.typography.headlineSmall.copy(shadow = glow),
+                softWrap = false,
+              )
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -18,6 +18,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.DragInteraction
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -38,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -277,14 +279,25 @@ fun LyricLines(
   val listState = rememberLazyListState()
   val active = remember(lines, positionMs) { activeLyricIndex(lines, positionMs) }
 
+  var userScrolling by remember { mutableStateOf(false) }
+  LaunchedEffect(listState) {
+    listState.interactionSource.interactions.collect { interaction ->
+      when (interaction) {
+        is DragInteraction.Start -> userScrolling = true
+        is DragInteraction.Stop, is DragInteraction.Cancel -> userScrolling = false
+        else -> Unit
+      }
+    }
+  }
+
   LaunchedEffect(active) {
-    // Never fight the user's finger: a skipped line centers on the next change.
-    if (!listState.isScrollInProgress) listState.centerLyricOn(active)
+    if (!userScrolling) listState.centerLyricOn(active)
   }
 
   LazyColumn(
     state = listState,
     modifier = modifier.fillMaxWidth(),
+    contentPadding = PaddingValues(bottom = 48.dp),
     verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {

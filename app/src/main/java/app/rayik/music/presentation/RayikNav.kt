@@ -2,8 +2,11 @@ package app.rayik.music.presentation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -35,6 +38,11 @@ fun RayikNav() {
   Scaffold(
     containerColor = dock,
     contentColor = MaterialTheme.colorScheme.onSurface,
+    // Status bars excluded: the light content surface draws edge-to-edge
+    // behind them, so dark icons stay legible in light mode instead of
+    // sitting on a dark dock-colored strip. The dock keeps its own
+    // navigationBarsPadding internally.
+    contentWindowInsets = WindowInsets.navigationBars,
     bottomBar = {
       MiniPlayer(
         onOpenPlayer = { playerSheetOpen = true },
@@ -56,6 +64,7 @@ fun RayikNav() {
       ) {
         Column(
           Modifier.fillMaxSize()
+            .statusBarsPadding()
             .padding(horizontal = MaterialTheme.spacing.medium)
             .padding(top = MaterialTheme.spacing.medium),
           // No bottom padding here: each tab screen owns bottom clearance

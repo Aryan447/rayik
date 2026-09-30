@@ -68,7 +68,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -76,6 +75,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.aspectRatio
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -575,63 +575,26 @@ fun NowPlayingSheetContent(
 @Composable
 private fun HeroArtwork(artwork: String) {
   val scheme = MaterialTheme.colorScheme
-  val heroShape = RoundedCornerShape(32.dp)
-  Box(
-    contentAlignment = Alignment.Center,
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    // Glow: blurred twin clipped to the hero shape so no square halo
-    // leaks past the rounded corners.
-    if (artwork.isNotBlank()) {
-      AsyncImage(
-        model = artwork,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-          .size(300.dp)
-          .blur(48.dp)
-          .clip(heroShape)
-          .alpha(0.55f),
-      )
-    }
-    Surface(
-      shape = heroShape,
-      tonalElevation = 0.dp,
-      shadowElevation = 0.dp,
+  // Full-bleed square art dissolving into the background wash —
+  // no card, no border, no glow. Title sits below on the fade.
+  Box(Modifier.fillMaxWidth()) {
+    TrackArt(
+      artworkUrl = artwork,
+      corner = 0.dp,
       modifier = Modifier
-        .size(292.dp)
-        .shadow(
-          40.dp,
-          heroShape,
-          spotColor = scheme.primary.copy(alpha = 0.45f),
-        )
-        .border(
-          1.dp,
-          Color.White.copy(alpha = 0.22f),
-          heroShape,
+        .fillMaxWidth()
+        .aspectRatio(1f),
+    )
+    Box(
+      Modifier
+        .matchParentSize()
+        .background(
+          Brush.verticalGradient(
+            0.55f to Color.Transparent,
+            1f to scheme.surface,
+          ),
         ),
-    ) {
-      Box {
-        TrackArt(
-          artworkUrl = artwork,
-          corner = 32.dp,
-          modifier = Modifier.fillMaxSize(),
-        )
-        // Top shine for a glassy vinyl-sleeve feel
-        Box(
-          Modifier
-            .matchParentSize()
-            .background(
-              Brush.verticalGradient(
-                0f to Color.White.copy(alpha = 0.16f),
-                0.28f to Color.Transparent,
-                0.8f to Color.Transparent,
-                1f to Color.Black.copy(alpha = 0.22f),
-              ),
-            ),
-        )
-      }
-    }
+    )
   }
 }
 
@@ -879,6 +842,40 @@ private fun SheetSlider(
         inactiveTrackColor = activeSlider.copy(alpha = 0.28f),
         thumbColor = activeSlider,
       ),
+      // Slim rounded track + small round thumb: the default thumb read as
+      // a broken vertical bar over the track.
+      thumb = {
+        Box(
+          Modifier
+            .size(14.dp)
+            .shadow(6.dp, CircleShape)
+            .clip(CircleShape)
+            .background(activeSlider),
+        )
+      },
+      track = {
+        val fraction = if (range.endInclusive > range.start) {
+          ((sliderValue - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
+        } else {
+          0f
+        }
+        Box(
+          Modifier
+            .fillMaxWidth()
+            .height(4.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .background(activeSlider.copy(alpha = 0.28f)),
+        ) {
+          Box(
+            Modifier
+              .fillMaxWidth(fraction)
+              .fillMaxHeight()
+              .clip(RoundedCornerShape(2.dp))
+              .background(activeSlider)
+              .align(Alignment.CenterStart),
+          )
+        }
+      },
       modifier = Modifier.fillMaxWidth(),
     )
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
