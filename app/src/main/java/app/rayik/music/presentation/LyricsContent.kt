@@ -13,7 +13,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,7 +21,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.animateScrollBy
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -85,13 +83,10 @@ fun rememberSmoothLyricPosition(positionMs: Long, isPlaying: Boolean): Long {
   return smooth
 }
 
-private val LyricCenterSpring = spring<Float>(stiffness = 260f, dampingRatio = 0.92f)
-
 /**
- * Glides [index] to the vertical center of the viewport with a soft
- * spring instead of snapping its top edge into view. Far jumps
- * (seek/track change) land near center instantly, then settle exactly
- * on the next frame — no fling, no overshoot wobble.
+ * Glides [index] to the vertical center of the viewport instead of snapping
+ * its top edge into view. Far jumps (seek/track change) land near center
+ * instantly, then settle exactly on the next frame — no fling, no overshoot.
  */
 suspend fun LazyListState.centerLyricOn(index: Int) {
   if (index < 0) return
@@ -100,16 +95,18 @@ suspend fun LazyListState.centerLyricOn(index: Int) {
     scrollToItem(maxOf(0, index - 1))
     return
   }
-  fun targetTopFor(size: Int) = (viewportH - size) / 2
+  // Negative offset parks the item's top below the viewport top, i.e. the
+  // item lands centered: top at H/2 - h/2.
+  fun centeredOffsetFor(size: Int) = -(viewportH / 2 - size / 2)
   val visible = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
   if (visible != null) {
-    animateScrollBy((visible.offset - targetTopFor(visible.size)).toFloat(), LyricCenterSpring)
+    animateScrollToItem(index, centeredOffsetFor(visible.size))
   } else {
     scrollToItem(index, -(viewportH / 2 - 120))
     withFrameNanos { }
     val settled = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
     if (settled != null) {
-      animateScrollBy((settled.offset - targetTopFor(settled.size)).toFloat(), LyricCenterSpring)
+      animateScrollToItem(index, centeredOffsetFor(settled.size))
     }
   }
 }
