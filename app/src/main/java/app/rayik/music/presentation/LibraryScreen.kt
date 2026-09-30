@@ -17,8 +17,16 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,6 +103,7 @@ fun LibraryScreen(
   }
 
   var showWrapped by remember { mutableStateOf(false) }
+  var showImport by remember { mutableStateOf(false) }
 
   Box(Modifier.fillMaxSize()) {
     LazyColumn(
@@ -120,6 +130,9 @@ fun LibraryScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = MaterialTheme.spacing.smaller),
           )
+        }
+        TextButton(onClick = { showImport = true }) {
+          Text(stringResource(R.string.import_open))
         }
         TextButton(onClick = { showWrapped = true }) {
           Text(stringResource(R.string.wrapped_open))
@@ -185,6 +198,11 @@ fun LibraryScreen(
     if (showWrapped) {
       Surface(Modifier.fillMaxSize()) {
         WrappedScreen(onClose = { showWrapped = false })
+      }
+    }
+    if (showImport) {
+      Surface(Modifier.fillMaxSize()) {
+        ImportScreen(onClose = { showImport = false })
       }
     }
   }
@@ -288,6 +306,249 @@ private fun LibraryCard(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
       )
+    }
+  }
+}
+
+/**
+ * Spotify import: connect with cookies, then resolve liked songs and
+ * playlists track-by-track through YTM search into the local library.
+ * Every state renders — connect, loading, progress, done, error — never
+ * a dead button or a silent drop.
+ */
+@Composable
+fun ImportScreen(
+  onClose: () -> Unit,
+  vm: ImportViewModel = hiltViewModel(),
+) {
+  val session by vm.session.collectAsState()
+  val playlists by vm.playlists.collectAsState()
+  val refreshing by vm.refreshing.collectAsState()
+  val spotifyError by vm.spotifyError.collectAsState()
+  val progress by vm.progress.collectAsState()
+  val connectError by vm.connectError.collectAsState()
+  var spDc by rememberSaveable { mutableStateOf("") }
+  var spKey by rememberSaveable { mutableStateOf("") }
+
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .padding(
+        horizontal = MaterialTheme.spacing.medium,
+        vertical = MaterialTheme.spacing.medium,
+      ),
+    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Column(Modifier.weight(1f)) {
+        GradientHeadline(stringResource(R.string.import_title))
+      }
+      IconButton(onClick = onClose) {
+        Icon(
+          Icons.Filled.Close,
+          contentDescription = stringResource(R.string.import_close),
+        )
+      }
+    }
+
+    if (!session.isAuthenticated) {
+      Text(
+        stringResource(R.string.import_howto_title),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+      )
+      Text(
+        stringResource(R.string.import_howto_body),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      OutlinedTextField(
+        value = spDc,
+        onValueChange = { spDc = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(stringResource(R.string.import_spdc_label)) },
+        singleLine = true,
+      )
+      OutlinedTextField(
+        value = spKey,
+        onValueChange = { spKey = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(stringResource(R.string.import_spkey_label)) },
+        singleLine = true,
+      )
+      if (connectError != null) {
+        Text(
+          connectError.orEmpty(),
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.error,
+        )
+      }
+      Button(onClick = { vm.connect(spDc, spKey) }) {
+        Text(stringResource(R.string.import_connect))
+      }
+      return@Column
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Column(Modifier.weight(1f)) {
+        Text(
+          stringResource(R.string.import_connected_as, session.accountName.ifBlank { "Spotify" }),
+          style = MaterialTheme.typography.titleSmall,
+          fontWeight = FontWeight.SemiBold,
+        )
+      }
+      TextButton(onClick = { vm.logout() }) {
+        Text(stringResource(R.string.import_disconnect))
+      }
+    }
+
+    ImportRow(
+      title = stringResource(R.string.import_liked),
+      busy = progress.running,
+      onImport = { vm.importLiked() },
+    )
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Text(
+        stringResource(R.string.import_playlists),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.weight(1f),
+      )
+      TextButton(onClick = { vm.refreshPlaylists() }, enabled = !refreshing) {
+        Text(stringResource(R.string.import_refresh))
+      }
+    }
+
+    if (refreshing && playlists.isEmpty()) {
+      LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    } else if (playlists.isEmpty()) {
+      Text(
+        stringResource(R.string.import_empty_playlists),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    } else {
+      playlists.forEach { playlist ->
+        ImportRow(
+          title = playlist.name.ifBlank { "Untitled" },
+          subtitle = playlist.tracks?.total?.let { "$it tracks" },
+          busy = progress.running,
+          onImport = { vm.importPlaylist(playlist.id, playlist.name) },
+        )
+      }
+    }
+
+    if (spotifyError != null) {
+      Text(
+        spotifyError.orEmpty(),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.error,
+      )
+    }
+
+    if (progress.running || progress.done) {
+      ImportProgressCard(
+        progress = progress,
+        onDismiss = { vm.dismissProgress() },
+      )
+    }
+  }
+}
+
+@Composable
+private fun ImportRow(
+  title: String,
+  subtitle: String? = null,
+  busy: Boolean,
+  onImport: () -> Unit,
+) {
+  Surface(
+    tonalElevation = 1.dp,
+    shape = RoundedCornerShape(16.dp),
+    modifier = Modifier.fillMaxWidth(),
+  ) {
+    Row(
+      modifier = Modifier.padding(MaterialTheme.spacing.medium),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Icon(
+        Icons.Filled.Download,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary,
+      )
+      Spacer(Modifier.width(MaterialTheme.spacing.small))
+      Column(Modifier.weight(1f)) {
+        Text(
+          title,
+          style = MaterialTheme.typography.bodyLarge,
+          fontWeight = FontWeight.Medium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+        if (subtitle != null) {
+          Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
+      }
+      TextButton(onClick = onImport, enabled = !busy) {
+        Text(stringResource(R.string.import_start))
+      }
+    }
+  }
+}
+
+@Composable
+private fun ImportProgressCard(
+  progress: ImportProgress,
+  onDismiss: () -> Unit,
+) {
+  Surface(
+    tonalElevation = 2.dp,
+    shape = RoundedCornerShape(16.dp),
+    modifier = Modifier.fillMaxWidth(),
+  ) {
+    Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
+      val status = if (progress.done) {
+        stringResource(R.string.import_done, progress.resolved - progress.failures.size, progress.total)
+      } else {
+        stringResource(R.string.import_running, progress.resolved, progress.total)
+      }
+      Text(
+        status,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+      )
+      Spacer(Modifier.height(MaterialTheme.spacing.small))
+      if (progress.running) {
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+      }
+      if (progress.failures.isNotEmpty()) {
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
+        Text(
+          stringResource(R.string.import_unmatched_title),
+          style = MaterialTheme.typography.labelLarge,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        progress.failures.take(8).forEach { failure ->
+          Text(
+            failure,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        }
+      }
+      if (progress.done) {
+        Spacer(Modifier.height(MaterialTheme.spacing.small))
+        TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+          Text(stringResource(R.string.import_dismiss))
+        }
+      }
     }
   }
 }

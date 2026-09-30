@@ -59,6 +59,26 @@
   <string name="library_empty_title">Quiet shelves, for now</string>
   <string name="library_empty_body">Play something worth keeping and it will line up here.</string>
 
+  <string name="import_open">Import</string>
+  <string name="import_title">Import music</string>
+  <string name="import_close">Close import</string>
+  <string name="import_howto_title">From Spotify, with love</string>
+  <string name="import_howto_body">Open open.spotify.com in a browser, sign in, open developer tools → Application → Cookies, and copy sp_dc (sp_key too, if you see it). We only read your playlists and liked songs — nothing else leaves your device except the searches that match them.</string>
+  <string name="import_spdc_label">sp_dc cookie</string>
+  <string name="import_spkey_label">sp_key (optional)</string>
+  <string name="import_connect">Connect Spotify</string>
+  <string name="import_disconnect">Disconnect</string>
+  <string name="import_connected_as">Connected as %1$s</string>
+  <string name="import_liked">Liked songs</string>
+  <string name="import_playlists">Playlists</string>
+  <string name="import_start">Import</string>
+  <string name="import_refresh">Refresh</string>
+  <string name="import_running">Matching %1$d of %2$d…</string>
+  <string name="import_done">Matched %1$d of %2$d</string>
+  <string name="import_unmatched_title">Couldn\'t match these</string>
+  <string name="import_dismiss">Done</string>
+  <string name="import_empty_playlists">No playlists found — hit refresh after connecting.</string>
+
   <string name="deviceflow_requesting">Contacting Google…</string>
   <string name="deviceflow_code_label">Enter this code on Google\'s page</string>
   <string name="deviceflow_copy">Copy code</string>
