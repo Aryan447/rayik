@@ -63,6 +63,7 @@ import app.rayik.music.innertube.models.SongItem
 import app.rayik.music.innertube.models.YTItem
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
+import app.rayik.music.utils.isLocalMediaId
 import java.time.LocalTime
 
 /**
@@ -77,6 +78,8 @@ data class RaayPick(
   val trackTitle: String,
   val trackArtist: String,
   val mood: String,
+  /** Real artwork when the pick comes from history; else the video still. */
+  val artworkUrl: String? = null,
 )
 
 private val RAAY_PICKS = listOf(
@@ -116,11 +119,41 @@ private val RAAY_PICKS = listOf(
 
 private fun pickArtwork(videoId: String): String = "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
 
+/**
+ * Builds the living pick: same curated slot, but the reason line, track,
+ * and artwork come from actual history. Local files can't stream by id,
+ * so they never become the playable pick. Null when there is no
+ * streamable history — the caller keeps the static slot.
+ */
+private fun historyPick(history: List<Song>, slot: RaayPick): RaayPick {
+  val candidates = history.filterNot { it.song.id.isLocalMediaId() }
+  if (candidates.isEmpty()) return slot
+  val top = candidates.maxByOrNull { it.song.totalPlayTime } ?: return slot
+  val artistName = top.artists.firstOrNull()?.name?.ifBlank { null } ?: return slot
+  val loopCount = candidates.count { candidate ->
+    candidate.artists.any { it.name == artistName }
+  }.coerceAtLeast(1)
+  val hour = LocalTime.now().hour
+  val daypart = when (hour) {
+    in 5..11 -> "This morning"
+    in 12..16 -> "This afternoon"
+    else -> "Tonight"
+  }
+  return slot.copy(
+    reason = "$daypart • because you looped $artistName ${loopCount}×",
+    videoId = top.song.id,
+    trackTitle = top.song.title,
+    trackArtist = top.artists.joinToString { it.name }.ifBlank { "Unknown artist" },
+    artworkUrl = top.song.thumbnailUrl,
+  )
+}
+
 @Composable
 fun RaayHomeScreen(
   onPlayStarted: () -> Unit = {},
   player: PlayerViewModel = hiltViewModel(),
   home: HomeViewModel = hiltViewModel(),
+  library: LibraryViewModel = hiltViewModel(),
 ) {
   var pickIndex by rememberSaveable { mutableIntStateOf(0) }
   var starting by rememberSaveable { mutableStateOf(false) }
@@ -133,7 +166,14 @@ fun RaayHomeScreen(
   val connected by player.connected.collectAsState()
 
   val currentPick = RAAY_PICKS[pickIndex % RAAY_PICKS.size]
-  val isPickPlaying = currentMediaId == currentPick.videoId &&
+  // Alive pick: the slot keeps its curated title/mood, but the reason,
+  // track, and art come from real listening history when there is any —
+  // so the card is about *their* week, not a hardcoded Arijit loop.
+  val libraryMostPlayed by library.mostPlayed.collectAsState()
+  val effectivePick = remember(currentPick, libraryMostPlayed) {
+    historyPick(libraryMostPlayed.orEmpty(), currentPick)
+  }
+  val isPickPlaying = currentMediaId == effectivePick.videoId &&
     playbackState == PlaybackUiState.Playing
 
   fun playPick(pick: RaayPick) {
@@ -199,11 +239,11 @@ fun RaayHomeScreen(
 
         item {
           RaayPickCard(
-            pick = currentPick,
+            pick = effectivePick,
             resolving = starting,
             isPlaying = isPickPlaying,
             error = startError,
-            onPlayClick = { playPick(currentPick) },
+            onPlayClick = { playPick(effectivePick) },
             onNextPick = {
               pickIndex = (pickIndex + 1) % RAAY_PICKS.size
               startError = null
@@ -215,7 +255,7 @@ fun RaayHomeScreen(
                 playPick(RAAY_PICKS[found])
               }
             },
-            onRetry = { playPick(currentPick) },
+            onRetry = { playPick(effectivePick) },
           )
         }
 
@@ -400,7 +440,7 @@ private fun RaayPickCard(
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         TrackArt(
-          artworkUrl = pickArtwork(pick.videoId),
+          artworkUrl = pick.artworkUrl ?: pickArtwork(pick.videoId),
           corner = 16.dp,
           modifier = Modifier.size(96.dp),
         )
