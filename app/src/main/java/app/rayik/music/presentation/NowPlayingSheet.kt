@@ -33,8 +33,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -46,6 +48,8 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import app.rayik.music.BuildConfig
@@ -91,6 +96,8 @@ import app.rayik.music.player.PlayerViewModel
 import app.rayik.music.player.RepeatMode
 import app.rayik.music.player.buildPlaybackDiagnostics
 import app.rayik.music.player.formatMs
+import app.rayik.music.preferences.StreamQuality
+import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 
@@ -129,6 +136,8 @@ fun NowPlayingSheetContent(
   val scope = rememberCoroutineScope()
   var lyricsExpanded by remember { mutableStateOf(false) }
   var immersiveLyrics by remember { mutableStateOf(false) }
+  val prefs = rayikPreferences()
+  val streamQuality by prefs.streamQuality.collectAsState()
 
   val artwork = current?.artworkUrl.orEmpty()
   val scheme = MaterialTheme.colorScheme
@@ -350,7 +359,12 @@ fun NowPlayingSheetContent(
             state = playbackState,
             repeatMode = repeatMode,
             shuffleEnabled = shuffleEnabled,
-            onToggle = player::togglePlayPause,
+            // On error the hero pill retries instead of toggling — the dock
+            // never sits dead with a disabled button and no way forward.
+            onToggle = {
+              if (playbackState is PlaybackUiState.Error) player.retry()
+              else player.togglePlayPause()
+            },
             onNext = player::next,
             onPrevious = player::previous,
             onCycleRepeat = player::cycleRepeat,
@@ -455,6 +469,14 @@ fun NowPlayingSheetContent(
                 )
               }
             }
+            Spacer(Modifier.weight(1f))
+            QualityMenu(
+              quality = streamQuality,
+              onSelect = {
+                prefs.streamQuality.set(it)
+                scope.launch(Dispatchers.IO) { context.mirrorStreamQualityChoice(it) }
+              },
+            )
           }
           Spacer(Modifier.height(MaterialTheme.spacing.small))
         }
@@ -632,6 +654,70 @@ private fun GlassIconButton(
   ) {
     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
       content()
+    }
+  }
+}
+
+/**
+ * In-player streaming quality: compact glass chip trailing the Up-next
+ * header, opening the same Saver / Auto / High choice as Settings.
+ * Writes through the same preference + legacy-key mirror.
+ */
+@Composable
+private fun QualityMenu(
+  quality: StreamQuality,
+  onSelect: (StreamQuality) -> Unit,
+) {
+  val scheme = MaterialTheme.colorScheme
+  var expanded by remember { mutableStateOf(false) }
+  Box {
+    Surface(
+      onClick = { expanded = true },
+      shape = CircleShape,
+      color = scheme.surface.copy(alpha = 0.5f),
+      modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape),
+    ) {
+      Row(
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Icon(
+          Icons.Filled.HighQuality,
+          contentDescription = stringResource(R.string.pref_quality_label),
+          modifier = Modifier.size(15.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+          stringResource(quality.titleRes),
+          style = MaterialTheme.typography.labelMedium,
+        )
+      }
+    }
+    DropdownMenu(
+      expanded = expanded,
+      onDismissRequest = { expanded = false },
+      shape = RoundedCornerShape(16.dp),
+    ) {
+      StreamQuality.entries.forEach { option ->
+        DropdownMenuItem(
+          text = { Text(stringResource(option.titleRes)) },
+          onClick = {
+            expanded = false
+            onSelect(option)
+          },
+          trailingIcon = if (option == quality) {
+            {
+              Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+              )
+            }
+          } else {
+            null
+          },
+        )
+      }
     }
   }
 }
@@ -863,7 +949,7 @@ private fun ControlDock(
       TransportPill(
         onClick = onToggle,
         enabled = state == PlaybackUiState.Playing || state == PlaybackUiState.Paused ||
-          state == PlaybackUiState.Idle,
+          state == PlaybackUiState.Idle || state is PlaybackUiState.Error,
         containerColor = scheme.primary,
         borderColor = scheme.primary.copy(alpha = 0.4f),
         shadowColor = scheme.primary.copy(alpha = 0.55f),

@@ -277,15 +277,7 @@ fun SettingsScreen(
               preferences.streamQuality.set(it)
               // The service reads the legacy AudioQualityKey; mirror the rayik
               // choice there so the toggle takes real effect.
-              scope.launch(Dispatchers.IO) {
-                context.dataStore.edit { prefs ->
-                  prefs[AudioQualityKey] = when (it) {
-                    StreamQuality.Auto -> AudioQuality.AUTO.name
-                    StreamQuality.High -> AudioQuality.HIGH
-                    StreamQuality.Saver -> AudioQuality.LOW
-                  }.toString()
-                }
-              }
+              scope.launch(Dispatchers.IO) { context.mirrorStreamQualityChoice(it) }
             },
           )
           SwitchSetting(
@@ -682,10 +674,25 @@ private fun SettingIcon(icon: ImageVector) {
 }
 
 @Composable
-private fun rayikPreferences(): AppearancePreferences {
+internal fun rayikPreferences(): AppearancePreferences {
   val context = LocalContext.current
   val entryPoint = rememberEntryPoint(context)
   return entryPoint.appearancePreferences()
+}
+
+/**
+ * Mirrors the rayik quality choice into the legacy AudioQualityKey the
+ * service actually reads. Shared with the in-player quality menu so the
+ * toggle takes real effect from either surface.
+ */
+internal suspend fun android.content.Context.mirrorStreamQualityChoice(choice: StreamQuality) {
+  dataStore.edit { prefs ->
+    prefs[AudioQualityKey] = when (choice) {
+      StreamQuality.Auto -> AudioQuality.AUTO.name
+      StreamQuality.High -> AudioQuality.HIGH
+      StreamQuality.Saver -> AudioQuality.LOW
+    }.toString()
+  }
 }
 
 @Composable

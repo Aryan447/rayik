@@ -143,7 +143,12 @@ fun MiniPlayer(
           onArtClick = onOpenPlayer,
           onPrevious = player::previous,
           onNext = player::next,
-          onToggle = player::togglePlayPause,
+          // On error the hero retries instead of toggling — same contract
+          // as the full player dock.
+          onToggle = {
+            if (playbackState is PlaybackUiState.Error) player.retry()
+            else player.togglePlayPause()
+          },
           onShowTabs = { onExpandedChange(true) },
           buttonsEnabled = buttonsEnabled,
           modeKey = false,
@@ -222,9 +227,11 @@ private fun DockTransportRow(
             }
             else -> IconButton(
               onClick = onToggle,
-              // Idle with a queue means "tap to start"; only Error sits disabled.
+              // Idle with a queue means "tap to start"; Error means "tap to
+              // retry". Only an unknown state sits disabled.
               enabled = buttonsEnabled &&
-                (state == PlaybackUiState.Paused || state == PlaybackUiState.Idle),
+                (state == PlaybackUiState.Paused || state == PlaybackUiState.Idle ||
+                  state is PlaybackUiState.Error),
               modifier = Modifier.size(DockHeroTouch),
             ) {
               Icon(
