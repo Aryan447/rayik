@@ -63,7 +63,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.aspectRatio
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +89,7 @@ import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.FrauncesItalicFamily
+import app.rayik.music.ui.theme.RayikIcons
 import app.rayik.music.ui.theme.spacing
 
 /** Lazy-list indices of the scroll targets; header sections above are always emitted. */

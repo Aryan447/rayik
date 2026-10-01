@@ -140,4 +140,3 @@ private fun Color.luminance(): Float {
     if (c <= 0.03928f) c / 12.92f else Math.pow(((c + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
   return 0.2126f * channel(red) + 0.7152f * channel(green) + 0.0722f * channel(blue)
 }
-}

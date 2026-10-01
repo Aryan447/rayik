@@ -52,6 +52,7 @@ import app.rayik.music.R
 import app.rayik.music.db.entities.Song
 import app.rayik.music.player.PlayerViewModel
 import app.rayik.music.ui.theme.AppShapes
+import app.rayik.music.ui.theme.RayikIcons
 import app.rayik.music.ui.theme.spacing
 
 /**

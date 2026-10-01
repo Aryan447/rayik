@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.PathBuilder
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 
 /**
@@ -33,65 +33,49 @@ import androidx.compose.ui.unit.dp
  * mark language is a follow-up, not this pass.
  */
 object RayikIcons {
-  /** Nav: the Raay tab is the five bars, not a house. */
-  val Raay: ImageVector by lazy {
+  private fun strokeIcon(name: String, d: String, width: Float = 1.75f): ImageVector =
     ImageVector.Builder(
-      name = "Raay",
+      name = name,
       defaultWidth = 24.dp,
       defaultHeight = 24.dp,
       viewportWidth = 24f,
       viewportHeight = 24f,
     ).addPath(
-      pathData = {
-        moveTo(5f, 8f); lineTo(5f, 16f)
-        moveTo(8.5f, 5f); lineTo(8.5f, 19f)
-        moveTo(12f, 2f); lineTo(12f, 22f)
-        moveTo(15.5f, 5f); lineTo(15.5f, 19f)
-        moveTo(19f, 8f); lineTo(19f, 16f)
-      },
+      pathData = PathParser().parsePathString(d).toNodes(),
       stroke = SolidColor(Color.Black),
-      strokeLineWidth = 1.75f,
+      strokeLineWidth = width,
       strokeLineCap = StrokeCap.Round,
       strokeLineJoin = StrokeJoin.Round,
     ).build()
-  }
 
-  /** Transport play — filled triangle, round joins. */
-  val Play: ImageVector by lazy {
+  private fun fillIcon(name: String, d: String): ImageVector =
     ImageVector.Builder(
-      name = "Play",
+      name = name,
       defaultWidth = 24.dp,
       defaultHeight = 24.dp,
       viewportWidth = 24f,
       viewportHeight = 24f,
     ).addPath(
-      pathData = {
-        moveTo(8f, 5.5f); lineTo(18.5f, 12f); lineTo(8f, 18.5f); close()
-      },
+      pathData = PathParser().parsePathString(d).toNodes(),
       fill = SolidColor(Color.Black),
       stroke = SolidColor(Color.Black),
       strokeLineWidth = 2f,
       strokeLineJoin = StrokeJoin.Round,
     ).build()
+
+  /** Nav: the Raay tab is the five bars, not a house. */
+  val Raay: ImageVector by lazy {
+    strokeIcon("Raay", "M5,8 V16 M8.5,5 V19 M12,2 V22 M15.5,5 V19 M19,8 V16")
+  }
+
+  /** Transport play — filled triangle, round joins. */
+  val Play: ImageVector by lazy {
+    fillIcon("Play", "M8,5.5 L18.5,12 L8,18.5 Z")
   }
 
   /** Transport pause — twin bars. */
   val Pause: ImageVector by lazy {
-    ImageVector.Builder(
-      name = "Pause",
-      defaultWidth = 24.dp,
-      defaultHeight = 24.dp,
-      viewportWidth = 24f,
-      viewportHeight = 24f,
-    ).addPath(
-      pathData = {
-        moveTo(8.6f, 6.5f); lineTo(8.6f, 17.5f)
-        moveTo(15.4f, 6.5f); lineTo(15.4f, 17.5f)
-      },
-      stroke = SolidColor(Color.Black),
-      strokeLineWidth = 3.4f,
-      strokeLineCap = StrokeCap.Round,
-    ).build()
+    strokeIcon("Pause", "M8.6,6.5 V17.5 M15.4,6.5 V17.5", width = 3.4f)
   }
 
   /** Transport previous — bar plus filled skip triangle. */
@@ -102,20 +86,15 @@ object RayikIcons {
       defaultHeight = 24.dp,
       viewportWidth = 24f,
       viewportHeight = 24f,
-    ).apply {
-      addPath(
-        pathData = {
-          moveTo(16.5f, 6f); lineTo(9.5f, 12f); lineTo(16.5f, 18f); close()
-        },
-        fill = SolidColor(Color.Black),
-      )
-      addPath(
-        pathData = { moveTo(6.5f, 6f); lineTo(6.5f, 18f) },
-        stroke = SolidColor(Color.Black),
-        strokeLineWidth = 2.2f,
-        strokeLineCap = StrokeCap.Round,
-      )
-    }.build()
+    ).addPath(
+      pathData = PathParser().parsePathString("M16.5,6 L9.5,12 L16.5,18 Z").toNodes(),
+      fill = SolidColor(Color.Black),
+    ).addPath(
+      pathData = PathParser().parsePathString("M6.5,6 V18").toNodes(),
+      stroke = SolidColor(Color.Black),
+      strokeLineWidth = 2.2f,
+      strokeLineCap = StrokeCap.Round,
+    ).build()
   }
 
   /** Transport next — mirror of previous. */
@@ -126,48 +105,29 @@ object RayikIcons {
       defaultHeight = 24.dp,
       viewportWidth = 24f,
       viewportHeight = 24f,
-    ).apply {
-      addPath(
-        pathData = {
-          moveTo(7.5f, 6f); lineTo(14.5f, 12f); lineTo(7.5f, 18f); close()
-        },
-        fill = SolidColor(Color.Black),
-      )
-      addPath(
-        pathData = { moveTo(17.5f, 6f); lineTo(17.5f, 18f) },
-        stroke = SolidColor(Color.Black),
-        strokeLineWidth = 2.2f,
-        strokeLineCap = StrokeCap.Round,
-      )
-    }.build()
+    ).addPath(
+      pathData = PathParser().parsePathString("M7.5,6 L14.5,12 L7.5,18 Z").toNodes(),
+      fill = SolidColor(Color.Black),
+    ).addPath(
+      pathData = PathParser().parsePathString("M17.5,6 V18").toNodes(),
+      stroke = SolidColor(Color.Black),
+      strokeLineWidth = 2.2f,
+      strokeLineCap = StrokeCap.Round,
+    ).build()
   }
 
-  private val heartPath: PathBuilder.() -> Unit = {
-    moveTo(12f, 20.6f)
-    curveTo(6.8f, 16.2f, 3.8f, 13f, 3.8f, 9.4f)
-    curveTo(3.8f, 6.9f, 5.8f, 5f, 8.3f, 5f)
-    curveTo(9.9f, 5f, 11.2f, 5.9f, 12f, 7.2f)
-    curveTo(12.8f, 5.9f, 14.1f, 5f, 15.7f, 5f)
-    curveTo(18.2f, 5f, 20.2f, 6.9f, 20.2f, 9.4f)
-    curveTo(20.2f, 13f, 17.2f, 16.2f, 12f, 20.6f)
-    close()
-  }
+  private const val HEART =
+    "M12,20.6 " +
+      "C6.8,16.2 3.8,13 3.8,9.4 " +
+      "C3.8,6.9 5.8,5 8.3,5 " +
+      "C9.9,5 11.2,5.9 12,7.2 " +
+      "C12.8,5.9 14.1,5 15.7,5 " +
+      "C18.2,5 20.2,6.9 20.2,9.4 " +
+      "C20.2,13 17.2,16.2 12,20.6 Z"
 
   /** Action heart — stroke (off state). */
   val Heart: ImageVector by lazy {
-    ImageVector.Builder(
-      name = "Heart",
-      defaultWidth = 24.dp,
-      defaultHeight = 24.dp,
-      viewportWidth = 24f,
-      viewportHeight = 24f,
-    ).addPath(
-      pathData = heartPath,
-      stroke = SolidColor(Color.Black),
-      strokeLineWidth = 1.75f,
-      strokeLineCap = StrokeCap.Round,
-      strokeLineJoin = StrokeJoin.Round,
-    ).build()
+    strokeIcon("Heart", HEART)
   }
 
   /** Action heart — filled (on state). The one sanctioned fill besides play. */
@@ -179,7 +139,7 @@ object RayikIcons {
       viewportWidth = 24f,
       viewportHeight = 24f,
     ).addPath(
-      pathData = heartPath,
+      pathData = PathParser().parsePathString(HEART).toNodes(),
       fill = SolidColor(Color.Black),
       stroke = SolidColor(Color.Black),
       strokeLineWidth = 1f,

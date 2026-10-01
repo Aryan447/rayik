@@ -18,8 +18,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.DragInteraction
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -55,6 +56,7 @@ import app.rayik.music.lyrics.LyricDisplayParser
 import app.rayik.music.lyrics.LyricsEntry
 import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.BrandGradient
+import app.rayik.music.ui.theme.RayikIcons
 import app.rayik.music.ui.theme.spacing
 
 /** Index of the line playing at [positionMs], or -1 when none matches yet. */

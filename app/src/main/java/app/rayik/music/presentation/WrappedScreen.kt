@@ -1,5 +1,6 @@
 package app.rayik.music.presentation
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import app.rayik.music.R
 import app.rayik.music.ui.theme.AppShapes
+import app.rayik.music.ui.theme.RayikIcons
 import app.rayik.music.ui.theme.spacing
 
 private const val WRAPPED_PAGES = 5
@@ -134,7 +136,7 @@ fun WrappedScreen(
                 },
               ),
               onShare = {
-                val text = buildWrappedShareText(wrapped)
+                val text = buildWrappedShareText(context, wrapped)
                 context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                   type = "text/plain"
                   putExtra(Intent.EXTRA_TEXT, text)
@@ -339,24 +341,20 @@ internal fun formatHour(slot: Int): String {
   return "$h12 $amPm"
 }
 
-@Composable
-private fun buildWrappedShareText(data: WrappedData): String {
+private fun buildWrappedShareText(context: Context, data: WrappedData): String {
   val top = data.topSongs.firstOrNull()
   val artist = data.topArtists.firstOrNull()
   val minutes = formatMinutes(data.totals.totalTimeListened)
+  val plays = context.getString(R.string.wrapped_plays_count, top?.songCountListened ?: 0)
   val topBit = if (top != null) {
-    stringResource(
-      R.string.wrapped_share_top_song,
-      top.title,
-      stringResource(R.string.wrapped_plays_count, top.songCountListened),
-    )
+    context.getString(R.string.wrapped_share_top_song, top.title, plays)
   } else {
     ""
   }
   val artistBit = if (artist != null) {
-    stringResource(R.string.wrapped_share_top_artist, artist.title)
+    context.getString(R.string.wrapped_share_top_artist, artist.title)
   } else {
     ""
   }
-  return stringResource(R.string.wrapped_share_text, minutes, topBit, artistBit)
+  return context.getString(R.string.wrapped_share_text, minutes, topBit, artistBit)
 }

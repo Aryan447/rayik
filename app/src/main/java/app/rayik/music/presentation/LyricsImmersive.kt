@@ -9,7 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.DragInteraction
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -65,6 +65,7 @@ import app.rayik.music.R
 import app.rayik.music.lyrics.LyricDisplayParser
 import app.rayik.music.lyrics.LyricsEntry
 import app.rayik.music.lyrics.WordTimestamp
+import app.rayik.music.ui.theme.RayikIcons
 import app.rayik.music.ui.theme.spacing
 import coil3.compose.AsyncImage
 
@@ -193,8 +194,9 @@ fun ImmersiveLyrics(
             state = listState,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(
-              horizontal = MaterialTheme.spacing.extraLarge,
+              start = MaterialTheme.spacing.extraLarge,
               top = edgePadding,
+              end = MaterialTheme.spacing.extraLarge,
               // Extra line-height past the edge so the upcoming line is
               // always fully readable, never half-clipped at the bottom.
               bottom = edgePadding + 72.dp,
