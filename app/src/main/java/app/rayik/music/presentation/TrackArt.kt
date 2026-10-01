@@ -1,21 +1,27 @@
 package app.rayik.music.presentation
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.RayikIcons
 import coil3.compose.AsyncImage
-import androidx.compose.foundation.layout.fillMaxSize
+import coil3.request.ImageRequest
 
 /**
  * Shared artwork tile: five bars on the theme sweep underneath, remote art
@@ -27,6 +33,7 @@ fun TrackArt(
   modifier: Modifier = Modifier,
   corner: Dp = AppShapes.art,
 ) {
+  val context = LocalContext.current
   Box(
     modifier = modifier
       .clip(RoundedCornerShape(corner))
@@ -39,13 +46,25 @@ fun TrackArt(
       tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f),
       modifier = Modifier.fillMaxSize(0.45f),
     )
-    if (artworkUrl.isNotBlank()) {
-      AsyncImage(
-        model = artworkUrl,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.matchParentSize().clip(RoundedCornerShape(corner)),
-      )
+    Crossfade(
+      targetState = artworkUrl,
+      animationSpec = tween(260, easing = FastOutSlowInEasing),
+      label = "trackArtworkChange",
+    ) { image ->
+      if (image.isNotBlank()) {
+        val request = remember(image, context) {
+          ImageRequest.Builder(context)
+            .data(image)
+            .crossfade(260)
+            .build()
+        }
+        AsyncImage(
+          model = request,
+          contentDescription = null,
+          contentScale = ContentScale.Crop,
+          modifier = Modifier.matchParentSize().clip(RoundedCornerShape(corner)),
+        )
+      }
     }
   }
 }

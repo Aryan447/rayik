@@ -59,12 +59,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -130,6 +130,8 @@ fun NowPlayingSheetContent(
   val streamQuality by prefs.streamQuality.collectAsState()
 
   val artwork = current?.artworkUrl.orEmpty()
+  val configuration = LocalConfiguration.current
+  val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
   val scheme = MaterialTheme.colorScheme
   val surface = scheme.surface
   val primary = scheme.primary
@@ -140,9 +142,8 @@ fun NowPlayingSheetContent(
       .fillMaxHeight(0.94f)
       .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
   ) {
-    // ---- Ambient background: single blurred-artwork wash, melting
-    // top-to-bottom into surface. No sharp full-bleed twin — that ghost
-    // image behind the sheet is what peeked out at the edges.
+    // Blurred cover art fills the sheet and carries its colors behind the
+    // controls, like a continuous extension of the hero image.
     if (artwork.isNotBlank()) {
       AsyncImage(
         model = artwork,
@@ -150,7 +151,7 @@ fun NowPlayingSheetContent(
         contentScale = ContentScale.Crop,
         modifier = Modifier
           .matchParentSize()
-          .blur(72.dp),
+          .blur(56.dp),
       )
     } else {
       Box(
@@ -162,34 +163,15 @@ fun NowPlayingSheetContent(
         ),
       )
     }
-    // Theme bloom orbs for depth — premium mesh feel (shared primitives).
-    Box(
-      Modifier.matchParentSize().background(
-        BrandGradient.bloomBrush(
-          color = primary,
-          alpha = 0.38f,
-          center = Offset(200f, 120f),
-          radius = 900f,
-        ),
-      ),
-    )
-    Box(
-      Modifier.matchParentSize().background(
-        BrandGradient.bloomBrush(
-          color = scheme.tertiary,
-          alpha = 0.28f,
-          center = Offset(900f, 1500f),
-          radius = 1100f,
-        ),
-      ),
-    )
-    // Readability scrim over the blur
+    // Let the cover breathe at the top, then blend it into a quiet theme
+    // tint and the sheet surface beneath the transport controls.
     Box(
       Modifier.matchParentSize().background(
         Brush.verticalGradient(
-          0f to surface.copy(alpha = 0.42f),
-          0.38f to surface.copy(alpha = 0.72f),
-          0.7f to surface.copy(alpha = 0.92f),
+          0f to scheme.onSurface.copy(alpha = 0.04f),
+          0.42f to Color.Transparent,
+          0.62f to primary.copy(alpha = 0.14f),
+          0.82f to surface.copy(alpha = 0.82f),
           1f to surface,
         ),
       ),
@@ -252,13 +234,13 @@ fun NowPlayingSheetContent(
         }
 
         item {
-          Spacer(Modifier.height(18.dp))
+          Spacer(Modifier.height(8.dp))
           if (current == null) {
             ScreenScaffold(state = ScreenState.Loading, loadingText = "", onRetry = {}) {}
           } else {
-            HeroArtwork(artwork = artwork)
+            HeroArtwork(artwork = artwork, landscape = isLandscape)
           }
-          Spacer(Modifier.height(20.dp))
+          Spacer(Modifier.height(12.dp))
         }
 
         item {
@@ -269,7 +251,7 @@ fun NowPlayingSheetContent(
               fontWeight = FontWeight.ExtraBold,
               maxLines = 2,
               overflow = TextOverflow.Ellipsis,
-              textAlign = TextAlign.Center,
+              textAlign = TextAlign.Start,
               modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(4.dp))
@@ -279,7 +261,7 @@ fun NowPlayingSheetContent(
               color = scheme.onSurfaceVariant,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis,
-              textAlign = TextAlign.Center,
+              textAlign = TextAlign.Start,
               modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
@@ -556,7 +538,7 @@ fun NowPlayingSheetContent(
 // ---------- Premium pieces ----------
 
 @Composable
-private fun HeroArtwork(artwork: String) {
+private fun HeroArtwork(artwork: String, landscape: Boolean) {
   val scheme = MaterialTheme.colorScheme
   // Tall full-bleed art dissolves into the ambient background wash.
   Box(Modifier.fillMaxWidth()) {
@@ -565,9 +547,7 @@ private fun HeroArtwork(artwork: String) {
       corner = 0.dp,
       modifier = Modifier
         .fillMaxWidth()
-        // A taller crop gives the cover more of the canvas, closer to the
-        // edge-to-edge artwork treatment in modern music players.
-        .aspectRatio(0.88f),
+        .aspectRatio(if (landscape) 1.45f else 0.96f),
     )
     Box(
       Modifier

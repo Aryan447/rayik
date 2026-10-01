@@ -1,6 +1,7 @@
 package app.rayik.music.presentation
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -196,7 +197,9 @@ fun RaayHomeScreen(
     is HomeUiState.Content -> {
       val content = feed.feed
       LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+          .fillMaxSize()
+          .background(app.rayik.music.ui.theme.BrandGradient.homeGlowBrush()),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large),
         // Bottom clearance so the last shelf clears the inset sheet's
         // 28dp bottom curve instead of clipping into the dock.
@@ -402,12 +405,14 @@ private fun RaayPickCard(
   onNextPick: () -> Unit,
   onRetry: () -> Unit,
 ) {
+  val scheme = MaterialTheme.colorScheme
   Surface(
     shape = AppShapes.cardShape,
     border = androidx.compose.foundation.BorderStroke(
       1.dp,
-      MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+      scheme.primary.copy(alpha = 0.24f),
     ),
+    color = scheme.surface.copy(alpha = 0.94f),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(
@@ -418,14 +423,16 @@ private fun RaayPickCard(
       // The stage: a concise reason above the recommendation title.
       Text(
         pick.reason,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.tertiary,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = scheme.tertiary,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
       )
       Text(
         pick.title,
-        style = MaterialTheme.typography.headlineSmall,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
@@ -435,14 +442,15 @@ private fun RaayPickCard(
         TrackArt(
           artworkUrl = pick.artworkUrl ?: pickArtwork(pick.videoId),
           corner = AppShapes.art,
-          modifier = Modifier.size(148.dp),
+          modifier = Modifier.size(116.dp),
         )
         Spacer(Modifier.width(MaterialTheme.spacing.medium))
         Column(Modifier.weight(1f)) {
           Text(
             pick.trackTitle,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 1,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
           )
           Text(
@@ -453,13 +461,15 @@ private fun RaayPickCard(
             overflow = TextOverflow.Ellipsis,
           )
           Spacer(Modifier.height(MaterialTheme.spacing.small))
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            // Hero play: filled primary circle, the mark's loudest cousin.
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+          ) {
             Surface(
               onClick = onPlayClick,
               shape = AppShapes.pill,
-              color = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.size(56.dp),
+              color = scheme.primary,
+              modifier = Modifier.size(48.dp),
             ) {
               Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -467,20 +477,32 @@ private fun RaayPickCard(
                   contentDescription = stringResource(
                     if (isPlaying) R.string.transport_pause else R.string.transport_play,
                   ),
-                  tint = MaterialTheme.colorScheme.onPrimary,
-                  modifier = Modifier.size(26.dp),
+                  tint = scheme.onPrimary,
+                  modifier = Modifier.size(22.dp),
                 )
               }
             }
-            Spacer(Modifier.width(MaterialTheme.spacing.small))
-            // Something else: the skip, quieter.
-            TextButtonLiteQuiet(onClick = onNextPick)
+            Surface(
+              onClick = onNextPick,
+              shape = AppShapes.pill,
+              color = scheme.surfaceVariant.copy(alpha = 0.72f),
+              modifier = Modifier.size(48.dp),
+            ) {
+              Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(
+                  RayikIcons.Next,
+                  contentDescription = stringResource(R.string.home_something_else),
+                  tint = scheme.onSurfaceVariant,
+                  modifier = Modifier.size(20.dp),
+                )
+              }
+            }
           }
           if (resolving) {
             Text(
               stringResource(R.string.home_tuning),
               style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = scheme.onSurfaceVariant,
               modifier = Modifier.padding(top = MaterialTheme.spacing.extraSmall),
             )
           }
@@ -503,19 +525,6 @@ private fun RaayPickCard(
         }
       }
     }
-  }
-}
-
-@Composable
-private fun TextButtonLiteQuiet(onClick: () -> Unit) {
-  TextButton(onClick = onClick) {
-    Icon(
-      RayikIcons.Next,
-      contentDescription = null,
-      modifier = Modifier.size(18.dp),
-    )
-    Spacer(Modifier.width(MaterialTheme.spacing.extraSmall))
-    Text(stringResource(R.string.home_something_else))
   }
 }
 

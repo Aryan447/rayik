@@ -42,6 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -58,6 +59,9 @@ import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.RayikIcons
 import app.rayik.music.ui.theme.spacing
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 
 /** Index of the line playing at [positionMs], or -1 when none matches yet. */
 fun activeLyricIndex(lines: List<LyricsEntry>, positionMs: Long): Int =
@@ -94,11 +98,10 @@ fun rememberSmoothLyricPosition(positionMs: Long, isPlaying: Boolean): Long {
  */
 suspend fun LazyListState.centerLyricOn(index: Int) {
   if (index < 0) return
-  val viewportH = layoutInfo.viewportSize.height
-  if (viewportH <= 0) {
-    scrollToItem(maxOf(0, index - 1))
-    return
+  if (layoutInfo.viewportSize.height <= 0) {
+    snapshotFlow { layoutInfo.viewportSize.height }.filter { it > 0 }.first()
   }
+  val viewportH = layoutInfo.viewportSize.height
   // Negative offset parks the item's top below the viewport top, i.e. the
   // item lands centered: top at H/2 - h/2.
   fun centeredOffsetFor(size: Int) = -(viewportH / 2 - size / 2)
@@ -106,7 +109,7 @@ suspend fun LazyListState.centerLyricOn(index: Int) {
   if (visible != null) {
     animateScrollToItem(index, centeredOffsetFor(visible.size))
   } else {
-    scrollToItem(index, -(viewportH / 2 - 120))
+    animateScrollToItem(index, -(viewportH / 2 - 120))
     withFrameNanos { }
     val settled = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
     if (settled != null) {
@@ -278,18 +281,31 @@ fun LyricLines(
   val active = remember(lines, positionMs) { activeLyricIndex(lines, positionMs) }
 
   var userScrolling by remember { mutableStateOf(false) }
+  var resumePending by remember { mutableStateOf(false) }
   LaunchedEffect(listState) {
     listState.interactionSource.interactions.collect { interaction ->
       when (interaction) {
-        is DragInteraction.Start -> userScrolling = true
-        is DragInteraction.Stop, is DragInteraction.Cancel -> userScrolling = false
+        is DragInteraction.Start -> {
+          userScrolling = true
+          resumePending = false
+        }
+        is DragInteraction.Stop, is DragInteraction.Cancel -> {
+          userScrolling = false
+          resumePending = true
+        }
         else -> Unit
       }
     }
   }
 
-  LaunchedEffect(active) {
-    if (!userScrolling) listState.centerLyricOn(active)
+  LaunchedEffect(resumePending) {
+    if (resumePending) {
+      delay(1_200)
+      resumePending = false
+    }
+  }
+  LaunchedEffect(active, userScrolling, resumePending) {
+    if (!userScrolling && !resumePending) listState.centerLyricOn(active)
   }
 
   LazyColumn(

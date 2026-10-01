@@ -45,6 +45,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -101,18 +102,31 @@ fun ImmersiveLyrics(
   // count as "scrolling", or every line change during a glide gets skipped
   // and the active line sinks to the bottom.
   var userScrolling by remember { mutableStateOf(false) }
+  var resumePending by remember { mutableStateOf(false) }
   LaunchedEffect(listState) {
     listState.interactionSource.interactions.collect { interaction ->
       when (interaction) {
-        is DragInteraction.Start -> userScrolling = true
-        is DragInteraction.Stop, is DragInteraction.Cancel -> userScrolling = false
+        is DragInteraction.Start -> {
+          userScrolling = true
+          resumePending = false
+        }
+        is DragInteraction.Stop, is DragInteraction.Cancel -> {
+          userScrolling = false
+          resumePending = true
+        }
         else -> Unit
       }
     }
   }
 
-  LaunchedEffect(active) {
-    if (!userScrolling) listState.centerLyricOn(active)
+  LaunchedEffect(resumePending) {
+    if (resumePending) {
+      delay(1_200)
+      resumePending = false
+    }
+  }
+  LaunchedEffect(active, userScrolling, resumePending) {
+    if (!userScrolling && !resumePending) listState.centerLyricOn(active)
   }
   BackHandler(onBack = onClose)
 

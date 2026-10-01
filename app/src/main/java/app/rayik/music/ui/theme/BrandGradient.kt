@@ -60,6 +60,18 @@ object BrandGradient {
     )
   }
 
+  /** Subtle bottom-up theme glow behind the Home feed. */
+  @Composable
+  @ReadOnlyComposable
+  fun homeGlowBrush(): Brush {
+    val primary = MaterialTheme.colorScheme.primary
+    return Brush.verticalGradient(
+      0.0f to Color.Transparent,
+      0.68f to primary.copy(alpha = 0.025f),
+      1.0f to primary.copy(alpha = 0.11f),
+    )
+  }
+
   /**
    * Art tile (`.art`): conic `primary → secondary → tertiary → primary`.
    * Theme-aware sweep for art placeholders and the hero tile.
