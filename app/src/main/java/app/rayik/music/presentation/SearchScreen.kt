@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -44,11 +45,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import app.rayik.music.player.formatMs
@@ -202,27 +205,32 @@ fun SearchScreen(
               fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(MaterialTheme.spacing.small))
-            LazyVerticalGrid(
-              columns = GridCells.Fixed(2),
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(404.dp),
-              horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-              verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-              userScrollEnabled = false,
-            ) {
-              items(BROWSE_MOODS.size) { index ->
-                val (labelRes, queryRes) = BROWSE_MOODS[index]
-                val label = stringResource(labelRes)
-                val queryText = stringResource(queryRes)
-                MoodCard(
-                  index = index,
-                  label = label,
-                  onClick = {
-                    query = queryText
-                    searchViewModel.searchAndRemember(queryText)
-                  },
-                )
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+              val minCellWidth = 144.dp
+              val gap = MaterialTheme.spacing.small
+              val columns = maxOf(1, ((maxWidth + gap) / (minCellWidth + gap)).toInt())
+              val rows = (BROWSE_MOODS.size + columns - 1) / columns
+              val gridHeight = 92.dp * rows.toFloat() + gap * (rows - 1).coerceAtLeast(0).toFloat()
+              LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = minCellWidth),
+                modifier = Modifier.fillMaxWidth().height(gridHeight),
+                horizontalArrangement = Arrangement.spacedBy(gap),
+                verticalArrangement = Arrangement.spacedBy(gap),
+                userScrollEnabled = false,
+              ) {
+                items(BROWSE_MOODS.size) { index ->
+                  val (labelRes, queryRes) = BROWSE_MOODS[index]
+                  val label = stringResource(labelRes)
+                  val queryText = stringResource(queryRes)
+                  MoodCard(
+                    index = index,
+                    label = label,
+                    onClick = {
+                      query = queryText
+                      searchViewModel.searchAndRemember(queryText)
+                    },
+                  )
+                }
               }
             }
           }
@@ -293,6 +301,7 @@ private fun MoodCard(
 ) {
   // Theme-colored sweep, rotated so neighbors differ — never fixed pinks.
   val scheme = MaterialTheme.colorScheme
+  val contrastScrim = if (scheme.onPrimary.luminance() > 0.5f) Color.Black else Color.White
   val sweep = remember(index, scheme) {
     val stops = listOf(scheme.primary, scheme.secondary, scheme.tertiary, scheme.primary)
     val shift = index % stops.size
@@ -304,9 +313,13 @@ private fun MoodCard(
       .height(92.dp)
       .clip(AppShapes.cardShape)
       .background(sweep)
-      .clickable(onClick = onClick)
-      .padding(MaterialTheme.spacing.medium),
+      .clickable(role = Role.Button, onClick = onClick),
   ) {
+    Box(
+      Modifier
+        .matchParentSize()
+        .background(contrastScrim.copy(alpha = 0.36f)),
+    )
     Text(
       label,
       style = MaterialTheme.typography.titleMedium,
@@ -314,7 +327,9 @@ private fun MoodCard(
       color = scheme.onPrimary,
       maxLines = 2,
       overflow = TextOverflow.Ellipsis,
-      modifier = Modifier.align(Alignment.BottomStart),
+      modifier = Modifier
+        .align(Alignment.BottomStart)
+        .padding(MaterialTheme.spacing.medium),
     )
     Icon(
       RayikIcons.MusicNote,

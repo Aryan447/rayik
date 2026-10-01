@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -79,6 +80,8 @@ fun ImmersiveLyrics(
   raw: String?,
   positionMs: Long,
   artworkUrl: String,
+  title: String,
+  artist: String,
   onClose: () -> Unit,
   isPlaying: Boolean = true,
   onSeek: ((Long) -> Unit)? = null,
@@ -128,9 +131,9 @@ fun ImmersiveLyrics(
     Box(
       Modifier.matchParentSize().background(
         Brush.verticalGradient(
-          0f to Color.Black.copy(alpha = 0.45f),
-          0.5f to Color.Black.copy(alpha = 0.55f),
-          1f to Color.Black.copy(alpha = 0.72f),
+          0f to Color.Black.copy(alpha = 0.34f),
+          0.5f to Color.Black.copy(alpha = 0.48f),
+          1f to Color.Black.copy(alpha = 0.68f),
         ),
       ),
     )
@@ -165,6 +168,25 @@ fun ImmersiveLyrics(
             }
           }
           Spacer(Modifier.weight(1f))
+          Column(
+            modifier = Modifier.weight(3f),
+            horizontalAlignment = Alignment.End,
+          ) {
+            Text(
+              title,
+              color = Color.White,
+              style = MaterialTheme.typography.titleSmall,
+              fontWeight = FontWeight.SemiBold,
+              maxLines = 1,
+            )
+            Text(
+              artist,
+              color = Color.White.copy(alpha = 0.72f),
+              style = MaterialTheme.typography.bodySmall,
+              maxLines = 1,
+            )
+          }
+          Spacer(Modifier.width(MaterialTheme.spacing.small))
           TrackArt(
             artworkUrl = artworkUrl,
             corner = AppShapes.art,
@@ -268,7 +290,7 @@ private fun ImmersiveLyricRow(
         line.text,
         fontSize = fontSize.sp,
         lineHeight = (fontSize * 1.25f).sp,
-        fontWeight = FontWeight.ExtraBold,
+        fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
         textAlign = TextAlign.Start,
         color = color,
         style = MaterialTheme.typography.headlineSmall.copy(
@@ -328,7 +350,7 @@ private fun WordKaraokeLine(
           ),
         )
       } else {
-        var wordWidthPx by remember(word.text) { mutableStateOf(0) }
+        var wordWidthPx by remember(word.text) { mutableIntStateOf(0) }
         val fraction =
           ((positionMs - wordStartMs).toFloat() / (wordEndMs - wordStartMs)).coerceIn(0f, 1f)
         Box {

@@ -4,8 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,7 +35,6 @@ import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,16 +47,14 @@ import app.rayik.music.innertube.models.PlaylistItem
 import app.rayik.music.innertube.models.SongItem
 import app.rayik.music.innertube.models.YTItem
 import app.rayik.music.ui.theme.AppShapes
-import app.rayik.music.ui.theme.FrauncesItalicFamily
 import app.rayik.music.ui.theme.RayikIcons
 import app.rayik.music.ui.theme.spacing
 import app.rayik.music.utils.isLocalMediaId
 import java.time.LocalTime
 
 /**
- * Raay home: greeting, jump-back-in tiles from your own history, the
- * opinionated Raay pick with its reason attached, then live shelves from
- * the streaming layer (chips filter, new releases close the page).
+ * Raay home: greeting, jump-back-in tiles from your own history, an
+ * opinionated Raay pick with its reason attached, then live shelves.
  */
 data class RaayPick(
   val title: String,
@@ -67,7 +62,6 @@ data class RaayPick(
   val videoId: String,
   val trackTitle: String,
   val trackArtist: String,
-  val mood: String,
   /** Real artwork when the pick comes from history; else the video still. */
   val artworkUrl: String? = null,
 )
@@ -75,20 +69,11 @@ data class RaayPick(
 @Composable
 private fun defaultPicks(): List<RaayPick> = listOf(
   RaayPick(
-    title = stringResource(R.string.home_pick_mehfil_title),
-    reason = stringResource(R.string.home_pick_mehfil_reason),
-    videoId = "BddP6PYo2gs",
-    trackTitle = stringResource(R.string.home_pick_mehfil_track),
-    trackArtist = stringResource(R.string.home_pick_mehfil_artist),
-    mood = "Mehfil",
-  ),
-  RaayPick(
     title = stringResource(R.string.home_pick_rain_title),
     reason = stringResource(R.string.home_pick_rain_reason),
     videoId = "MJyKN-8UncM",
     trackTitle = stringResource(R.string.home_pick_rain_track),
     trackArtist = stringResource(R.string.home_pick_rain_artist),
-    mood = "Rain",
   ),
   RaayPick(
     title = stringResource(R.string.home_pick_focus_title),
@@ -96,7 +81,6 @@ private fun defaultPicks(): List<RaayPick> = listOf(
     videoId = "6mr4cYJ7yew",
     trackTitle = stringResource(R.string.home_pick_focus_track),
     trackArtist = stringResource(R.string.home_pick_focus_artist),
-    mood = "Focus",
   ),
   RaayPick(
     title = stringResource(R.string.home_pick_drive_title),
@@ -104,7 +88,6 @@ private fun defaultPicks(): List<RaayPick> = listOf(
     videoId = "O5gwxm3NxFU",
     trackTitle = stringResource(R.string.home_pick_drive_track),
     trackArtist = stringResource(R.string.home_pick_drive_artist),
-    mood = "Drive",
   ),
 )
 
@@ -251,13 +234,6 @@ fun RaayHomeScreen(
             onNextPick = {
               pickIndex = (pickIndex + 1) % picks.size
               startError = null
-            },
-            onSelectMood = { mood ->
-              val found = picks.indexOfFirst { it.mood.equals(mood, ignoreCase = true) }
-              if (found >= 0) {
-                pickIndex = found
-                playPick(picks[found])
-              }
             },
             onRetry = { playPick(effectivePick) },
           )
@@ -424,7 +400,6 @@ private fun RaayPickCard(
   error: String?,
   onPlayClick: () -> Unit,
   onNextPick: () -> Unit,
-  onSelectMood: (String) -> Unit,
   onRetry: () -> Unit,
 ) {
   Surface(
@@ -440,13 +415,10 @@ private fun RaayPickCard(
         .fillMaxWidth()
         .padding(MaterialTheme.spacing.large),
     ) {
-      // The stage: reason first in serif italic, then the title.
+      // The stage: a concise reason above the recommendation title.
       Text(
         pick.reason,
-        style = MaterialTheme.typography.titleSmall.copy(
-          fontFamily = FrauncesItalicFamily,
-          fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-        ),
+        style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.tertiary,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
@@ -514,10 +486,6 @@ private fun RaayPickCard(
           }
         }
       }
-      if (!resolving) {
-        Spacer(Modifier.height(MaterialTheme.spacing.small))
-        MoodChips(onSelectMood = onSelectMood)
-      }
       if (error != null) {
         Row(
           modifier = Modifier.fillMaxWidth(),
@@ -548,24 +516,6 @@ private fun TextButtonLiteQuiet(onClick: () -> Unit) {
     )
     Spacer(Modifier.width(MaterialTheme.spacing.extraSmall))
     Text(stringResource(R.string.home_something_else))
-  }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun MoodChips(onSelectMood: (String) -> Unit) {
-  FlowRow(
-    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-  ) {
-    listOf(
-      stringResource(R.string.home_mood_mehfil) to "Mehfil",
-      stringResource(R.string.home_mood_rain) to "Rain",
-      stringResource(R.string.home_mood_focus) to "Focus",
-      stringResource(R.string.home_mood_drive) to "Drive",
-    ).forEach { (label, mood) ->
-      Chip(label = label, onClick = { onSelectMood(mood) })
-    }
   }
 }
 
@@ -681,52 +631,6 @@ private fun ShelfCard(
           )
         }
       }
-    }
-  }
-}
-
-@Composable
-private fun Chip(
-  label: String,
-  hot: Boolean = false,
-  onClick: () -> Unit = {},
-) {
-  if (hot) {
-    Surface(
-      shape = AppShapes.pill,
-      color = MaterialTheme.colorScheme.primary,
-      modifier = Modifier.clickable(onClick = onClick),
-    ) {
-      Text(
-        label,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onPrimary,
-        modifier = Modifier.padding(
-          horizontal = MaterialTheme.spacing.medium,
-          vertical = MaterialTheme.spacing.small,
-        ),
-      )
-    }
-  } else {
-    Surface(
-      shape = AppShapes.pill,
-      color = Color.Transparent,
-      border = androidx.compose.foundation.BorderStroke(
-        1.dp,
-        MaterialTheme.colorScheme.outlineVariant,
-      ),
-      modifier = Modifier.clickable(onClick = onClick),
-    ) {
-      Text(
-        label,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(
-          horizontal = MaterialTheme.spacing.medium,
-          vertical = MaterialTheme.spacing.small,
-        ),
-      )
     }
   }
 }

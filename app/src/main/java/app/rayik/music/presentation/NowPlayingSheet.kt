@@ -88,7 +88,6 @@ import app.rayik.music.preferences.StreamQuality
 import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.BrandGradient
-import app.rayik.music.ui.theme.FrauncesItalicFamily
 import app.rayik.music.ui.theme.RayikIcons
 import app.rayik.music.ui.theme.spacing
 
@@ -226,15 +225,11 @@ fun NowPlayingSheetContent(
               )
             }
             Spacer(Modifier.weight(1f))
-            // The playing-from line in serif italic — or nothing when there
-            // is no source. A fake live badge is the opposite of the voice.
+            // Keep the source label quiet; omit it when the queue has no name.
             if (!queueTitle.isNullOrBlank()) {
               Text(
                 stringResource(R.string.playing_from, queueTitle!!),
-                style = MaterialTheme.typography.titleSmall.copy(
-                  fontFamily = FrauncesItalicFamily,
-                  fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                ),
+                style = MaterialTheme.typography.titleSmall,
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -547,6 +542,8 @@ fun NowPlayingSheetContent(
           raw = rawLyrics,
           positionMs = positionMs,
           artworkUrl = artwork,
+          title = current?.title.orEmpty(),
+          artist = current?.artist.orEmpty(),
           onClose = { immersiveLyrics = false },
           isPlaying = playbackState == PlaybackUiState.Playing,
           onSeek = player::seekTo,
@@ -561,15 +558,16 @@ fun NowPlayingSheetContent(
 @Composable
 private fun HeroArtwork(artwork: String) {
   val scheme = MaterialTheme.colorScheme
-  // Full-bleed square art dissolving into the background wash —
-  // no card, no border, no glow. Title sits below on the fade.
+  // Tall full-bleed art dissolves into the ambient background wash.
   Box(Modifier.fillMaxWidth()) {
     TrackArt(
       artworkUrl = artwork,
       corner = 0.dp,
       modifier = Modifier
         .fillMaxWidth()
-        .aspectRatio(1f),
+        // A taller crop gives the cover more of the canvas, closer to the
+        // edge-to-edge artwork treatment in modern music players.
+        .aspectRatio(0.88f),
     )
     Box(
       Modifier
@@ -980,8 +978,8 @@ private fun TransportPill(
   enabled: Boolean,
   containerColor: Color,
   borderColor: Color,
-  shadowColor: Color = Color.Transparent,
   modifier: Modifier = Modifier,
+  shadowColor: Color = Color.Transparent,
   content: @Composable () -> Unit,
 ) {
   Surface(
