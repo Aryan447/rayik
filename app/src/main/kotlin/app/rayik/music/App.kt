@@ -22,6 +22,7 @@ import coil3.disk.directory
 import coil3.request.CachePolicy
 import coil3.request.allowHardware
 import coil3.request.crossfade
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
@@ -40,6 +41,7 @@ import app.rayik.music.extensions.*
 import app.rayik.music.gatekeeper.GatekeeperResult
 import app.rayik.music.gatekeeper.RunGatekeeperCheckUseCase
 import app.rayik.music.innertube.YouTube
+import app.rayik.music.innertube.models.YouTubeClient
 import app.rayik.music.innertube.models.YouTubeLocale
 import app.rayik.music.kugou.KuGou
 import app.rayik.music.lastfm.LastFM
@@ -60,6 +62,7 @@ import app.rayik.music.utils.potoken.BotGuardTokenGenerator
 import app.rayik.music.utils.reportException
 import app.rayik.music.utils.toPlaybackAuthState
 import okhttp3.Dns
+import okhttp3.OkHttpClient
 import timber.log.Timber
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -328,6 +331,22 @@ class App :
             applicationScope.launch(Dispatchers.IO) { trimImageDiskCache(diskCache) }
         }
 
+        // YouTube's thumbnail CDN 403s requests that carry no browser
+        // User-Agent, which left every tile on the gold placeholder. Every
+        // other HTTP path here already sends one; images did not.
+        val artworkHttpClient =
+            OkHttpClient
+                .Builder()
+                .addInterceptor { chain ->
+                    chain.proceed(
+                        chain
+                            .request()
+                            .newBuilder()
+                            .header("User-Agent", YouTubeClient.USER_AGENT_WEB)
+                            .build(),
+                    )
+                }.build()
+
         return ImageLoader
             .Builder(this)
             .crossfade(true)
@@ -335,6 +354,7 @@ class App :
             .diskCache(diskCache)
             .diskCachePolicy(imageCacheConfig.policy)
             .components {
+                add(OkHttpNetworkFetcherFactory(artworkHttpClient))
                 add(playlistCoverInterceptor)
                 add(downloadedArtworkRepository.coilMapper())
             }

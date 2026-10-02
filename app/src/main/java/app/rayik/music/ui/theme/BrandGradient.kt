@@ -60,15 +60,27 @@ object BrandGradient {
     )
   }
 
-  /** Subtle bottom-up theme glow behind the Home feed. */
+  /**
+   * Bottom-up ambient wash behind the Home feed, in the spirit of the Gemini
+   * home screen: the lower third picks up a strong tint that fades out by the
+   * middle. Driven by [androidx.compose.material3.ColorScheme.primary], so the
+   * glow takes each theme's own colour (Peacock glows blue, Gold glows gold).
+   * Never hardcode a hue here — it would break all 16 themes.
+   */
   @Composable
   @ReadOnlyComposable
   fun homeGlowBrush(): Brush {
-    val primary = MaterialTheme.colorScheme.primary
+    val scheme = MaterialTheme.colorScheme
+    val primary = scheme.primary
+    // Dark surfaces need more punch to read as a wash; light ones would go muddy.
+    val isDark = scheme.background.luminance() < 0.5f
+    val near = if (isDark) 0.48f else 0.32f
+    val far = if (isDark) 0.30f else 0.18f
     return Brush.verticalGradient(
       0.0f to Color.Transparent,
-      0.68f to primary.copy(alpha = 0.025f),
-      1.0f to primary.copy(alpha = 0.11f),
+      0.55f to Color.Transparent,
+      0.82f to primary.copy(alpha = far),
+      1.0f to primary.copy(alpha = near),
     )
   }
 

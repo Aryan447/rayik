@@ -25,6 +25,9 @@ import app.rayik.music.playback.PlayerConnection
 import app.rayik.music.playback.PlayerConnectionHolder
 import app.rayik.music.playback.queues.Queue
 import app.rayik.music.playback.queues.YouTubeQueue
+import app.rayik.music.ui.utils.YTThumbQuality
+import app.rayik.music.ui.utils.buildYTThumbnailUrl
+import app.rayik.music.utils.isLocalMediaId
 import javax.inject.Inject
 
 /** Repeat modes ported from mpvium PlayerViewModel pattern. */
@@ -109,7 +112,11 @@ class PlayerViewModel @Inject constructor(
               mediaId = item.mediaId,
               title = meta.title?.toString().orEmpty(),
               artist = meta.artist?.toString().orEmpty(),
-              artworkUrl = meta.artworkUri?.toString().orEmpty(),
+              artworkUrl = meta.artworkUri?.toString().orEmpty().ifBlank {
+                item.mediaId.takeIf { !it.isLocalMediaId() }
+                  ?.let { buildYTThumbnailUrl(it, YTThumbQuality.HQ) }
+                  .orEmpty()
+              },
               isCurrent = index == current,
             )
           }
