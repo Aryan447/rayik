@@ -54,7 +54,12 @@ fun UpNextRow(
       ),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    TrackArt(artworkUrl = item.artworkUrl, corner = AppShapes.art, modifier = Modifier.size(56.dp))
+    TrackArt(
+      artworkUrl = item.artworkUrl,
+      fallbackUrl = publicArtFallback(item.mediaId),
+      corner = AppShapes.art,
+      modifier = Modifier.size(56.dp),
+    )
     Spacer(Modifier.width(MaterialTheme.spacing.medium))
     Column(Modifier.weight(1f)) {
       Text(

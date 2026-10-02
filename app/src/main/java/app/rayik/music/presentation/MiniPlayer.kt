@@ -1,6 +1,8 @@
 package app.rayik.music.presentation
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -36,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +61,10 @@ import kotlin.math.min
 /** Morph clock: one shared duration for fade, size glide, stagger and chevron. */
 private const val MORPH_MS = 450
 private const val MORPH_EXIT_MS = 180
+
+/** Cold-start entrance: delay past first paint, then slide up once per process. */
+private const val DOCK_ENTER_DELAY_MS = 300
+private const val DOCK_ENTER_MS = 500
 
 /** Bottom-nav destinations. Icon-only in the expanded dock; labels survive in TalkBack. */
 internal enum class NavTab(val labelRes: Int, val icon: ImageVector) {
@@ -100,6 +107,15 @@ fun MiniPlayer(
   }
   val buttonsEnabled = !locked
 
+  // Cold-start entrance: no dock at first, then it slides up pushing the
+  // feed. Saveable so rotation doesn't replay it; size animation is what
+  // moves the content, the slide+fade is what the eye follows.
+  var entered by rememberSaveable { mutableStateOf(false) }
+  LaunchedEffect(Unit) {
+    delay(DOCK_ENTER_DELAY_MS.toLong())
+    entered = true
+  }
+
   Column(
     modifier = Modifier
       .fillMaxWidth()
@@ -111,6 +127,14 @@ fun MiniPlayer(
         onClick = { if (!showTabs) onOpenPlayer() },
       ),
   ) {
+    AnimatedVisibility(
+      visible = entered,
+      enter = slideInVertically(
+        initialOffsetY = { it },
+        animationSpec = tween(DOCK_ENTER_MS, easing = FastOutSlowInEasing),
+      ) + fadeIn(animationSpec = tween(DOCK_ENTER_MS, easing = FastOutSlowInEasing)),
+      label = "dockEnter",
+    ) {
     AnimatedContent(
       targetState = showTabs,
       transitionSpec = {
@@ -132,6 +156,7 @@ fun MiniPlayer(
       } else {
         DockTransportRow(
           artworkUrl = current?.artworkUrl.orEmpty(),
+          fallbackUrl = publicArtFallback(current?.mediaId.orEmpty()),
           state = playbackState,
           onArtClick = onOpenPlayer,
           onPrevious = player::previous,
@@ -148,6 +173,7 @@ fun MiniPlayer(
         )
       }
     }
+    }
   }
 }
 
@@ -155,6 +181,7 @@ fun MiniPlayer(
 @Composable
 private fun DockTransportRow(
   artworkUrl: String,
+  fallbackUrl: String,
   state: PlaybackUiState,
   onArtClick: () -> Unit,
   onPrevious: () -> Unit,
@@ -174,6 +201,7 @@ private fun DockTransportRow(
     MorphSlot(index = 0, modeKey = modeKey) {
       TrackArt(
         artworkUrl = artworkUrl,
+        fallbackUrl = fallbackUrl,
         corner = AppShapes.art,
         modifier = Modifier
           .size(DockArtSize)

@@ -156,10 +156,12 @@ fun NowPlayingSheetContent(
           .blur(56.dp),
       )
     } else {
+      // No art, no hue: a neutral lift so the header band can never clash
+      // with the hero the way a primary wash did.
       Box(
         Modifier.matchParentSize().background(
           Brush.verticalGradient(
-            0f to primary.copy(alpha = 0.35f),
+            0f to scheme.surfaceContainerHighest,
             1f to surface,
           ),
         ),
@@ -243,7 +245,11 @@ fun NowPlayingSheetContent(
           if (current == null) {
             ScreenScaffold(state = ScreenState.Loading, loadingText = "", onRetry = {}) {}
           } else {
-            HeroArtwork(artwork = artwork, landscape = isLandscape)
+            HeroArtwork(
+              artwork = artwork,
+              fallbackUrl = publicArtFallback(current.mediaId),
+              landscape = isLandscape,
+            )
           }
           Spacer(Modifier.height(24.dp))
         }
@@ -272,10 +278,19 @@ fun NowPlayingSheetContent(
                   modifier = Modifier.fillMaxWidth(),
                 )
               }
-              LikePill(
-                isLiked = isLiked,
-                onToggle = player::toggleLike,
-              )
+              Spacer(Modifier.width(MaterialTheme.spacing.small))
+              // Icon-only actions: the Like pill crowded the title and clipped
+              // the artist. Same toggles, a fraction of the width.
+              GlassIconButton(onClick = player::toggleLike) {
+                Icon(
+                  imageVector = if (isLiked) RayikIcons.HeartFilled else RayikIcons.Heart,
+                  contentDescription = stringResource(
+                    if (isLiked) R.string.action_unlike else R.string.action_like,
+                  ),
+                  tint = if (isLiked) scheme.primary else scheme.onSurfaceVariant,
+                  modifier = Modifier.size(20.dp),
+                )
+              }
               Spacer(Modifier.width(8.dp))
               GlassIconButton(
                 onClick = { shareTrack(context, current.title, current.artist) },
@@ -524,6 +539,7 @@ modifier = Modifier.size(22.dp),
           raw = rawLyrics,
           positionMs = positionMs,
           artworkUrl = artwork,
+          fallbackUrl = publicArtFallback(current?.mediaId.orEmpty()),
           title = current?.title.orEmpty(),
           artist = current?.artist.orEmpty(),
           onClose = { immersiveLyrics = false },
@@ -538,11 +554,12 @@ modifier = Modifier.size(22.dp),
 // ---------- Premium pieces ----------
 
 @Composable
-private fun HeroArtwork(artwork: String, landscape: Boolean) {
+private fun HeroArtwork(artwork: String, fallbackUrl: String, landscape: Boolean) {
   // Apple Music proportions: a square cover, edge to edge. No surface fade on
   // top of it — the sheet's blurred-art backdrop already carries the tint.
   TrackArt(
     artworkUrl = artwork,
+    fallbackUrl = fallbackUrl,
     corner = 0.dp,
     modifier = Modifier
       .fillMaxWidth()
@@ -633,52 +650,6 @@ private fun QualityMenu(
           },
         )
       }
-    }
-  }
-}
-
-@Composable
-private fun LikePill(
-  isLiked: Boolean,
-  onToggle: () -> Unit,
-) {
-  val scheme = MaterialTheme.colorScheme
-  val container = if (isLiked) scheme.primary else scheme.surface.copy(alpha = 0.5f)
-  val contentColor = if (isLiked) scheme.onPrimary else scheme.onSurfaceVariant
-  Surface(
-    onClick = onToggle,
-    shape = CircleShape,
-    color = container,
-    modifier = Modifier
-      .border(
-        1.dp,
-        if (isLiked) scheme.primary.copy(alpha = 0.4f) else BrandGradient.hairline(),
-        CircleShape,
-      )
-      .shadow(
-        if (isLiked) 16.dp else 0.dp,
-        CircleShape,
-        spotColor = scheme.primary.copy(alpha = 0.5f),
-      ),
-  ) {
-    Row(
-      modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Icon(
-        imageVector = if (isLiked) RayikIcons.HeartFilled else RayikIcons.Heart,
-        contentDescription = stringResource(
-          if (isLiked) R.string.action_unlike else R.string.action_like,
-        ),
-        tint = contentColor,
-        modifier = Modifier.size(17.dp),
-      )
-      Spacer(Modifier.width(6.dp))
-      Text(
-        stringResource(if (isLiked) R.string.action_liked else R.string.action_like),
-        style = MaterialTheme.typography.labelLarge,
-        color = contentColor,
-      )
     }
   }
 }
@@ -799,19 +770,25 @@ private fun SheetSlider(
       modifier = Modifier.fillMaxWidth(),
     )
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+      // Tabular figures in fixed slots so elapsed/remaining never wobble the
+      // row as digits change.
+      val tabular = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
       Text(
         formatMs(if (dragging) dragValue.toLong() else positionMs),
-        style = MaterialTheme.typography.labelMedium,
+        style = tabular,
         fontWeight = FontWeight.SemiBold,
         color = scheme.onSurface.copy(alpha = 0.9f),
+        modifier = Modifier.widthIn(min = 52.dp),
       )
       Spacer(Modifier.weight(1f))
       // Apple Music counts down, not up to the end.
       val elapsed = (if (dragging) dragValue.toLong() else positionMs).coerceAtLeast(0L)
       Text(
         "-${formatMs((durationMs - elapsed).coerceAtLeast(0L))}",
-        style = MaterialTheme.typography.labelMedium,
+        style = tabular,
         color = scheme.onSurfaceVariant,
+        textAlign = TextAlign.End,
+        modifier = Modifier.widthIn(min = 64.dp),
       )
     }
   }
@@ -828,8 +805,9 @@ private fun ControlDock(
   onCycleRepeat: () -> Unit,
   onToggleShuffle: () -> Unit,
 ) {
-  // Apple Music transport: bare icons, no pills or surfaces. The play button
-  // keeps a generous 48dp touch target even though the glyph is 44dp.
+  // Apple Music transport: bare icons, no pills or surfaces. Prev, play and
+  // next share one 64dp slot and one 40dp glyph so the row is symmetric by
+  // construction instead of by eyeballed spacers.
   val scheme = MaterialTheme.colorScheme
   Row(
     modifier = Modifier.fillMaxWidth(),
@@ -850,7 +828,7 @@ private fun ControlDock(
     IconButton(
       onClick = onPrevious,
       enabled = state != PlaybackUiState.Loading,
-      modifier = Modifier.size(56.dp),
+      modifier = Modifier.size(64.dp),
     ) {
       Icon(
         RayikIcons.Previous,
@@ -861,7 +839,7 @@ private fun ControlDock(
     }
     Spacer(Modifier.width(18.dp))
     if (state == PlaybackUiState.Loading) {
-      BarLoader(modifier = Modifier.size(width = 64.dp, height = 56.dp))
+      BarLoader(modifier = Modifier.size(width = 64.dp, height = 64.dp))
     } else {
       IconButton(
         onClick = onToggle,
@@ -883,7 +861,7 @@ private fun ControlDock(
             },
           ),
           tint = scheme.onSurface,
-          modifier = Modifier.size(44.dp),
+          modifier = Modifier.size(40.dp),
         )
       }
     }
@@ -891,7 +869,7 @@ private fun ControlDock(
     IconButton(
       onClick = onNext,
       enabled = state != PlaybackUiState.Loading,
-      modifier = Modifier.size(56.dp),
+      modifier = Modifier.size(64.dp),
     ) {
       Icon(
         RayikIcons.Next,

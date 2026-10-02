@@ -1,7 +1,6 @@
 package app.rayik.music.presentation
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -197,9 +196,7 @@ fun RaayHomeScreen(
     is HomeUiState.Content -> {
       val content = feed.feed
       LazyColumn(
-        modifier = Modifier
-          .fillMaxSize()
-          .background(app.rayik.music.ui.theme.BrandGradient.homeGlowBrush()),
+        modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large),
         // Bottom clearance so the last shelf clears the inset sheet's
         // 28dp bottom curve instead of clipping into the dock.
@@ -363,6 +360,7 @@ private fun QuickTile(
     ) {
       TrackArt(
         artworkUrl = song.song.thumbnailUrl.orEmpty(),
+        fallbackUrl = publicArtFallback(song.song.id),
         corner = AppShapes.art,
         modifier = Modifier.size(56.dp),
       )
@@ -441,6 +439,7 @@ private fun RaayPickCard(
       Row(verticalAlignment = Alignment.CenterVertically) {
         TrackArt(
           artworkUrl = pick.artworkUrl ?: pickArtwork(pick.videoId),
+          fallbackUrl = publicArtFallback(pick.videoId),
           corner = AppShapes.art,
           modifier = Modifier.size(116.dp),
         )
@@ -612,6 +611,9 @@ private fun ShelfCard(
         ).joinToString(" • ")
         else -> ""
       }
+      // Only songs own a video id, so only they get the public still as a
+      // fallback — albums, playlists and artists stay CDN-only.
+      val fallback = if (item is SongItem) publicArtFallback(item.id) else ""
       Column(
         modifier = Modifier
           .width(140.dp)
@@ -619,6 +621,7 @@ private fun ShelfCard(
       ) {
         TrackArt(
           artworkUrl = item.thumbnail.orEmpty(),
+          fallbackUrl = fallback,
           corner = AppShapes.art,
           modifier = Modifier.size(140.dp),
         )

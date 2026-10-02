@@ -81,6 +81,7 @@ fun ImmersiveLyrics(
   raw: String?,
   positionMs: Long,
   artworkUrl: String,
+  fallbackUrl: String = "",
   title: String,
   artist: String,
   onClose: () -> Unit,
@@ -203,6 +204,7 @@ fun ImmersiveLyrics(
           Spacer(Modifier.width(MaterialTheme.spacing.small))
           TrackArt(
             artworkUrl = artworkUrl,
+            fallbackUrl = fallbackUrl,
             corner = AppShapes.art,
             modifier = Modifier.size(64.dp),
           )
