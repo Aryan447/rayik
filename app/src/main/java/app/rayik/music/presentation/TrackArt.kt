@@ -28,6 +28,7 @@ import app.rayik.music.ui.utils.buildYTThumbnailUrl
 import app.rayik.music.utils.isLocalMediaId
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import timber.log.Timber
 
 /**
