@@ -92,9 +92,12 @@ fun rememberSmoothLyricPosition(positionMs: Long, isPlaying: Boolean): Long {
 }
 
 /**
- * Glides [index] to the vertical center of the viewport instead of snapping
- * its top edge into view. Far jumps (seek/track change) land near center
- * instantly, then settle exactly on the next frame — no fling, no overshoot.
+ * Glides [index] to just above the viewport's vertical center instead of
+ * snapping its top edge into view. Late lines would otherwise sink to the
+ * bottom when the list can't scroll past its end; the biased anchor plus
+ * generous bottom padding keeps the active line readable up there. Far
+ * jumps (seek/track change) land near the anchor instantly, then settle
+ * exactly on the next frame — no fling, no overshoot.
  */
 suspend fun LazyListState.centerLyricOn(index: Int) {
   if (index < 0) return
@@ -102,21 +105,25 @@ suspend fun LazyListState.centerLyricOn(index: Int) {
     snapshotFlow { layoutInfo.viewportSize.height }.filter { it > 0 }.first()
   }
   val viewportH = layoutInfo.viewportSize.height
+  val anchor = (viewportH * LyricAnchorFraction).toInt()
   // Negative offset parks the item's top below the viewport top, i.e. the
-  // item lands centered: top at H/2 - h/2.
-  fun centeredOffsetFor(size: Int) = -(viewportH / 2 - size / 2)
+  // item lands on the anchor: top at anchor - h/2.
+  fun anchoredOffsetFor(size: Int) = -(anchor - size / 2)
   val visible = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
   if (visible != null) {
-    animateScrollToItem(index, centeredOffsetFor(visible.size))
+    animateScrollToItem(index, anchoredOffsetFor(visible.size))
   } else {
-    animateScrollToItem(index, -(viewportH / 2 - 120))
+    animateScrollToItem(index, -(anchor - 120))
     withFrameNanos { }
     val settled = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
     if (settled != null) {
-      animateScrollToItem(index, centeredOffsetFor(settled.size))
+      animateScrollToItem(index, anchoredOffsetFor(settled.size))
     }
   }
 }
+
+/** Fraction of the viewport height where the active lyric line parks. */
+private const val LyricAnchorFraction = 0.38f
 
 /**
  * Spotify-style lyrics card for the player: a 3-line synced preview that

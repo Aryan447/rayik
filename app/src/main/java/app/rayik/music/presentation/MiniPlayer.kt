@@ -62,9 +62,10 @@ import kotlin.math.min
 private const val MORPH_MS = 450
 private const val MORPH_EXIT_MS = 180
 
-/** Cold-start entrance: delay past first paint, then slide up once per process. */
-private const val DOCK_ENTER_DELAY_MS = 300
-private const val DOCK_ENTER_MS = 500
+/** Cold-start entrance: after home settles, slide up once per process. */
+private const val DOCK_ENTER_SETTLE_MS = 150
+private const val DOCK_ENTER_FADE_MS = 420
+private const val DOCK_ENTER_FADE_DELAY_MS = 120
 
 /** Bottom-nav destinations. Icon-only in the expanded dock; labels survive in TalkBack. */
 internal enum class NavTab(val labelRes: Int, val icon: ImageVector) {
@@ -88,6 +89,7 @@ fun MiniPlayer(
   selectedTab: Int,
   onSelectTab: (Int) -> Unit,
   player: PlayerViewModel = hiltViewModel(),
+  home: HomeViewModel = hiltViewModel(),
 ) {
   val rows by player.queueRows.collectAsState()
   val playbackState by player.playbackState.collectAsState()
@@ -107,13 +109,17 @@ fun MiniPlayer(
   }
   val buttonsEnabled = !locked
 
-  // Cold-start entrance: no dock at first, then it slides up pushing the
-  // feed. Saveable so rotation doesn't replay it; size animation is what
-  // moves the content, the slide+fade is what the eye follows.
+  // Cold-start entrance: no dock until home settles ("tuning your home"
+  // done), then it glides up pushing the feed. Any settled state counts —
+  // Content or Unavailable — so a failed feed can't strand a dockless shell.
+  // Saveable so rotation doesn't replay it.
+  val homeState by home.state.collectAsState()
   var entered by rememberSaveable { mutableStateOf(false) }
-  LaunchedEffect(Unit) {
-    delay(DOCK_ENTER_DELAY_MS.toLong())
-    entered = true
+  LaunchedEffect(homeState) {
+    if (!entered && homeState !is HomeUiState.Loading) {
+      delay(DOCK_ENTER_SETTLE_MS.toLong())
+      entered = true
+    }
   }
 
   Column(
@@ -131,8 +137,17 @@ fun MiniPlayer(
       visible = entered,
       enter = slideInVertically(
         initialOffsetY = { it },
-        animationSpec = tween(DOCK_ENTER_MS, easing = FastOutSlowInEasing),
-      ) + fadeIn(animationSpec = tween(DOCK_ENTER_MS, easing = FastOutSlowInEasing)),
+        animationSpec = spring(
+          dampingRatio = Spring.DampingRatioNoBouncy,
+          stiffness = Spring.StiffnessMediumLow,
+        ),
+      ) + fadeIn(
+        animationSpec = tween(
+          durationMillis = DOCK_ENTER_FADE_MS,
+          delayMillis = DOCK_ENTER_FADE_DELAY_MS,
+          easing = FastOutSlowInEasing,
+        ),
+      ),
       label = "dockEnter",
     ) {
     AnimatedContent(

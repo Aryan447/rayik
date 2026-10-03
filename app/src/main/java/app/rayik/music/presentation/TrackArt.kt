@@ -28,6 +28,7 @@ import app.rayik.music.ui.utils.buildYTThumbnailUrl
 import app.rayik.music.utils.isLocalMediaId
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import coil3.request.crossfade
 import timber.log.Timber
 
@@ -83,6 +84,10 @@ fun TrackArt(
         val request = remember(image) {
           ImageRequest.Builder(context)
             .data(image)
+            // Software bitmaps like the notification loader: hardware bitmaps
+            // are the one remaining difference from the only load path that
+            // provably renders on-device.
+            .allowHardware(false)
             .crossfade(true)
             .listener(
               onError = { _, result ->

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Lyrics
 import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.MyLocation
 import androidx.compose.material.icons.outlined.QueueMusic
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.RepeatOne
@@ -160,6 +161,7 @@ object RayikIcons {
   val RepeatOne = Icons.Outlined.RepeatOne
   val History = Icons.Outlined.History
   val MusicNote = Icons.Outlined.MusicNote
+  val Resync = Icons.Outlined.MyLocation
 
   // TODO(visual-identity): redraw Shuffle/Repeat/RepeatOne in the mark's
   // 1.75-stroke language; they currently keep platform-readable arrows.

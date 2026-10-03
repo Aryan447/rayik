@@ -1,6 +1,10 @@
 package app.rayik.music.presentation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -44,8 +48,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -104,6 +110,7 @@ fun ImmersiveLyrics(
   // and the active line sinks to the bottom.
   var userScrolling by remember { mutableStateOf(false) }
   var resumePending by remember { mutableStateOf(false) }
+  val scope = rememberCoroutineScope()
   LaunchedEffect(listState) {
     listState.interactionSource.interactions.collect { interaction ->
       when (interaction) {
@@ -235,9 +242,10 @@ fun ImmersiveLyrics(
               start = MaterialTheme.spacing.extraLarge,
               top = edgePadding,
               end = MaterialTheme.spacing.extraLarge,
-              // Extra line-height past the edge so the upcoming line is
-              // always fully readable, never half-clipped at the bottom.
-              bottom = edgePadding + 72.dp,
+              // Deep tail so the last line can still climb to the anchor
+              // instead of parking at the bottom when the list runs out
+              // of road.
+              bottom = maxHeight * 0.62f,
             ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
           ) {
@@ -255,6 +263,49 @@ fun ImmersiveLyrics(
           }
         }
         Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
+      }
+      // Manual re-sync: the list glides back on its own after a drag, but a
+      // visible affordance beats waiting when you've scrolled far away.
+      AnimatedVisibility(
+        visible = userScrolling || resumePending,
+        enter = fadeIn(animationSpec = tween(250)) +
+          slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(250)),
+        exit = fadeOut(animationSpec = tween(200)),
+        modifier = Modifier.align(Alignment.BottomCenter),
+        label = "lyricResync",
+      ) {
+        Surface(
+          onClick = {
+            scope.launch {
+              userScrolling = false
+              resumePending = false
+              listState.centerLyricOn(active)
+            }
+          },
+          shape = AppShapes.pill,
+          color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+          modifier = Modifier
+            .padding(bottom = MaterialTheme.spacing.extraLarge)
+            .border(1.dp, BrandGradient.hairline(), AppShapes.pill),
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Icon(
+              RayikIcons.Resync,
+              contentDescription = null,
+              tint = MaterialTheme.colorScheme.onSurface,
+              modifier = Modifier.size(17.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+              stringResource(R.string.lyrics_resync),
+              style = MaterialTheme.typography.labelLarge,
+              color = MaterialTheme.colorScheme.onSurface,
+            )
+          }
+        }
       }
     }
   }

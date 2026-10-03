@@ -821,7 +821,7 @@ private fun ControlDock(
           if (shuffleEnabled) R.string.transport_shuffle_on else R.string.transport_shuffle_off,
         ),
         tint = if (shuffleEnabled) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.7f),
-        modifier = Modifier.size(22.dp),
+        modifier = Modifier.size(26.dp),
       )
     }
     Spacer(Modifier.width(18.dp))
@@ -888,6 +888,7 @@ private fun ControlDock(
         } else {
           scheme.primary
         },
+        modifier = Modifier.size(26.dp),
       )
     }
   }

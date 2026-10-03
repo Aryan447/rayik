@@ -120,6 +120,7 @@
   <string name="lyrics_fullscreen">Full-screen lyrics</string>
   <string name="lyrics_show_more">Full lyrics</string>
   <string name="lyrics_show_less">Show less</string>
+  <string name="lyrics_resync">Sync to music</string>
 
   <string name="queue_title">Up next</string>
   <string name="queue_empty_title">Nothing queued</string>
