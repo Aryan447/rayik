@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import app.rayik.music.ui.theme.AppShapes
 import app.rayik.music.ui.theme.BrandGradient
@@ -28,9 +27,6 @@ import app.rayik.music.ui.utils.buildYTThumbnailUrl
 import app.rayik.music.ui.utils.getNextFallbackUrl
 import app.rayik.music.utils.isLocalMediaId
 import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.allowHardware
-import coil3.request.crossfade
 import timber.log.Timber
 
 /**
@@ -61,8 +57,6 @@ fun TrackArt(
   corner: Dp = AppShapes.art,
   fallbackUrl: String = "",
 ) {
-  val context = LocalContext.current
-  // ponytail: fixed chain, no retry queue beyond the ytimg quality ladder.
   val chain = remember(artworkUrl, fallbackUrl) { artChain(artworkUrl, fallbackUrl) }
   var attempt by remember(artworkUrl, fallbackUrl) { mutableStateOf(0) }
   val model = chain.getOrElse(attempt) { "" }
@@ -84,29 +78,20 @@ fun TrackArt(
       label = "trackArtworkChange",
     ) { image ->
       if (image.isNotBlank()) {
-        val request = remember(image) {
-          ImageRequest.Builder(context)
-            .data(image)
-            // Software bitmaps like the notification loader: hardware bitmaps
-            // are the one remaining difference from the only load path that
-            // provably renders on-device.
-            .allowHardware(false)
-            .crossfade(true)
-            .listener(
-              onError = { _, result ->
-                Timber.w(result.throwable, "Artwork load failed: %s", image)
-                if (attempt < chain.lastIndex) {
-                  attempt += 1
-                }
-              },
-            )
-            .build()
-        }
+        // Plain URL model like the player backdrop (the one load path that
+        // provably renders on-device) — the custom ImageRequest build broke
+        // every tile while the player's raw AsyncImage kept working.
         AsyncImage(
-          model = request,
+          model = image,
           contentDescription = null,
           contentScale = ContentScale.Crop,
           modifier = Modifier.matchParentSize().clip(RoundedCornerShape(corner)),
+          onError = { state ->
+            Timber.w(state.result.throwable, "Artwork load failed: %s", image)
+            if (attempt < chain.lastIndex) {
+              attempt += 1
+            }
+          },
         )
       }
     }
