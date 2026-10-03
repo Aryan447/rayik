@@ -362,7 +362,12 @@ private fun TopResultCard(
       modifier = Modifier.padding(MaterialTheme.spacing.medium),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      TrackArt(artworkUrl = track.thumbnail, corner = AppShapes.art, modifier = Modifier.size(96.dp))
+      TrackArt(
+        artworkUrl = track.thumbnail,
+        fallbackUrl = publicArtFallback(track.id),
+        corner = AppShapes.art,
+        modifier = Modifier.size(96.dp),
+      )
       Spacer(Modifier.width(MaterialTheme.spacing.medium))
       Column(Modifier.weight(1f)) {
         Text(
@@ -417,7 +422,12 @@ private fun SearchRow(
       .padding(MaterialTheme.spacing.small),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    TrackArt(artworkUrl = track.thumbnail, corner = AppShapes.art, modifier = Modifier.size(52.dp))
+    TrackArt(
+      artworkUrl = track.thumbnail,
+      fallbackUrl = publicArtFallback(track.id),
+      corner = AppShapes.art,
+      modifier = Modifier.size(52.dp),
+    )
     Spacer(Modifier.width(MaterialTheme.spacing.medium))
     Column(Modifier.weight(1f)) {
       Text(

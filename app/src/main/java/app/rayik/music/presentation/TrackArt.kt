@@ -25,6 +25,7 @@ import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.RayikIcons
 import app.rayik.music.ui.utils.YTThumbQuality
 import app.rayik.music.ui.utils.buildYTThumbnailUrl
+import app.rayik.music.ui.utils.getNextFallbackUrl
 import app.rayik.music.utils.isLocalMediaId
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -47,9 +48,11 @@ fun publicArtFallback(mediaId: String): String =
  * Shared artwork tile: five bars on the theme sweep underneath, remote art
  * on top when present. Graceful when art fails — never a grey box.
  *
- * [fallbackUrl] is tried once when [artworkUrl] is blank or fails to load
- * (typically [publicArtFallback]). Failures are logged with their HTTP
- * status so missing art is diagnosable instead of silent gold.
+ * Tries [artworkUrl], then [fallbackUrl] (typically [publicArtFallback]),
+ * then each lower ytimg quality rung — some stills only exist at low
+ * quality, and the feed CDN 403s where `i.ytimg.com` renders. Failures are
+ * logged with their cause so missing art is diagnosable instead of silent
+ * gold.
  */
 @Composable
 fun TrackArt(
@@ -59,10 +62,10 @@ fun TrackArt(
   fallbackUrl: String = "",
 ) {
   val context = LocalContext.current
-  // ponytail: single fallback rung, no retry queue unless ytimg fails too.
-  var failedPrimary by remember(artworkUrl) { mutableStateOf(false) }
-  val primary = artworkUrl.ifBlank { fallbackUrl }
-  val model = if (failedPrimary) fallbackUrl else primary
+  // ponytail: fixed chain, no retry queue beyond the ytimg quality ladder.
+  val chain = remember(artworkUrl, fallbackUrl) { artChain(artworkUrl, fallbackUrl) }
+  var attempt by remember(artworkUrl, fallbackUrl) { mutableStateOf(0) }
+  val model = chain.getOrElse(attempt) { "" }
   Box(
     modifier = modifier
       .clip(RoundedCornerShape(corner))
@@ -92,8 +95,8 @@ fun TrackArt(
             .listener(
               onError = { _, result ->
                 Timber.w(result.throwable, "Artwork load failed: %s", image)
-                if (!failedPrimary && fallbackUrl.isNotBlank() && image != fallbackUrl) {
-                  failedPrimary = true
+                if (attempt < chain.lastIndex) {
+                  attempt += 1
                 }
               },
             )
@@ -108,4 +111,24 @@ fun TrackArt(
       }
     }
   }
+}
+
+/** Ordered, de-duplicated URLs to try: primary, fallback, ytimg descents. */
+private fun artChain(artworkUrl: String, fallbackUrl: String): List<String> {
+  val chain = LinkedHashSet<String>()
+  if (artworkUrl.isNotBlank()) {
+    chain += artworkUrl
+    var next = getNextFallbackUrl(artworkUrl)
+    while (next != null && chain.add(next)) {
+      next = getNextFallbackUrl(next)
+    }
+  }
+  if (fallbackUrl.isNotBlank()) {
+    chain += fallbackUrl
+    var next = getNextFallbackUrl(fallbackUrl)
+    while (next != null && chain.add(next)) {
+      next = getNextFallbackUrl(next)
+    }
+  }
+  return chain.toList()
 }

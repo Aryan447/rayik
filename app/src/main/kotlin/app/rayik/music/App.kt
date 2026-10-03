@@ -68,6 +68,7 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.net.Proxy
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.system.exitProcess
@@ -333,10 +334,18 @@ class App :
 
         // YouTube's thumbnail CDN 403s requests that carry no browser
         // User-Agent, which left every tile on the gold placeholder. Every
-        // other HTTP path here already sends one; images did not.
+        // other HTTP path here already sends one; images did not. Mirrors
+        // the proven downloaded-artwork client (proxy, redirects, timeouts)
+        // so art loads wherever streams do.
         val artworkHttpClient =
             OkHttpClient
                 .Builder()
+                .proxy(YouTube.streamOkHttpProxy)
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .connectTimeout(ARTWORK_NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .readTimeout(ARTWORK_NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .callTimeout(ARTWORK_NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .addInterceptor { chain ->
                     chain.proceed(
                         chain
@@ -389,6 +398,7 @@ class App :
 
     companion object {
         private const val GATEKEEPER_RETRY_INTERVAL_MILLIS = 30_000L
+        private const val ARTWORK_NETWORK_TIMEOUT_SECONDS = 30L
 
         lateinit var instance: App
             private set

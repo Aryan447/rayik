@@ -301,6 +301,7 @@ private fun LibraryCard(
   ) {
     TrackArt(
       artworkUrl = song.song.thumbnailUrl.orEmpty(),
+      fallbackUrl = publicArtFallback(song.song.id),
       corner = AppShapes.art,
       modifier = Modifier.size(132.dp),
     )

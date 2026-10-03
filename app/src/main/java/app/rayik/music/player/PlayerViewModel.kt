@@ -169,6 +169,10 @@ class PlayerViewModel @Inject constructor(
       title = title.ifBlank { videoId },
       artists = listOf(MediaMetadata.Artist(id = null, name = artist.ifBlank { "Unknown artist" })),
       duration = -1,
+      // First paint, notification, and queue rows read this before the
+      // service resolves stream art — never start blank for remote ids.
+      thumbnailUrl = videoId.takeIf { !it.isLocalMediaId() }
+        ?.let { buildYTThumbnailUrl(it, YTThumbQuality.HQ) },
     )
     playQueue(YouTubeQueue.playlist(WatchEndpoint(videoId = videoId), preloadItem = meta))
   }

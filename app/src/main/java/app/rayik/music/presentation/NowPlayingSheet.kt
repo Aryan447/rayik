@@ -146,9 +146,10 @@ fun NowPlayingSheetContent(
   ) {
     // Blurred cover art fills the sheet and carries its colors behind the
     // controls, like a continuous extension of the hero image.
-    if (artwork.isNotBlank()) {
+    val backdrop = artwork.ifBlank { publicArtFallback(current?.mediaId.orEmpty()) }
+    if (backdrop.isNotBlank()) {
       AsyncImage(
-        model = artwork,
+        model = backdrop,
         contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = Modifier
