@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -797,6 +798,10 @@ private fun ControlDock(
   // Apple Music transport: bare icons, no pills or surfaces. Prev, play and
   // next share one 64dp slot and one 40dp glyph so the row is symmetric by
   // construction instead of by eyeballed spacers.
+  // Fixed total is 360dp — wider than a 360dp phone minus the 20dp side
+  // insets, so the row used to center itself off the edges and clip the
+  // repeat (and shuffle) button. Gaps flex down instead; capped so wide
+  // screens keep the same 18dp rhythm.
   val scheme = MaterialTheme.colorScheme
   Row(
     modifier = Modifier.fillMaxWidth(),
@@ -813,7 +818,7 @@ private fun ControlDock(
         modifier = Modifier.size(26.dp),
       )
     }
-    Spacer(Modifier.width(18.dp))
+    DockGap()
     IconButton(
       onClick = onPrevious,
       enabled = state != PlaybackUiState.Loading,
@@ -826,7 +831,7 @@ private fun ControlDock(
         modifier = Modifier.size(40.dp),
       )
     }
-    Spacer(Modifier.width(18.dp))
+    DockGap()
     if (state == PlaybackUiState.Loading) {
       BarLoader(modifier = Modifier.size(width = 64.dp, height = 64.dp))
     } else {
@@ -854,7 +859,7 @@ private fun ControlDock(
         )
       }
     }
-    Spacer(Modifier.width(18.dp))
+    DockGap()
     IconButton(
       onClick = onNext,
       enabled = state != PlaybackUiState.Loading,
@@ -867,7 +872,7 @@ private fun ControlDock(
         modifier = Modifier.size(40.dp),
       )
     }
-    Spacer(Modifier.width(18.dp))
+    DockGap()
     IconButton(onClick = onCycleRepeat, modifier = Modifier.size(48.dp)) {
       Icon(
         imageVector = if (repeatMode == RepeatMode.ONE) RayikIcons.RepeatOne else RayikIcons.Repeat,
@@ -881,6 +886,13 @@ private fun ControlDock(
       )
     }
   }
+}
+
+/** Flexible transport gap: 18dp rhythm on wide screens, shrinks so the
+ * 360dp dock never clips shuffle/repeat on narrow phones. */
+@Composable
+private fun RowScope.DockGap() {
+  Spacer(Modifier.weight(1f).widthIn(max = 18.dp))
 }
 
 private fun shareTrack(context: Context, title: String, artist: String) {
