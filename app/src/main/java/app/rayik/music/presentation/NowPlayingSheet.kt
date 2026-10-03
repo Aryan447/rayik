@@ -56,15 +56,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -96,8 +93,14 @@ private const val LYRICS_SECTION_INDEX = 6
 private const val UPNEXT_SECTION_INDEX = 7
 
 /**
- * Immersive full-screen player: ambient blurred artwork, glowing hero art,
- * glass control dock, synced lyric pill, glass lyrics + Up next.
+ * Art stage height: header floats over the cover, the title lands in the
+ * lower scrim, and slider + transport sit on the melt into surface.
+ */
+private val StageHeight = 600.dp
+
+/**
+ * Immersive full-screen player: full-bleed cover art, glass control dock,
+ * synced lyric pill, glass lyrics + Up next.
  */
 @Composable
 fun NowPlayingSheetContent(
@@ -130,11 +133,8 @@ fun NowPlayingSheetContent(
   val streamQuality by prefs.streamQuality.collectAsState()
 
   val artwork = current?.artworkUrl.orEmpty()
-  val configuration = LocalConfiguration.current
-  val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
   val scheme = MaterialTheme.colorScheme
   val surface = scheme.surface
-  val primary = scheme.primary
   // Side inset for every item except the full-bleed cover.
   val contentInset = 20.dp
 
@@ -144,21 +144,42 @@ fun NowPlayingSheetContent(
       .fillMaxHeight(0.94f)
       .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
   ) {
-    // Blurred cover art fills the sheet and carries its colors behind the
-    // controls, like a continuous extension of the hero image.
+    // Apple Music stage: sharp cover art bleeds edge to edge behind the
+    // header and controls, then melts into the sheet surface. Theme scrims
+    // top and bottom keep the grab pill and title legible on any art.
     val backdrop = artwork.ifBlank { publicArtFallback(current?.mediaId.orEmpty()) }
+    // Surface under everything so the lyrics/queue region below the art is
+    // always on-theme, even before art loads.
+    Box(Modifier.matchParentSize().background(surface)) {}
     if (backdrop.isNotBlank()) {
       AsyncImage(
         model = backdrop,
         contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = Modifier
-          .matchParentSize()
-          .blur(56.dp),
+          .fillMaxWidth()
+          .height(StageHeight)
+          .align(Alignment.TopCenter)
+          .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
+      )
+      Box(
+        Modifier
+          .fillMaxWidth()
+          .height(StageHeight)
+          .align(Alignment.TopCenter)
+          .background(
+            Brush.verticalGradient(
+              0f to surface.copy(alpha = 0.55f),
+              0.22f to Color.Transparent,
+              0.55f to Color.Transparent,
+              0.85f to surface.copy(alpha = 0.88f),
+              1f to surface,
+            ),
+          ),
       )
     } else {
       // No art, no hue: a neutral lift so the header band can never clash
-      // with the hero the way a primary wash did.
+      // the way a primary wash did.
       Box(
         Modifier.matchParentSize().background(
           Brush.verticalGradient(
@@ -168,19 +189,6 @@ fun NowPlayingSheetContent(
         ),
       )
     }
-    // Let the cover breathe at the top, then blend it into a quiet theme
-    // tint and the sheet surface beneath the transport controls.
-    Box(
-      Modifier.matchParentSize().background(
-        Brush.verticalGradient(
-          0f to scheme.onSurface.copy(alpha = 0.04f),
-          0.42f to Color.Transparent,
-          0.62f to primary.copy(alpha = 0.14f),
-          0.82f to surface.copy(alpha = 0.82f),
-          1f to surface,
-        ),
-      ),
-    )
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
       LazyColumn(
@@ -239,20 +247,14 @@ fun NowPlayingSheetContent(
           }
         }
 
-        // Edge-to-edge cover, like the Apple Music player: full-bleed square
-        // under the grab pill, no side inset.
+        // Clear stage: the cover behind carries this space, like the
+        // Apple Music player — no card stacked on top of the artwork.
         item {
-          Spacer(Modifier.height(16.dp))
           if (current == null) {
             ScreenScaffold(state = ScreenState.Loading, loadingText = "", onRetry = {}) {}
           } else {
-            HeroArtwork(
-              artwork = artwork,
-              fallbackUrl = publicArtFallback(current.mediaId),
-              landscape = isLandscape,
-            )
+            Spacer(Modifier.height(240.dp))
           }
-          Spacer(Modifier.height(24.dp))
         }
 
         item {
@@ -553,20 +555,6 @@ modifier = Modifier.size(22.dp),
 }
 
 // ---------- Premium pieces ----------
-
-@Composable
-private fun HeroArtwork(artwork: String, fallbackUrl: String, landscape: Boolean) {
-  // Apple Music proportions: a square cover, edge to edge. No surface fade on
-  // top of it — the sheet's blurred-art backdrop already carries the tint.
-  TrackArt(
-    artworkUrl = artwork,
-    fallbackUrl = fallbackUrl,
-    corner = 0.dp,
-    modifier = Modifier
-      .fillMaxWidth()
-      .aspectRatio(if (landscape) 1.6f else 1f),
-  )
-}
 
 @Composable
 private fun GlassIconButton(
