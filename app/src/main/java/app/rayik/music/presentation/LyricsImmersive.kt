@@ -162,6 +162,9 @@ fun ImmersiveLyrics(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
       val edgePadding = maxHeight * 0.28f
+      // Deep tail so the last line can still climb to the anchor instead
+      // of parking at the bottom when the list runs out of road.
+      val tailPadding = maxHeight * 0.62f
       Column(Modifier.fillMaxSize()) {
         Row(
           modifier = Modifier
@@ -242,10 +245,7 @@ fun ImmersiveLyrics(
               start = MaterialTheme.spacing.extraLarge,
               top = edgePadding,
               end = MaterialTheme.spacing.extraLarge,
-              // Deep tail so the last line can still climb to the anchor
-              // instead of parking at the bottom when the list runs out
-              // of road.
-              bottom = maxHeight * 0.62f,
+              bottom = tailPadding,
             ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
           ) {
