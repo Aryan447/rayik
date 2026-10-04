@@ -76,13 +76,15 @@ fun RayikNav() {
   if (playerSheetOpen) {
     // No system drag handle: the sheet content already draws its own grab
     // pill, and two handles stacked reads broken, not premium.
-    // Explicit surface container + translucent scrim so the status-bar gap
-    // above the 94%-height sheet never reads as opaque black.
+    // Transparent container + full-height content: the artwork IS the
+    // sheet and bleeds behind the status bar; the dim scrim only shows
+    // while the sheet animates in.
     ModalBottomSheet(
       onDismissRequest = { playerSheetOpen = false },
       sheetState = sheetState,
       dragHandle = {},
-      containerColor = MaterialTheme.colorScheme.surface,
+      containerColor = androidx.compose.ui.graphics.Color.Transparent,
+      contentColor = androidx.compose.ui.graphics.Color.White,
       scrimColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f),
     ) {
       NowPlayingSheetContent(onCollapse = { playerSheetOpen = false })
