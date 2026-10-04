@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
@@ -84,6 +85,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -94,6 +96,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import app.rayik.music.BuildConfig
 import app.rayik.music.R
+import app.rayik.music.lyrics.LyricDisplayParser
 import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
 import app.rayik.music.player.RepeatMode
@@ -249,11 +252,13 @@ fun NowPlayingSheetContent(
               ) {
                 LiveDot(isPlaying = playbackState == PlaybackUiState.Playing)
                 Text(
-                  "RAYIK",
+                  current?.artist?.takeIf { it.isNotBlank() }?.uppercase() ?: "RAYIK",
                   style = MaterialTheme.typography.labelSmall,
                   color = Color.White.copy(alpha = 0.8f),
                   fontWeight = FontWeight.SemiBold,
                   letterSpacing = 1.4.sp,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
                 )
               }
             }
@@ -279,6 +284,13 @@ fun NowPlayingSheetContent(
           if (current == null) {
             ScreenScaffold(state = ScreenState.Loading, loadingText = "", onRetry = {}) {}
           } else {
+            LyricPill(
+              raw = rawLyrics,
+              positionMs = positionMs,
+              isPlaying = playbackState == PlaybackUiState.Playing,
+              onOpenImmersive = { immersiveLyrics = true },
+            )
+            Spacer(Modifier.height(14.dp))
             Row(
               modifier = Modifier.fillMaxWidth(),
               verticalAlignment = Alignment.CenterVertically,
@@ -593,6 +605,7 @@ fun NowPlayingSheetContent(
 private fun ArtCircleButton(
   onClick: () -> Unit,
   enabled: Boolean = true,
+  size: Dp = 48.dp,
   content: @Composable () -> Unit,
 ) {
   Surface(
@@ -602,12 +615,66 @@ private fun ArtCircleButton(
     color = Color.White.copy(alpha = 0.14f),
     tonalElevation = 0.dp,
     modifier = Modifier
-      .size(48.dp)
+      .size(size)
       .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
   ) {
     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
       CompositionLocalProvider(LocalContentColor provides Color.White) {
         content()
+      }
+    }
+  }
+}
+
+/**
+ * Synced lyric pill floating above the title, like the reference: the
+ * active line in a frosted bar, expand opens the immersive lyrics.
+ * Hidden when there are no timed lines — the below-fold card still shows
+ * plain/unsynced lyrics. Reuses the preview's parser + smooth clock.
+ */
+@Composable
+private fun LyricPill(
+  raw: String?,
+  positionMs: Long,
+  isPlaying: Boolean,
+  onOpenImmersive: () -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  if (raw.isNullOrBlank() || raw == "LYRICS_NOT_FOUND") return
+  val lines = remember(raw) { LyricDisplayParser.parseTimed(raw) }
+  if (lines.isEmpty()) return
+  val smooth = rememberSmoothLyricPosition(positionMs, isPlaying)
+  val active = activeLyricIndex(lines, smooth)
+  val line = lines.getOrNull(active)?.text ?: lines.firstOrNull()?.text ?: return
+  Surface(
+    onClick = onOpenImmersive,
+    shape = RoundedCornerShape(28.dp),
+    color = Color.White.copy(alpha = 0.12f),
+    tonalElevation = 0.dp,
+    modifier = modifier
+      .fillMaxWidth()
+      .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(28.dp)),
+  ) {
+    Row(
+      modifier = Modifier.padding(start = 20.dp, top = 7.dp, end = 7.dp, bottom = 7.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Crossfade(targetState = line, label = "lyricPillSwap", modifier = Modifier.weight(1f)) {
+        Text(
+          it,
+          style = MaterialTheme.typography.bodyLarge,
+          color = Color.White,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+      }
+      Spacer(Modifier.width(8.dp))
+      ArtCircleButton(onClick = onOpenImmersive, size = 38.dp) {
+        Icon(
+          imageVector = Icons.Filled.OpenInFull,
+          contentDescription = stringResource(R.string.lyrics_fullscreen),
+          modifier = Modifier.size(17.dp),
+        )
       }
     }
   }
