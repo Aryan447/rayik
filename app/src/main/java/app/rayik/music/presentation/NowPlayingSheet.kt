@@ -174,16 +174,23 @@ fun NowPlayingSheetContent(
     // across tracks is the transition (colors included — they ride in the
     // art). Same Coil URL/cache as TrackArt: no second fetch, and no blur
     // pass — the old blur(72.dp) was the GPU hotspot here.
-    Crossfade(targetState = artwork, label = "artBackdrop") { art ->
+    // NOTE: Crossfade must own a real size (fillMaxSize). A matchParentSize
+    // child contributes nothing to measurement, so a bare Crossfade
+    // collapses to 0x0 and the art silently disappears.
+    Crossfade(
+      targetState = artwork,
+      label = "artBackdrop",
+      modifier = Modifier.fillMaxSize(),
+    ) { art ->
       if (art.isNotBlank()) {
         AsyncImage(
           model = art,
           contentDescription = null,
           contentScale = ContentScale.Crop,
-          modifier = Modifier.matchParentSize(),
+          modifier = Modifier.fillMaxSize(),
         )
       } else {
-        Box(Modifier.matchParentSize().background(surface))
+        Box(Modifier.fillMaxSize().background(surface))
       }
     }
     // Top scrim: status bar + top controls over bright art.
