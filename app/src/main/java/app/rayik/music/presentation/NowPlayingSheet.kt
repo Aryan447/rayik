@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -16,6 +17,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,11 +78,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -91,6 +100,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.size.Size
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -167,15 +178,45 @@ fun NowPlayingSheetContent(
     }
   }
 
+  // Drag-to-dismiss (replaces the old bottom-sheet gesture): the header
+  // zone tracks the finger; fling down or drag past threshold collapses.
+  val dragOffset = remember { Animatable(0f) }
+  val density = LocalDensity.current
+  val dismissThresholdPx = with(density) { 120.dp.toPx() }
+  val headerDrag = Modifier.pointerInput(onCollapse) {
+    val tracker = VelocityTracker()
+    detectVerticalDragGestures(
+      onDragStart = { tracker.resetTracking() },
+      onDragCancel = { scope.launch { dragOffset.animateTo(0f) } },
+      onDragEnd = {
+        scope.launch {
+          if (dragOffset.value > dismissThresholdPx ||
+            tracker.calculateVelocity().y > 1200f
+          ) {
+            onCollapse()
+          } else {
+            dragOffset.animateTo(0f)
+          }
+        }
+      },
+      onVerticalDrag = { change, dragAmount ->
+        change.consume()
+        tracker.addPosition(change.uptimeMillis, change.position)
+        scope.launch { dragOffset.snapTo(maxOf(0f, dragOffset.value + dragAmount)) }
+      },
+    )
+  }
+
   Box(
-    modifier = Modifier.fillMaxSize(),
+    modifier = Modifier
+      .fillMaxSize()
+      .graphicsLayer { translationY = dragOffset.value },
   ) {
-    // ---- Artwork atmosphere: sharp, crop-filled, edge to edge. Crossfade
-    // across tracks is the transition (colors included — they ride in the
-    // art). Same Coil URL/cache as TrackArt: no second fetch, and no blur
-    // pass — the old blur(72.dp) was the GPU hotspot here.
-    // NOTE: Crossfade must own a real size (fillMaxSize). A matchParentSize
-    // child contributes nothing to measurement, so a bare Crossfade
+    // ---- Artwork atmosphere, Apple-style: sharp fit-width composition up
+    // top (never side-cropped), blurred continuation dissolving below.
+    // Crossfade across tracks is the transition; same Coil URL/cache as
+    // TrackArt, blurred copy downsampled so the blur stays cheap.
+    // NOTE: Crossfade must own a real size (fillMaxSize) — a bare one
     // collapses to 0x0 and the art silently disappears.
     Crossfade(
       targetState = artwork,
@@ -183,12 +224,40 @@ fun NowPlayingSheetContent(
       modifier = Modifier.fillMaxSize(),
     ) { art ->
       if (art.isNotBlank()) {
-        AsyncImage(
-          model = art,
-          contentDescription = null,
-          contentScale = ContentScale.Crop,
-          modifier = Modifier.fillMaxSize(),
-        )
+        Box(Modifier.fillMaxSize()) {
+          // Blur-fill: full-screen crop behind, fading in toward the
+          // bottom via a DstIn mask — the reference dissolve.
+          AsyncImage(
+            model = ImageRequest.Builder(context)
+              .data(art)
+              .size(Size(360, 640))
+              .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+              .fillMaxSize()
+              .blur(56.dp)
+              .drawWithContent {
+                drawContent()
+                drawRect(
+                  brush = Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    0.38f to Color.Transparent,
+                    0.62f to Color.Black,
+                  ),
+                  blendMode = BlendMode.DstIn,
+                )
+              },
+          )
+          // Sharp composition: fit-width, top-anchored, full width visible.
+          AsyncImage(
+            model = art,
+            contentDescription = null,
+            contentScale = ContentScale.FillWidth,
+            alignment = Alignment.TopCenter,
+            modifier = Modifier.fillMaxWidth(),
+          )
+        }
       } else {
         Box(Modifier.fillMaxSize().background(surface))
       }
@@ -202,13 +271,13 @@ fun NowPlayingSheetContent(
         ),
       ),
     )
-    // Bottom scrim: title + transport float on darkness.
+    // Bottom scrim: gentle dim for controls — the blur already darkens.
     Box(
       Modifier.matchParentSize().background(
         Brush.verticalGradient(
-          0.42f to Color.Transparent,
-          0.68f to Color.Black.copy(alpha = 0.55f),
-          1f to Color.Black.copy(alpha = 0.82f),
+          0.55f to Color.Transparent,
+          0.8f to Color.Black.copy(alpha = 0.25f),
+          1f to Color.Black.copy(alpha = 0.55f),
         ),
       ),
     )
@@ -230,11 +299,12 @@ fun NowPlayingSheetContent(
               .width(42.dp)
               .height(5.dp)
               .clip(CircleShape)
-              .background(Color.White.copy(alpha = 0.55f)),
+              .background(Color.White.copy(alpha = 0.55f))
+              .then(headerDrag),
           )
           Spacer(Modifier.height(10.dp))
           Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(headerDrag),
             verticalAlignment = Alignment.CenterVertically,
           ) {
             ArtCircleButton(onClick = onCollapse) {
@@ -281,10 +351,10 @@ fun NowPlayingSheetContent(
           }
         }
 
-        // The artwork is the background now — no hero card. This spacer
-        // drops the title block onto the lower third, like the reference.
+        // No hero card — the sharp fit-width art above IS the hero. This
+        // spacer drops the lyric pill + title onto the blur dissolve.
         item {
-          Spacer(Modifier.fillParentMaxHeight(0.4f))
+          Spacer(Modifier.fillParentMaxHeight(0.34f))
         }
 
         item {
@@ -920,6 +990,16 @@ private fun SheetSlider(
         inactiveTrackColor = activeSlider.copy(alpha = 0.28f),
         thumbColor = activeSlider,
       ),
+      // Pinned 12dp dot: the stock expressive thumb morphs into a pill
+      // mid-drag, which read as a rendering glitch on screenshots.
+      thumb = {
+        Box(
+          Modifier
+            .size(12.dp)
+            .clip(CircleShape)
+            .background(Color.White),
+        )
+      },
       modifier = Modifier.fillMaxWidth(),
     )
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {

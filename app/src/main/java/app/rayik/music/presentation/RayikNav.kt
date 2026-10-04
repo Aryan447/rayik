@@ -1,15 +1,20 @@
 package app.rayik.music.presentation
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -20,24 +25,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.rayik.music.ui.theme.spacing
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RayikNav() {
   var tab by rememberSaveable { mutableIntStateOf(0) }
   var dockExpanded by rememberSaveable { mutableStateOf(false) }
-  var playerSheetOpen by rememberSaveable { mutableStateOf(false) }
-  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+  var playerOpen by rememberSaveable { mutableStateOf(false) }
   // Inset-sheet layout: content is a rounded sheet sitting on the single
   // morphing dock (transport <-> icon tabs). No floating pill, no FOLDERS
   // tab (local files are pinned-offline fallback only), no player tab (the
-  // dock art opens the full player sheet).
+  // dock art opens the full player overlay).
   val dock = dockContainer()
   Scaffold(
     containerColor = dock,
     contentColor = MaterialTheme.colorScheme.onSurface,
     bottomBar = {
       MiniPlayer(
-        onOpenPlayer = { playerSheetOpen = true },
+        onOpenPlayer = { playerOpen = true },
         expanded = dockExpanded,
         onExpandedChange = { dockExpanded = it },
         selectedTab = tab,
@@ -73,21 +76,23 @@ fun RayikNav() {
     }
   }
 
-  if (playerSheetOpen) {
-    // No system drag handle: the sheet content already draws its own grab
-    // pill, and two handles stacked reads broken, not premium.
-    // Transparent container + full-height content: the artwork IS the
-    // sheet and bleeds behind the status bar; the dim scrim only shows
-    // while the sheet animates in.
-    ModalBottomSheet(
-      onDismissRequest = { playerSheetOpen = false },
-      sheetState = sheetState,
-      dragHandle = {},
-      containerColor = androidx.compose.ui.graphics.Color.Transparent,
-      contentColor = androidx.compose.ui.graphics.Color.White,
-      scrimColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f),
-    ) {
-      NowPlayingSheetContent(onCollapse = { playerSheetOpen = false })
-    }
+  // Full-screen player overlay in the activity window (true edge-to-edge:
+  // artwork bleeds behind status + gesture bars). No ModalBottomSheet — its
+  // dialog window can never go edge-to-edge, which painted the black band
+  // above the old player.
+  BackHandler(enabled = playerOpen) { playerOpen = false }
+  AnimatedVisibility(
+    visible = playerOpen,
+    enter = slideInVertically(
+      initialOffsetY = { it },
+      animationSpec = tween(380, easing = FastOutSlowInEasing),
+    ) + fadeIn(animationSpec = tween(280)),
+    exit = slideOutVertically(
+      targetOffsetY = { it },
+      animationSpec = tween(320, easing = FastOutSlowInEasing),
+    ) + fadeOut(animationSpec = tween(220)),
+    label = "playerOverlay",
+  ) {
+    NowPlayingSheetContent(onCollapse = { playerOpen = false })
   }
 }
