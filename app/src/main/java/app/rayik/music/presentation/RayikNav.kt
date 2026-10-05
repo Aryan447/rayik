@@ -4,8 +4,9 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,18 +37,18 @@ import androidx.compose.ui.unit.dp
 import app.rayik.music.ui.theme.spacing
 import kotlinx.coroutines.delay
 
-/** Emphasized-decelerate: fast lift, long gentle settle. No bounce. */
-private val DockIntroEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
-private const val DOCK_INTRO_MS = 800
+/** Apple settle: 500ms beat after content, then a soft ~800ms spring rise. */
+private const val DOCK_INTRO_HOLD_MS = 500L
 
 @Composable
 fun RayikNav() {
   var tab by rememberSaveable { mutableIntStateOf(0) }
   var dockExpanded by rememberSaveable { mutableStateOf(false) }
   var playerOpen by rememberSaveable { mutableStateOf(false) }
-  // Dock slide-up intro (once per cold start): content starts fullscreen
-  // square, then the dock rises while the sheet shrinks onto it. One shared
-  // progress drives both layers so they can never desync a frame.
+  // Dock slide-up intro (once per cold start): content loads fullscreen
+  // square, holds a 500ms beat, then the dock springs up while the sheet
+  // slides onto it. One shared progress drives both layers so they can
+  // never desync a frame.
   var introPlayed by rememberSaveable { mutableStateOf(false) }
   val context = LocalContext.current
   val animationsOff = remember {
@@ -70,7 +71,11 @@ fun RayikNav() {
   LaunchedEffect(contentReady, dockHeightPx) {
     if (introPlayed || animationsOff) return@LaunchedEffect
     if (!contentReady || dockHeightPx == 0) return@LaunchedEffect
-    intro.animateTo(1f, tween(DOCK_INTRO_MS, easing = DockIntroEasing))
+    delay(DOCK_INTRO_HOLD_MS)
+    intro.animateTo(
+      1f,
+      spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMediumLow),
+    )
     introPlayed = true
   }
   val eased = intro.value
