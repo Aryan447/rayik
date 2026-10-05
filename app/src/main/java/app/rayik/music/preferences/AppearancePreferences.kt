@@ -12,7 +12,7 @@ import app.rayik.music.ui.theme.AppTheme
 class AppearancePreferences(
   preferenceStore: PreferenceStore,
 ) {
-  val darkMode = preferenceStore.getEnum("dark_mode", app.rayik.music.ui.theme.DarkMode.System)
+  val darkMode = preferenceStore.getEnum("dark_mode", app.rayik.music.ui.theme.DarkMode.Light)
   val appTheme = preferenceStore.getEnum("app_theme", AppTheme.Gold)
   val amoledMode = preferenceStore.getBoolean("amoled_mode", false)
   val albumArtDynamic = preferenceStore.getBoolean("album_art_dynamic", true)
