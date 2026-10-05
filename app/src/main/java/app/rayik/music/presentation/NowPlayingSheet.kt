@@ -157,7 +157,7 @@ fun NowPlayingSheetContent(
   val prefs = rayikPreferences()
   val streamQuality by prefs.streamQuality.collectAsState()
 
-  val artwork = current?.artworkUrl.orEmpty()
+  val artwork = player.premiumArtworkUrl.collectAsState().value
   val scheme = MaterialTheme.colorScheme
   val surface = scheme.surface
 

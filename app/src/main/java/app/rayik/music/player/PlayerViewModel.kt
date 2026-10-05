@@ -25,7 +25,14 @@ import app.rayik.music.playback.PlayerConnection
 import app.rayik.music.playback.PlayerConnectionHolder
 import app.rayik.music.playback.queues.Queue
 import app.rayik.music.playback.queues.YouTubeQueue
+import app.rayik.music.ui.utils.resize
 import javax.inject.Inject
+
+/** Premium art: clean YTM album art, never a ytimg video frame (baked-in view counts). */
+private fun cleanPremiumArt(url: String): String {
+  if (url.isBlank() || "i.ytimg.com" in url) return ""
+  return url.resize(width = 1080, height = 1080)
+}
 
 /** Repeat modes ported from mpvium PlayerViewModel pattern. */
 enum class RepeatMode { OFF, ONE, ALL }
@@ -116,6 +123,22 @@ class PlayerViewModel @Inject constructor(
         }
       }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+  /**
+   * Premium player artwork: the DB row's clean YTM album art at hi-res.
+   * Video frames (`i.ytimg.com`, baked-in view counts) count as blank so
+   * the player shows the themed placeholder until clean art resolves
+   * (e.g. bare-video starts before the queue row lands).
+   */
+  @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+  val premiumArtworkUrl: StateFlow<String> =
+    connection.flatMapLatest { conn ->
+      if (conn == null) {
+        flowOf("")
+      } else {
+        conn.currentSong.map { cleanPremiumArt(it?.song?.thumbnailUrl.orEmpty()) }
+      }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, "")
 
   private val positionListener = object : Player.Listener {
     override fun onEvents(player: Player, events: Player.Events) {
