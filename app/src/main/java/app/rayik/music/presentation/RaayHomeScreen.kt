@@ -33,6 +33,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -119,6 +120,7 @@ private fun pickArtwork(videoId: String): String = "https://i.ytimg.com/vi/$vide
 @Composable
 fun RaayHomeScreen(
   onPlayStarted: () -> Unit = {},
+  onContentReady: () -> Unit = {},
   player: PlayerViewModel = hiltViewModel(),
   home: HomeViewModel = hiltViewModel(),
 ) {
@@ -167,6 +169,9 @@ fun RaayHomeScreen(
       onRetry = home::retry,
     ) {}
     is HomeUiState.Content -> {
+      // Dock intro gate: release RayikNav's 800ms slide-up once the feed
+      // is actually ready. Idempotent — RayikNav ignores repeats.
+      LaunchedEffect(Unit) { onContentReady() }
       val content = feed.feed
       LazyColumn(
         modifier = Modifier.fillMaxSize(),
