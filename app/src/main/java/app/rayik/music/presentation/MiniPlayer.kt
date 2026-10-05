@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -87,6 +88,7 @@ fun MiniPlayer(
   onExpandedChange: (Boolean) -> Unit,
   selectedTab: Int,
   onSelectTab: (Int) -> Unit,
+  floatingDock: Boolean = false,
   player: PlayerViewModel = hiltViewModel(),
 ) {
   val rows by player.queueRows.collectAsState()
@@ -110,8 +112,24 @@ fun MiniPlayer(
   Column(
     modifier = Modifier
       .fillMaxWidth()
+      // Floating dock: detached pill with margins + lift. The gesture
+      // strip below stays on the Scaffold container, so no
+      // navigationBarsPadding inside the pill.
+      .then(
+        if (floatingDock) {
+          Modifier
+            .padding(
+              horizontal = MaterialTheme.spacing.medium,
+              vertical = MaterialTheme.spacing.small,
+            )
+            .shadow(8.dp, RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(28.dp))
+        } else {
+          Modifier
+        },
+      )
       .background(container)
-      .navigationBarsPadding()
+      .then(if (floatingDock) Modifier else Modifier.navigationBarsPadding())
       .clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,

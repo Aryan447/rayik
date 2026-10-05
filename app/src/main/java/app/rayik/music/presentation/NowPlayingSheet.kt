@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -119,8 +120,10 @@ import app.rayik.music.player.RepeatMode
 import app.rayik.music.player.buildPlaybackDiagnostics
 import app.rayik.music.player.formatMs
 import app.rayik.music.preferences.StreamQuality
+import app.rayik.music.preferences.SeekbarStyle
 import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.theme.spacing
+import me.saket.squiggles.SquigglySlider
 
 /** Lazy-list index of the scroll target; header sections above are always emitted. */
 private const val UPNEXT_SECTION_INDEX = 7
@@ -204,6 +207,7 @@ fun NowPlayingSheetContent(
   var immersiveLyrics by remember { mutableStateOf(false) }
   val prefs = rayikPreferences()
   val streamQuality by prefs.streamQuality.collectAsState()
+  val seekbarStyle by prefs.seekbarStyle.collectAsState()
 
   val artwork = player.premiumArtworkUrl.collectAsState().value
   // Bedrock samples the clean art; while home-album taps resolve, the
@@ -450,6 +454,7 @@ fun NowPlayingSheetContent(
           SheetSlider(
             positionMs = positionMs,
             durationMs = durationMs,
+            style = seekbarStyle,
             onSeek = player::seekTo,
           )
         }
@@ -930,10 +935,12 @@ private fun LiveDot(isPlaying: Boolean) {
   )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SheetSlider(
   positionMs: Long,
   durationMs: Long,
+  style: SeekbarStyle,
   onSeek: (Long) -> Unit,
 ) {
   // Apple slider: thin track, pinned 10dp dot, small grey times with
@@ -944,45 +951,86 @@ private fun SheetSlider(
   val range = 0f..maxOf(durationMs.toFloat(), 1f)
   val sliderValue = (if (dragging) dragValue else positionMs.toFloat()).coerceIn(range)
   val shownPosition = if (dragging) dragValue.toLong() else positionMs
+  val onScrub = { value: Float ->
+    dragging = true
+    dragValue = value
+  }
+  val onScrubFinished = {
+    onSeek(dragValue.toLong())
+    dragging = false
+  }
+  val sliderColors = SliderDefaults.colors(
+    activeTrackColor = activeSlider,
+    inactiveTrackColor = activeSlider.copy(alpha = 0.28f),
+    thumbColor = activeSlider,
+  )
 
   Column(Modifier.fillMaxWidth()) {
-    Slider(
-      value = sliderValue,
-      onValueChange = {
-        dragging = true
-        dragValue = it
-      },
-      onValueChangeFinished = {
-        onSeek(dragValue.toLong())
-        dragging = false
-      },
-      valueRange = range,
-      enabled = durationMs > 0,
-      colors = SliderDefaults.colors(
-        activeTrackColor = activeSlider,
-        inactiveTrackColor = activeSlider.copy(alpha = 0.28f),
-        thumbColor = activeSlider,
-      ),
-      thumb = {
-        Box(
-          Modifier
-            .size(10.dp)
-            .clip(CircleShape)
-            .background(Color.White),
+    when (style) {
+      SeekbarStyle.Wavy -> {
+        SquigglySlider(
+          value = sliderValue,
+          onValueChange = onScrub,
+          onValueChangeFinished = onScrubFinished,
+          valueRange = range,
+          enabled = durationMs > 0,
+          colors = sliderColors,
+          modifier = Modifier.fillMaxWidth(),
         )
-      },
-      track = { sliderState ->
-        SliderDefaults.Track(
-          sliderState = sliderState,
-          modifier = Modifier.height(4.dp),
-          colors = SliderDefaults.colors(
-            activeTrackColor = activeSlider,
-            inactiveTrackColor = activeSlider.copy(alpha = 0.28f),
-          ),
+      }
+      SeekbarStyle.Thick -> {
+        Slider(
+          value = sliderValue,
+          onValueChange = onScrub,
+          onValueChangeFinished = onScrubFinished,
+          valueRange = range,
+          enabled = durationMs > 0,
+          colors = sliderColors,
+          thumb = {
+            Box(
+              Modifier
+                .size(18.dp)
+                .clip(CircleShape)
+                .background(Color.White),
+            )
+          },
+          track = { sliderState ->
+            SliderDefaults.Track(
+              sliderState = sliderState,
+              modifier = Modifier.height(10.dp),
+              colors = sliderColors,
+            )
+          },
+          modifier = Modifier.fillMaxWidth(),
         )
-      },
-      modifier = Modifier.fillMaxWidth(),
-    )
+      }
+      SeekbarStyle.Standard -> {
+        Slider(
+          value = sliderValue,
+          onValueChange = onScrub,
+          onValueChangeFinished = onScrubFinished,
+          valueRange = range,
+          enabled = durationMs > 0,
+          colors = sliderColors,
+          thumb = {
+            Box(
+              Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(Color.White),
+            )
+          },
+          track = { sliderState ->
+            SliderDefaults.Track(
+              sliderState = sliderState,
+              modifier = Modifier.height(4.dp),
+              colors = sliderColors,
+            )
+          },
+          modifier = Modifier.fillMaxWidth(),
+        )
+      }
+    }
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
       Text(
         formatMs(shownPosition),

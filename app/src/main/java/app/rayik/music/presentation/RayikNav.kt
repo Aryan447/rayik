@@ -27,6 +27,7 @@ import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.theme.spacing
 import kotlinx.coroutines.delay
 
@@ -99,8 +101,12 @@ fun RayikNav() {
   // tab (local files are pinned-offline fallback only), no player tab (the
   // dock art opens the full player overlay).
   val dock = dockContainer()
+  // Floating dock: the bar detaches into a pill, so the Scaffold bed
+  // behind it (and the gesture strip) goes home-surface — the pill
+  // keeps dock colors and reads as floating in light and dark.
+  val floatingDock by rayikPreferences().floatingDock.collectAsState()
   Scaffold(
-    containerColor = dock,
+    containerColor = if (floatingDock) MaterialTheme.colorScheme.surface else dock,
     contentColor = MaterialTheme.colorScheme.onSurface,
     contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.statusBars),
     bottomBar = {
@@ -118,6 +124,7 @@ fun RayikNav() {
           onExpandedChange = { dockExpanded = it },
           selectedTab = tab,
           onSelectTab = { tab = it },
+          floatingDock = floatingDock,
         )
       }
     }

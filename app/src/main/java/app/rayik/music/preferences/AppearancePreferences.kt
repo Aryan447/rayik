@@ -6,7 +6,8 @@ import app.rayik.music.ui.theme.AppTheme
 
 /**
  * Streaming-first appearance prefs. Ported from mpvium pattern;
- * video-specific prefs (seekbar styles, player buttons) are intentionally dropped.
+ * video-specific prefs (player buttons) are intentionally dropped, but the
+ * seekbar styles live on as audio-player customization.
  * The one sanctioned deviation is [albumArtDynamic]: Palette -> primaryContainer.
  */
 class AppearancePreferences(
@@ -16,6 +17,8 @@ class AppearancePreferences(
   val appTheme = preferenceStore.getEnum("app_theme", AppTheme.Gold)
   val amoledMode = preferenceStore.getBoolean("amoled_mode", false)
   val albumArtDynamic = preferenceStore.getBoolean("album_art_dynamic", true)
+  val floatingDock = preferenceStore.getBoolean("floating_dock", false)
+  val seekbarStyle = preferenceStore.getEnum("seekbar_style", SeekbarStyle.Standard)
   val onboardingCompleted = preferenceStore.getBoolean("onboarding_completed", false)
   val streamQuality = preferenceStore.getEnum("stream_quality", StreamQuality.Auto)
 }

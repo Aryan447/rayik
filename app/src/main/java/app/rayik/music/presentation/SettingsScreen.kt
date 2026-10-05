@@ -1,6 +1,7 @@
 package app.rayik.music.presentation
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Bolt
@@ -31,7 +33,9 @@ import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Repeat
@@ -46,6 +50,7 @@ import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -75,6 +80,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
 import app.rayik.music.preferences.AppearancePreferences
+import app.rayik.music.preferences.SeekbarStyle
 import app.rayik.music.preferences.StreamQuality
 import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.preferences.components.ThemePicker
@@ -132,16 +138,13 @@ import app.rayik.music.utils.rememberPreference
 fun SettingsScreen(
   preferences: AppearancePreferences = rayikPreferences(),
 ) {
-  val appTheme by preferences.appTheme.collectAsState()
-  val darkMode by preferences.darkMode.collectAsState()
-  val amoledMode by preferences.amoledMode.collectAsState()
-  val albumArtDynamic by preferences.albumArtDynamic.collectAsState()
   val streamQuality by preferences.streamQuality.collectAsState()
   val context = LocalContext.current
   val uriHandler = LocalUriHandler.current
   val scope = rememberCoroutineScope()
   val entryPoint = rememberEntryPoint(context)
   var showLogin by rememberSaveable { mutableStateOf(false) }
+  var showCustomization by rememberSaveable { mutableStateOf(false) }
   var query by rememberSaveable { mutableStateOf("") }
   var clearingCache by rememberSaveable { mutableStateOf(false) }
 
@@ -171,12 +174,6 @@ fun SettingsScreen(
     sessionCookie?.let { hasCompleteYouTubeLoginCookies(it) } == true
   val accountName = accountPrefs?.get(AccountNameKey).orEmpty()
   val accountEmail = accountPrefs?.get(AccountEmailKey).orEmpty()
-  val systemDark = isSystemInDarkTheme()
-  val useDarkTheme = when (darkMode) {
-    DarkMode.Dark -> true
-    DarkMode.Light -> false
-    DarkMode.System -> systemDark
-  }
 
   val cacheClearedMessage = stringResource(R.string.settings_cache_cleared)
   val cacheFailedMessage = stringResource(R.string.settings_cache_failed)
@@ -231,38 +228,15 @@ fun SettingsScreen(
         singleLine = true,
       )
 
-      if (matches("appearance", "theme", "gold", "dark", "amoled", "color", "art", "light")) {
-        SettingsCard(title = stringResource(R.string.rayik_settings_section_appearance)) {
-          ThemePicker(
-            currentTheme = appTheme,
-            isDarkMode = useDarkTheme,
-            onThemeSelected = { preferences.appTheme.set(it) },
-          )
-          Spacer(Modifier.height(MaterialTheme.spacing.small))
-          SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            DarkMode.entries.forEachIndexed { index, mode ->
-              SegmentedButton(
-                selected = darkMode == mode,
-                onClick = { preferences.darkMode.set(mode) },
-                shape = SegmentedButtonDefaults.itemShape(index, DarkMode.entries.size),
-              ) {
-                Text(stringResource(mode.titleRes))
-              }
-            }
-          }
-          SwitchSetting(
-            icon = Icons.Filled.Contrast,
-            title = stringResource(R.string.pref_amoled_label),
-            subtitle = null,
-            checked = amoledMode,
-            onChecked = { preferences.amoledMode.set(it) },
-          )
-          SwitchSetting(
-            icon = Icons.Filled.AutoAwesome,
-            title = stringResource(R.string.pref_album_art_label),
-            subtitle = null,
-            checked = albumArtDynamic,
-            onChecked = { preferences.albumArtDynamic.set(it) },
+      if (matches("custom", "appearance", "theme", "gold", "dark", "amoled", "color", "art", "light", "dock", "floating", "seekbar", "slider", "wavy", "thick", "standard")) {
+        SettingsCard(title = stringResource(R.string.settings_customize_title)) {
+          ActionSetting(
+            icon = Icons.Filled.Palette,
+            title = stringResource(R.string.settings_customize_title),
+            subtitle = stringResource(R.string.settings_customize_body),
+            actionLabel = stringResource(R.string.settings_customize_open),
+            actionEnabled = true,
+            onAction = { showCustomization = true },
           )
         }
       }
@@ -474,6 +448,109 @@ fun SettingsScreen(
         LoginScreen(onDone = { showLogin = false })
       }
     }
+    if (showCustomization) {
+      Surface(Modifier.fillMaxSize()) {
+        CustomizationScreen(
+          preferences = preferences,
+          onBack = { showCustomization = false },
+        )
+      }
+    }
+  }
+}
+
+/**
+ * Customization: themes + light/dark live here instead of the main
+ * settings list, alongside the floating dock toggle and seekbar style.
+ */
+@Composable
+private fun CustomizationScreen(
+  preferences: AppearancePreferences,
+  onBack: () -> Unit,
+) {
+  val appTheme by preferences.appTheme.collectAsState()
+  val darkMode by preferences.darkMode.collectAsState()
+  val amoledMode by preferences.amoledMode.collectAsState()
+  val albumArtDynamic by preferences.albumArtDynamic.collectAsState()
+  val floatingDock by preferences.floatingDock.collectAsState()
+  val seekbarStyle by preferences.seekbarStyle.collectAsState()
+  val systemDark = isSystemInDarkTheme()
+  val useDarkTheme = when (darkMode) {
+    DarkMode.Dark -> true
+    DarkMode.Light -> false
+    DarkMode.System -> systemDark
+  }
+
+  BackHandler(onBack = onBack)
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .verticalScroll(rememberScrollState()),
+    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+  ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      IconButton(onClick = onBack) {
+        Icon(
+          Icons.Filled.ArrowBack,
+          contentDescription = stringResource(R.string.settings_customize_back),
+        )
+      }
+      GradientHeadline(stringResource(R.string.settings_customize_title))
+    }
+
+    SettingsCard(title = stringResource(R.string.rayik_settings_section_appearance)) {
+      ThemePicker(
+        currentTheme = appTheme,
+        isDarkMode = useDarkTheme,
+        onThemeSelected = { preferences.appTheme.set(it) },
+      )
+      Spacer(Modifier.height(MaterialTheme.spacing.small))
+      SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        DarkMode.entries.forEachIndexed { index, mode ->
+          SegmentedButton(
+            selected = darkMode == mode,
+            onClick = { preferences.darkMode.set(mode) },
+            shape = SegmentedButtonDefaults.itemShape(index, DarkMode.entries.size),
+          ) {
+            Text(stringResource(mode.titleRes))
+          }
+        }
+      }
+      SwitchSetting(
+        icon = Icons.Filled.Contrast,
+        title = stringResource(R.string.pref_amoled_label),
+        subtitle = null,
+        checked = amoledMode,
+        onChecked = { preferences.amoledMode.set(it) },
+      )
+      SwitchSetting(
+        icon = Icons.Filled.AutoAwesome,
+        title = stringResource(R.string.pref_album_art_label),
+        subtitle = null,
+        checked = albumArtDynamic,
+        onChecked = { preferences.albumArtDynamic.set(it) },
+      )
+    }
+
+    SettingsCard(title = stringResource(R.string.settings_customize_player)) {
+      SwitchSetting(
+        icon = Icons.Filled.Layers,
+        title = stringResource(R.string.pref_floating_dock_label),
+        subtitle = stringResource(R.string.pref_floating_dock_body),
+        checked = floatingDock,
+        onChecked = { preferences.floatingDock.set(it) },
+      )
+      Spacer(Modifier.height(MaterialTheme.spacing.small))
+      IconLabel(icon = Icons.Filled.LinearScale, title = stringResource(R.string.pref_seekbar_label))
+      RadioRow(
+        options = SeekbarStyle.entries.map { it to stringResource(it.titleRes) },
+        selected = seekbarStyle,
+        onSelect = { preferences.seekbarStyle.set(it) },
+      )
+    }
+    // Bottom clearance so the last card clears the inset sheet's
+    // 28dp bottom curve instead of clipping into the dock.
+    Spacer(Modifier.height(DockSheetBottomRadius + MaterialTheme.spacing.large))
   }
 }
 
