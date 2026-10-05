@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,13 +40,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.OpenInFull
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
@@ -54,6 +54,8 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -65,10 +67,10 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -78,7 +80,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -99,15 +100,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
+import coil3.imageLoader
 import coil3.request.ImageRequest
-import coil3.size.Size
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import app.rayik.music.BuildConfig
 import app.rayik.music.R
-import app.rayik.music.lyrics.LyricDisplayParser
 import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
 import app.rayik.music.player.RepeatMode
@@ -120,6 +125,51 @@ import app.rayik.music.ui.theme.spacing
 /** Lazy-list indices of the scroll targets; header sections above are always emitted. */
 private const val LYRICS_SECTION_INDEX = 7
 private const val UPNEXT_SECTION_INDEX = 8
+
+/** Apple field: photo runs this far down, then dissolves into flat bedrock. */
+private const val APPLE_PHOTO_FRACTION = 0.68f
+
+/** Fallback field when sampling fails — deep teal-black. */
+private val BedrockFallback = Color(0xFF0B2427)
+
+/**
+ * Apple-style flat bedrock sampled from the art: dark muted first, then
+ * dark vibrant, then a darkened dominant. Darkened to V<=0.22 so white
+ * controls always contrast. Cached per URL; falls back quietly.
+ */
+@Composable
+private fun rememberSampledBedrock(artUrl: String): Color {
+  val context = LocalContext.current
+  var bedrock by remember(artUrl) { mutableStateOf(BedrockFallback) }
+  LaunchedEffect(artUrl) {
+    if (artUrl.isBlank()) {
+      bedrock = BedrockFallback
+      return@LaunchedEffect
+    }
+    bedrock = withContext(Dispatchers.IO) {
+      runCatching {
+        val request = ImageRequest.Builder(context)
+          .data(artUrl)
+          .size(128)
+          .allowHardware(false)
+          .build()
+        val result = context.imageLoader.execute(request)
+        val bitmap = (result as? SuccessResult)?.image?.toBitmap()
+          ?: return@runCatching BedrockFallback
+        val palette = Palette.from(bitmap).maximumColorCount(16).generate()
+        val rgb = palette.darkMutedSwatch?.rgb
+          ?: palette.darkVibrantSwatch?.rgb
+          ?: palette.dominantSwatch?.rgb
+          ?: return@runCatching BedrockFallback
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(rgb, hsv)
+        hsv[2] = minOf(hsv[2], 0.22f)
+        Color(android.graphics.Color.HSVToColor(hsv))
+      }.getOrDefault(BedrockFallback)
+    }
+  }
+  return bedrock
+}
 
 /**
  * Immersive full-screen player: the track artwork IS the screen —
@@ -158,8 +208,16 @@ fun NowPlayingSheetContent(
   val streamQuality by prefs.streamQuality.collectAsState()
 
   val artwork = player.premiumArtworkUrl.collectAsState().value
+  // Bedrock samples the clean art; while home-album taps resolve, the
+  // queue's frame tints the field so the screen is never a black void.
+  val sampleUrl = artwork.ifBlank { current?.artworkUrl.orEmpty() }
+  val bedrockTarget = rememberSampledBedrock(sampleUrl)
+  val bedrock by animateColorAsState(
+    targetValue = bedrockTarget,
+    animationSpec = tween(600),
+    label = "bedrockMelt",
+  )
   val scheme = MaterialTheme.colorScheme
-  val surface = scheme.surface
 
   // The player is always a dark room over artwork: force light status +
   // nav icons while open, restore the theme-driven values on close.
@@ -210,16 +268,14 @@ fun NowPlayingSheetContent(
   Box(
     modifier = Modifier
       .fillMaxSize()
-      // Opaque bedrock: the layer stack must never sum to transparent or
-      // the home feed ghosts through mid-screen (seen between the sharp
-      // art's bottom edge and the blur zone).
-      .background(Color.Black)
+      // Apple field: flat sampled color, never black, never transparent —
+      // home can never ghost through and no seam can open mid-screen.
+      .background(bedrock)
       .graphicsLayer { translationY = dragOffset.value },
   ) {
-    // ---- Artwork atmosphere, Apple-style: sharp fit-width composition up
-    // top (never side-cropped), blurred continuation dissolving below.
-    // Crossfade across tracks is the transition; same Coil URL/cache as
-    // TrackArt, blurred copy downsampled so the blur stays cheap.
+    // ---- Apple artwork: full-bleed portrait Crop to ~68%, feathered into
+    // the flat bedrock. No cloud-blur copy (neither reference has one), no
+    // fit-width banner. Crossfade across tracks is the transition.
     // NOTE: Crossfade must own a real size (fillMaxSize) — a bare one
     // collapses to 0x0 and the art silently disappears.
     Crossfade(
@@ -228,62 +284,44 @@ fun NowPlayingSheetContent(
       modifier = Modifier.fillMaxSize(),
     ) { art ->
       if (art.isNotBlank()) {
-        Box(Modifier.fillMaxSize()) {
-          // Blur-fill: full-screen crop behind, fading in toward the
-          // bottom via a DstIn mask — the reference dissolve. The mask
-          // reaches full strength well above the sharp art's bottom edge
-          // on any aspect, so no transparent band can open up mid-screen.
-          AsyncImage(
-            model = ImageRequest.Builder(context)
-              .data(art)
-              .size(Size(360, 640))
-              .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-              .fillMaxSize()
-              .blur(56.dp)
-              .drawWithContent {
-                drawContent()
-                drawRect(
-                  brush = Brush.verticalGradient(
-                    0f to Color.Transparent,
-                    0.30f to Color.Transparent,
-                    0.50f to Color.Black,
-                  ),
-                  blendMode = BlendMode.DstIn,
-                )
-              },
-          )
-          // Sharp composition: fit-width, top-anchored, full width visible.
-          AsyncImage(
-            model = art,
-            contentDescription = null,
-            contentScale = ContentScale.FillWidth,
-            alignment = Alignment.TopCenter,
-            modifier = Modifier.fillMaxWidth(),
-          )
-        }
-      } else {
-        Box(Modifier.fillMaxSize().background(surface))
+        AsyncImage(
+          model = art,
+          contentDescription = null,
+          contentScale = ContentScale.Crop,
+          alignment = Alignment.TopCenter,
+          modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(APPLE_PHOTO_FRACTION)
+            .drawWithContent {
+              drawContent()
+              drawRect(
+                brush = Brush.verticalGradient(
+                  0f to Color.Black,
+                  0.72f to Color.Black,
+                  1f to Color.Transparent,
+                ),
+                blendMode = BlendMode.DstIn,
+              )
+            },
+        )
       }
     }
-    // Top scrim: status bar + top controls over bright art.
+    // Bridge: bedrock transparent above the melt, opaque below — the photo
+    // always lands on flat color with zero line on any aspect.
     Box(
       Modifier.matchParentSize().background(
         Brush.verticalGradient(
-          0f to Color.Black.copy(alpha = 0.45f),
-          0.22f to Color.Transparent,
+          0.52f to Color.Transparent,
+          0.70f to bedrock,
         ),
       ),
     )
-    // Bottom scrim: gentle dim for controls — the blur already darkens.
+    // Whisper top scrim for status-bar legibility only.
     Box(
       Modifier.matchParentSize().background(
         Brush.verticalGradient(
-          0.50f to Color.Transparent,
-          0.78f to Color.Black.copy(alpha = 0.25f),
-          1f to Color.Black.copy(alpha = 0.55f),
+          0f to Color.Black.copy(alpha = 0.30f),
+          0.15f to Color.Transparent,
         ),
       ),
     )
@@ -357,23 +395,16 @@ fun NowPlayingSheetContent(
           }
         }
 
-        // No hero card — the sharp fit-width art above IS the hero. This
-        // spacer drops the lyric pill + title onto the blur dissolve.
+        // No hero card — the full-bleed art above IS the hero. This
+        // spacer drops the title onto the melt, Apple-style.
         item {
-          Spacer(Modifier.fillParentMaxHeight(0.34f))
+          Spacer(Modifier.fillParentMaxHeight(0.42f))
         }
 
         item {
           if (current == null) {
             ScreenScaffold(state = ScreenState.Loading, loadingText = "", onRetry = {}) {}
           } else {
-            LyricPill(
-              raw = rawLyrics,
-              positionMs = positionMs,
-              isPlaying = playbackState == PlaybackUiState.Playing,
-              onOpenImmersive = { immersiveLyrics = true },
-            )
-            Spacer(Modifier.height(14.dp))
             Row(
               modifier = Modifier.fillMaxWidth(),
               verticalAlignment = Alignment.CenterVertically,
@@ -381,30 +412,37 @@ fun NowPlayingSheetContent(
               Column(Modifier.weight(1f)) {
                 Text(
                   current.title,
-                  style = MaterialTheme.typography.headlineMedium,
-                  fontWeight = FontWeight.ExtraBold,
-                  maxLines = 2,
+                  style = MaterialTheme.typography.headlineSmall,
+                  fontWeight = FontWeight.SemiBold,
+                  maxLines = 1,
                   overflow = TextOverflow.Ellipsis,
                   color = Color.White,
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                   current.artist,
-                  style = MaterialTheme.typography.bodyLarge,
-                  color = Color.White.copy(alpha = 0.75f),
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = Color.White.copy(alpha = 0.6f),
                   maxLines = 1,
                   overflow = TextOverflow.Ellipsis,
                 )
               }
-              Spacer(Modifier.width(12.dp))
-              ArtCircleButton(onClick = player::toggleLike) {
+              Spacer(Modifier.width(8.dp))
+              TitleIconButton(onClick = player::toggleLike) {
                 Icon(
-                  imageVector = if (isLiked) Icons.Filled.Check else Icons.Filled.Add,
+                  imageVector = if (isLiked) Icons.Filled.Star else Icons.Filled.StarBorder,
                   contentDescription = stringResource(
                     if (isLiked) R.string.action_unlike else R.string.action_like,
                   ),
+                  tint = Color.White,
+                  modifier = Modifier.size(20.dp),
                 )
               }
+              Spacer(Modifier.width(8.dp))
+              TitleOverflowMenu(
+                onShare = { shareTrack(context, current.title, current.artist) },
+                onOpenQueue = { scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) } },
+              )
             }
           }
         }
@@ -422,9 +460,7 @@ fun NowPlayingSheetContent(
           Spacer(Modifier.height(4.dp))
           ControlDock(
             state = playbackState,
-            repeatMode = repeatMode,
-            shuffleEnabled = shuffleEnabled,
-            // On error the hero pill retries instead of toggling — the dock
+            // On error the hero retries instead of toggling — the dock
             // never sits dead with a disabled button and no way forward.
             onToggle = {
               if (playbackState is PlaybackUiState.Error) player.retry()
@@ -432,48 +468,62 @@ fun NowPlayingSheetContent(
             },
             onNext = player::next,
             onPrevious = player::previous,
-            onCycleRepeat = player::cycleRepeat,
-            onToggleShuffle = player::toggleShuffle,
           )
         }
 
         item {
           if (current != null) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
+            // Apple footer: quiet icon row. Shuffle/repeat moved here from
+            // the transport so nothing is lost; lyrics + queue stay one tap.
             Row(
               modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+              horizontalArrangement = Arrangement.SpaceEvenly,
               verticalAlignment = Alignment.CenterVertically,
             ) {
-              LikePill(
-                isLiked = isLiked,
-                onToggle = player::toggleLike,
-              )
-              GlassPill(
-                onClick = {
-                  shareTrack(context, current.title, current.artist)
-                },
+              IconButton(onClick = player::toggleShuffle, modifier = Modifier.size(48.dp)) {
+                Icon(
+                  imageVector = Icons.Filled.Shuffle,
+                  contentDescription = stringResource(
+                    if (shuffleEnabled) R.string.transport_shuffle_on else R.string.transport_shuffle_off,
+                  ),
+                  tint = if (shuffleEnabled) Color.White else Color.White.copy(alpha = 0.5f),
+                  modifier = Modifier.size(22.dp),
+                )
+              }
+              IconButton(onClick = player::cycleRepeat, modifier = Modifier.size(48.dp)) {
+                Icon(
+                  imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                  contentDescription = stringResource(R.string.transport_repeat, repeatMode.name),
+                  tint = if (repeatMode == RepeatMode.OFF) {
+                    Color.White.copy(alpha = 0.5f)
+                  } else {
+                    Color.White
+                  },
+                  modifier = Modifier.size(22.dp),
+                )
+              }
+              IconButton(
+                onClick = { immersiveLyrics = true },
+                modifier = Modifier.size(48.dp),
               ) {
                 Icon(
-                  Icons.Filled.Share,
-                  contentDescription = stringResource(R.string.action_share),
-                  modifier = Modifier.size(17.dp),
+                  Icons.Filled.FormatQuote,
+                  contentDescription = stringResource(R.string.lyrics_fullscreen),
+                  tint = Color.White.copy(alpha = 0.75f),
+                  modifier = Modifier.size(22.dp),
                 )
-                Spacer(Modifier.width(6.dp))
-                Text("Share", style = MaterialTheme.typography.labelLarge)
               }
-              GlassPill(
-                onClick = {
-                  scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) }
-                },
+              IconButton(
+                onClick = { scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) } },
+                modifier = Modifier.size(48.dp),
               ) {
                 Icon(
                   Icons.Filled.QueueMusic,
                   contentDescription = stringResource(R.string.action_open_queue),
-                  modifier = Modifier.size(17.dp),
+                  tint = Color.White.copy(alpha = 0.75f),
+                  modifier = Modifier.size(22.dp),
                 )
-                Spacer(Modifier.width(6.dp))
-                Text("Queue", style = MaterialTheme.typography.labelLarge)
               }
             }
           }
@@ -505,28 +555,6 @@ fun NowPlayingSheetContent(
                   )
                 },
               ) {}
-            }
-          } else {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.Center,
-            ) {
-              TextButton(
-                onClick = {
-                  scope.launch { listState.animateScrollToItem(LYRICS_SECTION_INDEX) }
-                },
-              ) {
-                Text(stringResource(R.string.lyrics_preview_title))
-              }
-              TextButton(
-                onClick = {
-                  scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) }
-                },
-              ) {
-                Icon(Icons.Filled.QueueMusic, contentDescription = null)
-                Spacer(Modifier.width(MaterialTheme.spacing.smaller))
-                Text(stringResource(R.string.action_open_queue))
-              }
             }
           }
         }
@@ -710,55 +738,72 @@ private fun ArtCircleButton(
 }
 
 /**
- * Synced lyric pill floating above the title, like the reference: the
- * active line in a frosted bar, expand opens the immersive lyrics.
- * Hidden when there are no timed lines — the below-fold card still shows
- * plain/unsynced lyrics. Reuses the preview's parser + smooth clock.
+ * Small dark circle for title-row actions (like star, overflow) floating
+ * on the melt — Apple-sized, quieter than [ArtCircleButton].
  */
 @Composable
-private fun LyricPill(
-  raw: String?,
-  positionMs: Long,
-  isPlaying: Boolean,
-  onOpenImmersive: () -> Unit,
-  modifier: Modifier = Modifier,
+private fun TitleIconButton(
+  onClick: () -> Unit,
+  content: @Composable () -> Unit,
 ) {
-  if (raw.isNullOrBlank() || raw == "LYRICS_NOT_FOUND") return
-  val lines = remember(raw) { LyricDisplayParser.parseTimed(raw) }
-  if (lines.isEmpty()) return
-  val smooth = rememberSmoothLyricPosition(positionMs, isPlaying)
-  val active = activeLyricIndex(lines, smooth)
-  val line = lines.getOrNull(active)?.text ?: lines.firstOrNull()?.text ?: return
   Surface(
-    onClick = onOpenImmersive,
-    shape = RoundedCornerShape(28.dp),
+    onClick = onClick,
+    shape = CircleShape,
     color = Color.White.copy(alpha = 0.12f),
     tonalElevation = 0.dp,
-    modifier = modifier
-      .fillMaxWidth()
-      .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(28.dp)),
+    modifier = Modifier
+      .size(38.dp)
+      .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
   ) {
-    Row(
-      modifier = Modifier.padding(start = 20.dp, top = 7.dp, end = 7.dp, bottom = 7.dp),
-      verticalAlignment = Alignment.CenterVertically,
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+      CompositionLocalProvider(LocalContentColor provides Color.White) {
+        content()
+      }
+    }
+  }
+}
+
+/** Overflow for the title row: share + jump to queue live here now. */
+@Composable
+private fun TitleOverflowMenu(
+  onShare: () -> Unit,
+  onOpenQueue: () -> Unit,
+) {
+  var expanded by remember { mutableStateOf(false) }
+  Box {
+    TitleIconButton(onClick = { expanded = true }) {
+      Icon(
+        Icons.Filled.MoreVert,
+        contentDescription = stringResource(R.string.action_open_queue),
+        tint = Color.White,
+        modifier = Modifier.size(20.dp),
+      )
+    }
+    DropdownMenu(
+      expanded = expanded,
+      onDismissRequest = { expanded = false },
+      shape = RoundedCornerShape(16.dp),
     ) {
-      Crossfade(targetState = line, label = "lyricPillSwap", modifier = Modifier.weight(1f)) {
-        Text(
-          it,
-          style = MaterialTheme.typography.bodyLarge,
-          color = Color.White,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-      }
-      Spacer(Modifier.width(8.dp))
-      ArtCircleButton(onClick = onOpenImmersive, size = 38.dp) {
-        Icon(
-          imageVector = Icons.Filled.OpenInFull,
-          contentDescription = stringResource(R.string.lyrics_fullscreen),
-          modifier = Modifier.size(17.dp),
-        )
-      }
+      DropdownMenuItem(
+        text = { Text(stringResource(R.string.action_share)) },
+        onClick = {
+          expanded = false
+          onShare()
+        },
+        leadingIcon = {
+          Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+        },
+      )
+      DropdownMenuItem(
+        text = { Text(stringResource(R.string.action_open_queue)) },
+        onClick = {
+          expanded = false
+          onOpenQueue()
+        },
+        leadingIcon = {
+          Icon(Icons.Filled.QueueMusic, contentDescription = null, modifier = Modifier.size(18.dp))
+        },
+      )
     }
   }
 }
@@ -850,64 +895,6 @@ private fun QualityMenu(
   }
 }
 
-@Composable
-private fun GlassPill(
-  onClick: () -> Unit,
-  content: @Composable () -> Unit,
-) {
-  Surface(
-    onClick = onClick,
-    shape = CircleShape,
-    color = Color.White.copy(alpha = 0.12f),
-    modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
-  ) {
-    Row(
-      modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.Center,
-    ) {
-      CompositionLocalProvider(LocalContentColor provides Color.White) {
-        content()
-      }
-    }
-  }
-}
-
-@Composable
-private fun LikePill(
-  isLiked: Boolean,
-  onToggle: () -> Unit,
-) {
-  val container = if (isLiked) Color.White else Color.White.copy(alpha = 0.12f)
-  val contentColor = if (isLiked) Color.Black else Color.White
-  Surface(
-    onClick = onToggle,
-    shape = CircleShape,
-    color = container,
-    modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
-  ) {
-    Row(
-      modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Icon(
-        imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-        contentDescription = stringResource(
-          if (isLiked) R.string.action_unlike else R.string.action_like,
-        ),
-        tint = contentColor,
-        modifier = Modifier.size(17.dp),
-      )
-      Spacer(Modifier.width(6.dp))
-      Text(
-        if (isLiked) "Liked" else "Like",
-        style = MaterialTheme.typography.labelLarge,
-        color = contentColor,
-      )
-    }
-  }
-}
-
 /** Frosted card used for lyrics / error / empty states. */
 @Composable
 fun GlassCard(
@@ -971,12 +958,14 @@ private fun SheetSlider(
   durationMs: Long,
   onSeek: (Long) -> Unit,
 ) {
-  // Always white: the slider floats on artwork, never on theme surfaces.
+  // Apple slider: thin track, pinned 10dp dot, small grey times with
+  // negative remaining. Always white: floats on artwork, never on theme.
   val activeSlider = Color.White
   var dragging by remember { mutableStateOf(false) }
   var dragValue by remember { mutableFloatStateOf(0f) }
   val range = 0f..maxOf(durationMs.toFloat(), 1f)
   val sliderValue = (if (dragging) dragValue else positionMs.toFloat()).coerceIn(range)
+  val shownPosition = if (dragging) dragValue.toLong() else positionMs
 
   Column(Modifier.fillMaxWidth()) {
     Slider(
@@ -996,30 +985,37 @@ private fun SheetSlider(
         inactiveTrackColor = activeSlider.copy(alpha = 0.28f),
         thumbColor = activeSlider,
       ),
-      // Pinned 12dp dot: the stock expressive thumb morphs into a pill
-      // mid-drag, which read as a rendering glitch on screenshots.
       thumb = {
         Box(
           Modifier
-            .size(12.dp)
+            .size(10.dp)
             .clip(CircleShape)
             .background(Color.White),
+        )
+      },
+      track = { sliderState ->
+        SliderDefaults.Track(
+          sliderState = sliderState,
+          modifier = Modifier.height(4.dp),
+          colors = SliderDefaults.colors(
+            activeTrackColor = activeSlider,
+            inactiveTrackColor = activeSlider.copy(alpha = 0.28f),
+          ),
         )
       },
       modifier = Modifier.fillMaxWidth(),
     )
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
       Text(
-        formatMs(if (dragging) dragValue.toLong() else positionMs),
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = Color.White.copy(alpha = 0.9f),
+        formatMs(shownPosition),
+        style = MaterialTheme.typography.labelSmall,
+        color = Color.White.copy(alpha = 0.6f),
       )
       Spacer(Modifier.weight(1f))
       Text(
-        formatMs(durationMs),
-        style = MaterialTheme.typography.labelMedium,
-        color = Color.White.copy(alpha = 0.7f),
+        "-" + formatMs(maxOf(durationMs - shownPosition, 0L)),
+        style = MaterialTheme.typography.labelSmall,
+        color = Color.White.copy(alpha = 0.6f),
       )
     }
   }
@@ -1028,102 +1024,72 @@ private fun SheetSlider(
 @Composable
 private fun ControlDock(
   state: PlaybackUiState,
-  repeatMode: RepeatMode,
-  shuffleEnabled: Boolean,
   onToggle: () -> Unit,
   onNext: () -> Unit,
   onPrevious: () -> Unit,
-  onCycleRepeat: () -> Unit,
-  onToggleShuffle: () -> Unit,
 ) {
-  // Reference layout: bare white side icons, one large translucent play
-  // circle. Everything floats on the art, so all-white, no theme tints.
+  // Apple transport: three bare white icons, no circle. Shuffle/repeat
+  // live in the quiet footer row so nothing is lost.
   Row(
     modifier = Modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.SpaceEvenly,
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    IconButton(onClick = onToggleShuffle, modifier = Modifier.size(48.dp)) {
-      Icon(
-        imageVector = Icons.Filled.Shuffle,
-        contentDescription = stringResource(
-          if (shuffleEnabled) R.string.transport_shuffle_on else R.string.transport_shuffle_off,
-        ),
-        tint = if (shuffleEnabled) Color.White else Color.White.copy(alpha = 0.55f),
-        modifier = Modifier.size(24.dp),
-      )
-    }
     IconButton(
       onClick = onPrevious,
       enabled = state != PlaybackUiState.Loading,
-      modifier = Modifier.size(56.dp),
+      modifier = Modifier.size(64.dp),
     ) {
       Icon(
         Icons.Filled.SkipPrevious,
         contentDescription = stringResource(R.string.transport_previous),
         tint = Color.White,
-        modifier = Modifier.size(34.dp),
+        modifier = Modifier.size(42.dp),
       )
     }
     if (state == PlaybackUiState.Loading) {
       CircularProgressIndicator(
-        modifier = Modifier.size(88.dp),
+        modifier = Modifier.size(60.dp),
         color = Color.White,
         trackColor = Color.White.copy(alpha = 0.24f),
       )
     } else {
-      Surface(
+      IconButton(
         onClick = onToggle,
+        // Idle with a queue means "tap to start"; Error means "tap to
+        // retry". Only an unknown state sits disabled.
         enabled = state == PlaybackUiState.Playing || state == PlaybackUiState.Paused ||
           state == PlaybackUiState.Idle || state is PlaybackUiState.Error,
-        shape = CircleShape,
-        color = Color.White.copy(alpha = 0.18f),
-        modifier = Modifier
-          .size(88.dp)
-          .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+        modifier = Modifier.size(76.dp),
       ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-          Icon(
-            imageVector = if (state == PlaybackUiState.Playing) {
-              Icons.Filled.Pause
+        Icon(
+          imageVector = if (state == PlaybackUiState.Playing) {
+            Icons.Filled.Pause
+          } else {
+            Icons.Filled.PlayArrow
+          },
+          contentDescription = stringResource(
+            if (state == PlaybackUiState.Playing) {
+              R.string.transport_pause
             } else {
-              Icons.Filled.PlayArrow
+              R.string.transport_play
             },
-            contentDescription = stringResource(
-              if (state == PlaybackUiState.Playing) {
-                R.string.transport_pause
-              } else {
-                R.string.transport_play
-              },
-            ),
-            tint = Color.White,
-            modifier = Modifier.size(44.dp),
-          )
-        }
+          ),
+          tint = Color.White,
+          modifier = Modifier.size(58.dp),
+        )
       }
     }
     IconButton(
       onClick = onNext,
       enabled = state != PlaybackUiState.Loading,
-      modifier = Modifier.size(56.dp),
+      modifier = Modifier.size(64.dp),
     ) {
       Icon(
         Icons.Filled.SkipNext,
         contentDescription = stringResource(R.string.transport_next),
         tint = Color.White,
-        modifier = Modifier.size(34.dp),
-      )
-    }
-    IconButton(onClick = onCycleRepeat, modifier = Modifier.size(48.dp)) {
-      Icon(
-        imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-        contentDescription = stringResource(R.string.transport_repeat, repeatMode.name),
-        tint = if (repeatMode == RepeatMode.OFF) {
-          Color.White.copy(alpha = 0.55f)
-        } else {
-          Color.White
-        },
-        modifier = Modifier.size(24.dp),
+        modifier = Modifier.size(42.dp),
       )
     }
   }
