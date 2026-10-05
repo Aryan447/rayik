@@ -14,11 +14,16 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -97,6 +102,7 @@ fun RayikNav() {
   Scaffold(
     containerColor = dock,
     contentColor = MaterialTheme.colorScheme.onSurface,
+    contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.statusBars),
     bottomBar = {
       Box(
         Modifier
@@ -116,6 +122,12 @@ fun RayikNav() {
       }
     }
   ) { inner ->
+    // Immersive status: the surface sheet runs full-bleed behind the
+    // status bar (same home color in light + dark) instead of leaving the
+    // dark dock container showing through. Only the status inset is
+    // excluded; everything else stays so the sheet's bottom curve still
+    // sits on the dock. Content position is unchanged: the Column
+    // re-applies the status inset inside the surface.
     Box(
       Modifier.fillMaxSize().padding(inner)
         .onSizeChanged { sheetHeightPx = it.height },
@@ -136,6 +148,7 @@ fun RayikNav() {
       ) {
         Column(
           Modifier.fillMaxSize()
+            .statusBarsPadding()
             .padding(horizontal = MaterialTheme.spacing.medium)
             .padding(top = MaterialTheme.spacing.medium),
           // No bottom padding here: each tab screen owns bottom clearance

@@ -122,9 +122,8 @@ import app.rayik.music.preferences.StreamQuality
 import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.theme.spacing
 
-/** Lazy-list indices of the scroll targets; header sections above are always emitted. */
-private const val LYRICS_SECTION_INDEX = 7
-private const val UPNEXT_SECTION_INDEX = 8
+/** Lazy-list index of the scroll target; header sections above are always emitted. */
+private const val UPNEXT_SECTION_INDEX = 7
 
 /** Apple field: photo runs this far down, then dissolves into flat bedrock. */
 private const val APPLE_PHOTO_FRACTION = 0.68f
@@ -202,7 +201,6 @@ fun NowPlayingSheetContent(
   val current = rows.firstOrNull { it.isCurrent }
   val listState = rememberLazyListState()
   val scope = rememberCoroutineScope()
-  var lyricsExpanded by remember { mutableStateOf(false) }
   var immersiveLyrics by remember { mutableStateOf(false) }
   val prefs = rayikPreferences()
   val streamQuality by prefs.streamQuality.collectAsState()
@@ -557,26 +555,6 @@ fun NowPlayingSheetContent(
               ) {}
             }
           }
-        }
-
-        item {
-          Spacer(Modifier.height(MaterialTheme.spacing.small))
-          LyricsPreviewCard(
-            raw = rawLyrics,
-            positionMs = positionMs,
-            expanded = lyricsExpanded,
-            onToggleExpand = { lyricsExpanded = !lyricsExpanded },
-            onShareCard = rememberShareLyricCard(
-              raw = rawLyrics,
-              positionMs = positionMs,
-              title = current?.title.orEmpty(),
-              artist = current?.artist.orEmpty(),
-              artworkUrl = artwork,
-            ),
-            onOpenImmersive = { immersiveLyrics = true },
-            onSeek = player::seekTo,
-          )
-          Spacer(Modifier.height(MaterialTheme.spacing.medium))
         }
 
         item {
