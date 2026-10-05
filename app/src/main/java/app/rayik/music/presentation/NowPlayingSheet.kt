@@ -210,6 +210,10 @@ fun NowPlayingSheetContent(
   Box(
     modifier = Modifier
       .fillMaxSize()
+      // Opaque bedrock: the layer stack must never sum to transparent or
+      // the home feed ghosts through mid-screen (seen between the sharp
+      // art's bottom edge and the blur zone).
+      .background(Color.Black)
       .graphicsLayer { translationY = dragOffset.value },
   ) {
     // ---- Artwork atmosphere, Apple-style: sharp fit-width composition up
@@ -226,7 +230,9 @@ fun NowPlayingSheetContent(
       if (art.isNotBlank()) {
         Box(Modifier.fillMaxSize()) {
           // Blur-fill: full-screen crop behind, fading in toward the
-          // bottom via a DstIn mask — the reference dissolve.
+          // bottom via a DstIn mask — the reference dissolve. The mask
+          // reaches full strength well above the sharp art's bottom edge
+          // on any aspect, so no transparent band can open up mid-screen.
           AsyncImage(
             model = ImageRequest.Builder(context)
               .data(art)
@@ -242,8 +248,8 @@ fun NowPlayingSheetContent(
                 drawRect(
                   brush = Brush.verticalGradient(
                     0f to Color.Transparent,
-                    0.38f to Color.Transparent,
-                    0.62f to Color.Black,
+                    0.30f to Color.Transparent,
+                    0.50f to Color.Black,
                   ),
                   blendMode = BlendMode.DstIn,
                 )
@@ -275,8 +281,8 @@ fun NowPlayingSheetContent(
     Box(
       Modifier.matchParentSize().background(
         Brush.verticalGradient(
-          0.55f to Color.Transparent,
-          0.8f to Color.Black.copy(alpha = 0.25f),
+          0.50f to Color.Transparent,
+          0.78f to Color.Black.copy(alpha = 0.25f),
           1f to Color.Black.copy(alpha = 0.55f),
         ),
       ),
