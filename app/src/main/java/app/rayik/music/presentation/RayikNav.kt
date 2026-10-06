@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,14 +75,29 @@ fun RayikNav() {
   var contentReady by remember { mutableStateOf(false) }
   var dockHeightPx by remember { mutableIntStateOf(0) }
   var sheetHeightPx by remember { mutableIntStateOf(0) }
+  // Measured stretch for the fullscreen-square hold, snapshotted once the
+  // intro starts so a late remeasure (rotation, dock toggle) can never move
+  // the sheet mid-flight. Before the snapshot the sheet follows the live
+  // measurement, so the first visible frame is already at the right scale
+  // and never slides down into it.
+  var introScale0 by remember { mutableFloatStateOf(1f) }
+  var introArmed by remember { mutableStateOf(false) }
+  val layoutReady = sheetHeightPx > 0 && dockHeightPx > 0
+  val liveScale0 = if (layoutReady) {
+    (sheetHeightPx + dockHeightPx).toFloat() / sheetHeightPx.toFloat()
+  } else {
+    1f
+  }
   // Fallback so Loading/Unavailable can never strand the dock hidden.
   LaunchedEffect(Unit) {
     delay(3000)
     contentReady = true
   }
-  LaunchedEffect(contentReady, dockHeightPx) {
+  LaunchedEffect(contentReady, dockHeightPx, sheetHeightPx) {
     if (introPlayed || animationsOff) return@LaunchedEffect
-    if (!contentReady || dockHeightPx == 0) return@LaunchedEffect
+    if (!contentReady || !layoutReady) return@LaunchedEffect
+    introScale0 = liveScale0
+    introArmed = true
     delay(DOCK_INTRO_HOLD_MS)
     intro.animateTo(
       1f,
@@ -97,12 +113,10 @@ fun RayikNav() {
   // Invisible dock sits translated fully below the screen (off-screen =
   // untouchable, since graphicsLayer moves hit bounds too).
   val dockAlpha = (eased * 1.25f).coerceIn(0f, 1f)
-  val scale0 = if (sheetHeightPx > 0 && dockHeightPx > 0) {
-    (sheetHeightPx + dockHeightPx).toFloat() / sheetHeightPx.toFloat()
-  } else {
-    1f
-  }
-  val sheetScaleY = 1f + (scale0 - 1f) * (1f - eased)
+  // Frozen once armed; live before that so the hold state tracks measurement
+  // instead of jumping 1f -> scale0 on the visible content.
+  val startScale = if (introArmed) introScale0 else liveScale0
+  val sheetScaleY = 1f + (startScale - 1f) * (1f - eased)
   val sheetBottom = if (floatingDock) 0.dp else DockSheetBottomRadius * eased
   // Inset-sheet layout: content is a rounded sheet sitting on the single
   // morphing dock (transport <-> icon tabs). No floating pill, no FOLDERS
@@ -171,11 +185,16 @@ fun RayikNav() {
           // (DockSheetBottomRadius + large docked, DockFloatingClearance
           // floating) so its last row clears the dock instead of clipping.
         ) {
-          when (NavTab.entries[tab]) {
-            NavTab.Raay -> RaayHomeScreen(onPlayStarted = {}, onContentReady = { contentReady = true })
-            NavTab.Search -> SearchScreen(onPlayStarted = {})
-            NavTab.Library -> LibraryScreen()
-            NavTab.Settings -> SettingsScreen()
+          // Hold tab content until the sheet + dock are measured: the first
+          // visible frame is then already at the fullscreen-square scale and
+          // the feed can never slide down into it. Costs 1-2 blank frames.
+          if (layoutReady) {
+            when (NavTab.entries[tab]) {
+              NavTab.Raay -> RaayHomeScreen(onPlayStarted = {}, onContentReady = { contentReady = true })
+              NavTab.Search -> SearchScreen(onPlayStarted = {})
+              NavTab.Library -> LibraryScreen()
+              NavTab.Settings -> SettingsScreen()
+            }
           }
         }
       }
