@@ -177,6 +177,8 @@ import app.rayik.music.constants.StopMusicOnTaskClearKey
 import app.rayik.music.constants.TogetherClientIdKey
 import app.rayik.music.constants.WakelockKey
 import app.rayik.music.db.MusicDatabase
+import app.rayik.music.playback.haptics.HapticTapProcessor
+import app.rayik.music.playback.haptics.SyncedHapticsController
 import app.rayik.music.db.entities.AlbumEntity
 import app.rayik.music.db.entities.ArtistEntity
 import app.rayik.music.db.entities.Event
@@ -325,6 +327,12 @@ class MusicService :
     val activeAudioDevice get() = audioOutputResolver.activeAudioDevice
 
     fun refreshActiveDevice() = audioOutputResolver.refresh()
+
+    // Synced haptics: passthrough PCM tap + beat-driven vibrator. The tap
+    // lives in the audio chain (zero cost when the toggle is off); the
+    // controller owns prefs, speaker gating, and vibration.
+    private val hapticTap = HapticTapProcessor()
+    private var syncedHaptics: SyncedHapticsController? = null
 
     private val audioDeviceCallback =
         object : AudioDeviceCallback() {
@@ -1162,6 +1170,7 @@ class MusicService :
         audioDeviceCallbackRegistered = true
         lastAudioOutputDeviceSignature = currentAudioOutputDeviceSignature()
         audioOutputResolver.refresh()
+        syncedHaptics = SyncedHapticsController(this, scope, hapticTap, activeAudioDevice, dataStore)
 
         mediaLibrarySessionCallback.apply {
             toggleLike = ::toggleLike
@@ -2702,7 +2711,9 @@ class MusicService :
         ExoPlayer
             .Builder(this)
             .setMediaSourceFactory(createMediaSourceFactory())
-            .setRenderersFactory(createRenderersFactory())
+            // Fresh inert tap: processor instances can't be shared across
+            // chains, and haptics follow the primary player only.
+            .setRenderersFactory(createRenderersFactory(HapticTapProcessor()))
             .setLoadControl(createCrossfadeLoadControl())
             .setTrackSelector(DefaultTrackSelector(this, SafeTrackSelectionFactory()))
             .setHandleAudioBecomingNoisy(false)
@@ -6558,6 +6569,7 @@ class MusicService :
     ) {
         super.onMediaItemTransition(mediaItem, reason)
 
+        syncedHaptics?.reset()
         if (sleepTimer.pauseWhenSongEnd) {
             pauseFromSleepTimer()
             return
@@ -6770,6 +6782,7 @@ class MusicService :
             scheduleCrossfade()
         }
         updateAudiblePlaybackRecovery()
+        syncedHaptics?.setPlaying(isPlaying)
     }
 
     private fun updateNextStreamPreload() {
@@ -7089,6 +7102,7 @@ class MusicService :
             if (!crossfadeHandoffInProgress) {
                 cancelCrossfade(resetVolume = true, resetPauseAtEnd = true)
             }
+            syncedHaptics?.reset()
         }
         if (!isCrossfading && !crossfadeHandoffInProgress) {
             scheduleCrossfade()
@@ -7720,7 +7734,7 @@ class MusicService :
             ).setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
-    private fun createRenderersFactory() =
+    private fun createRenderersFactory(hapticTap: HapticTapProcessor = this.hapticTap) =
         object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(
                 context: Context,
@@ -7740,6 +7754,7 @@ class MusicService :
                             150.toShort(),
                         ),
                         SonicAudioProcessor(),
+                        hapticTap,
                     ),
                 ).build()
         }

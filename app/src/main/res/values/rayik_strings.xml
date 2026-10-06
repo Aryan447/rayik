@@ -94,6 +94,8 @@
   <string name="transport_repeat">Repeat: %1$s</string>
   <string name="transport_shuffle_on">Shuffle on</string>
   <string name="transport_shuffle_off">Shuffle off</string>
+  <string name="transport_haptics_on">Synced haptics on</string>
+  <string name="transport_haptics_off">Synced haptics off</string>
   <string name="transport_seek_forward">Forward 10 seconds</string>
   <string name="transport_seek_back">Back 10 seconds</string>
   <string name="dock_show_navigation">Show navigation</string>
@@ -154,6 +156,14 @@
   <string name="settings_crossfade_body">Blend song endings together</string>
   <string name="settings_offload_label">Audio offload</string>
   <string name="settings_offload_body">Hardware decoding, less battery</string>
+  <string name="settings_haptics_label">Synced haptics</string>
+  <string name="settings_haptics_body">Vibrate along with the beat</string>
+  <string name="settings_haptics_speaker_label">Speaker only</string>
+  <string name="settings_haptics_speaker_body">Pause haptics on headphones or Bluetooth</string>
+  <string name="settings_haptics_intensity_label">Haptic strength</string>
+  <string name="settings_haptics_low">Low</string>
+  <string name="settings_haptics_medium">Medium</string>
+  <string name="settings_haptics_high">High</string>
 
   <string name="settings_autodl_label">Download liked</string>
   <string name="settings_autodl_body">Pin liked songs for offline</string>

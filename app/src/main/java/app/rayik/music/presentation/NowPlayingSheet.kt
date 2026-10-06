@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -114,6 +115,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import app.rayik.music.BuildConfig
 import app.rayik.music.R
+import app.rayik.music.constants.SyncedMusicHapticsKey
+import app.rayik.music.utils.rememberPreference
 import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
 import app.rayik.music.player.RepeatMode
@@ -208,6 +211,7 @@ fun NowPlayingSheetContent(
   val prefs = rayikPreferences()
   val streamQuality by prefs.streamQuality.collectAsState()
   val seekbarStyle by prefs.seekbarStyle.collectAsState()
+  var syncedHaptics by rememberPreference(SyncedMusicHapticsKey, false)
 
   val artwork = player.premiumArtworkUrl.collectAsState().value
   // Bedrock samples the clean art; while home-album taps resolve, the
@@ -503,6 +507,19 @@ fun NowPlayingSheetContent(
                   } else {
                     Color.White
                   },
+                  modifier = Modifier.size(22.dp),
+                )
+              }
+              IconButton(
+                onClick = { syncedHaptics = !syncedHaptics },
+                modifier = Modifier.size(48.dp),
+              ) {
+                Icon(
+                  Icons.Filled.Vibration,
+                  contentDescription = stringResource(
+                    if (syncedHaptics) R.string.transport_haptics_on else R.string.transport_haptics_off,
+                  ),
+                  tint = if (syncedHaptics) Color.White else Color.White.copy(alpha = 0.5f),
                   modifier = Modifier.size(22.dp),
                 )
               }

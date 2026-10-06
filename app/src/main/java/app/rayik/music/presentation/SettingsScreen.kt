@@ -42,9 +42,11 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Speaker
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
@@ -118,6 +120,10 @@ import app.rayik.music.constants.PoTokenKey
 import app.rayik.music.constants.PoTokenPlayerKey
 import app.rayik.music.constants.PreloadNextSongKey
 import app.rayik.music.constants.SkipSilenceKey
+import app.rayik.music.constants.SyncedHapticsIntensity
+import app.rayik.music.constants.SyncedHapticsIntensityKey
+import app.rayik.music.constants.SyncedHapticsSpeakerOnlyKey
+import app.rayik.music.constants.SyncedMusicHapticsKey
 import app.rayik.music.auth.OAuthSessionManager
 import app.rayik.music.innertube.PlaybackAuthState
 import app.rayik.music.innertube.YouTube
@@ -127,6 +133,7 @@ import app.rayik.music.storage.StorageCacheKind
 import app.rayik.music.storage.StorageLocationRepository
 import app.rayik.music.utils.clearPlaybackWebAuthSession
 import app.rayik.music.utils.dataStore
+import app.rayik.music.utils.rememberEnumPreference
 import app.rayik.music.utils.rememberPreference
 
 /**
@@ -154,6 +161,9 @@ fun SettingsScreen(
   var restoreQueue by rememberPreference(PersistentQueueKey, true)
   var skipOnError by rememberPreference(AutoSkipNextOnErrorKey, false)
   var keepShuffle by rememberPreference(PermanentShuffleKey, false)
+  var syncedHaptics by rememberPreference(SyncedMusicHapticsKey, false)
+  var hapticsIntensity by rememberEnumPreference(SyncedHapticsIntensityKey, SyncedHapticsIntensity.MEDIUM)
+  var hapticsSpeakerOnly by rememberPreference(SyncedHapticsSpeakerOnlyKey, true)
   var normalize by rememberPreference(AudioNormalizationKey, true)
   var skipSilence by rememberPreference(SkipSilenceKey, false)
   var crossfade by rememberPreference(CrossfadeEnabledKey, false)
@@ -242,7 +252,7 @@ fun SettingsScreen(
         }
       }
 
-      if (matches("playback", "quality", "streaming", "gapless", "preload", "autoplay", "queue", "restore", "shuffle", "error", "skip")) {
+      if (matches("playback", "quality", "streaming", "gapless", "preload", "autoplay", "queue", "restore", "shuffle", "error", "skip", "haptic", "vibrat", "beat")) {
         SettingsCard(title = stringResource(R.string.settings_section_playback)) {
           IconLabel(icon = Icons.Filled.Palette, title = stringResource(R.string.pref_quality_label))
           RadioRow(
@@ -290,6 +300,32 @@ fun SettingsScreen(
             checked = keepShuffle,
             onChecked = { keepShuffle = it },
           )
+          SwitchSetting(
+            icon = Icons.Filled.Vibration,
+            title = stringResource(R.string.settings_haptics_label),
+            subtitle = stringResource(R.string.settings_haptics_body),
+            checked = syncedHaptics,
+            onChecked = { syncedHaptics = it },
+          )
+          if (syncedHaptics) {
+            IconLabel(icon = Icons.Filled.Tune, title = stringResource(R.string.settings_haptics_intensity_label))
+            RadioRow(
+              options = listOf(
+                SyncedHapticsIntensity.LOW to stringResource(R.string.settings_haptics_low),
+                SyncedHapticsIntensity.MEDIUM to stringResource(R.string.settings_haptics_medium),
+                SyncedHapticsIntensity.HIGH to stringResource(R.string.settings_haptics_high),
+              ),
+              selected = hapticsIntensity,
+              onSelect = { hapticsIntensity = it },
+            )
+            SwitchSetting(
+              icon = Icons.Filled.Speaker,
+              title = stringResource(R.string.settings_haptics_speaker_label),
+              subtitle = stringResource(R.string.settings_haptics_speaker_body),
+              checked = hapticsSpeakerOnly,
+              onChecked = { hapticsSpeakerOnly = it },
+            )
+          }
         }
       }
 
