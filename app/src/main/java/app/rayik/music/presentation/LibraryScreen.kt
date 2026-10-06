@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 import app.rayik.music.R
 import app.rayik.music.db.entities.Song
 import app.rayik.music.player.PlayerViewModel
+import app.rayik.music.preferences.preference.collectAsState as collectPreferenceAsState
 import app.rayik.music.ui.theme.spacing
 
 /**
@@ -55,6 +56,7 @@ fun LibraryScreen(
   val recent by library.recent.collectAsState()
   val mostPlayed by library.mostPlayed.collectAsState()
   val currentMediaId by player.currentMediaId.collectAsState()
+  val floatingDock by rayikPreferences().floatingDock.collectPreferenceAsState()
 
   val listState = rememberLazyListState()
   val scope = rememberCoroutineScope()
@@ -100,10 +102,11 @@ fun LibraryScreen(
       state = listState,
       modifier = Modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
-      // Bottom clearance so the last row clears the inset sheet's
-      // 28dp bottom curve instead of clipping into the dock.
+      // Bottom clearance: floating pill needs DockFloatingClearance,
+      // docked needs the sheet's 28dp curve + large to clear the bar.
       contentPadding = PaddingValues(
-        bottom = DockSheetBottomRadius + MaterialTheme.spacing.large,
+        bottom = if (floatingDock) DockFloatingClearance
+        else DockSheetBottomRadius + MaterialTheme.spacing.large,
       ),
     ) {
     item {

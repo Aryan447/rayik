@@ -11,6 +11,13 @@ import androidx.compose.ui.unit.dp
 /** Bottom radius of the inset content sheet — Pocket Casts-style curve over the dock. */
 val DockSheetBottomRadius: Dp = 28.dp
 
+/**
+ * Bottom clearance for tab screens when the floating dock is on: the M3
+ * expressive pill (~80dp) + ScreenOffset (16dp) + breathing room. Content
+ * draws behind and beside the pill, so lists need this to clear it.
+ */
+val DockFloatingClearance: Dp = 112.dp
+
 /** True when the active scheme is light (background luminance), drives dock inversion. */
 @Composable
 private fun isLightScheme(): Boolean =

@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,7 +51,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -109,27 +110,35 @@ fun MiniPlayer(
   }
   val buttonsEnabled = !locked
 
+  if (floatingDock) {
+    // M3 Expressive path: the pill owns shape, tonal color, elevation and
+    // the expand/collapse motion. The default dock below stays custom (non-M3).
+    FloatingDock(
+      showTabs = showTabs,
+      artworkUrl = current?.artworkUrl.orEmpty(),
+      playbackState = playbackState,
+      isPlaying = isPlaying,
+      buttonsEnabled = buttonsEnabled,
+      selectedTab = selectedTab,
+      onSelectTab = onSelectTab,
+      onArtClick = onOpenPlayer,
+      onPrevious = player::previous,
+      onNext = player::next,
+      onToggle = {
+        if (playbackState is PlaybackUiState.Error) player.retry()
+        else player.togglePlayPause()
+      },
+      onShowTabs = { onExpandedChange(true) },
+      onCollapse = { onExpandedChange(false) },
+    )
+    return
+  }
+
   Column(
     modifier = Modifier
       .fillMaxWidth()
-      // Floating dock: detached pill with margins + lift. The gesture
-      // strip below stays on the Scaffold container, so no
-      // navigationBarsPadding inside the pill.
-      .then(
-        if (floatingDock) {
-          Modifier
-            .padding(
-              horizontal = MaterialTheme.spacing.medium,
-              vertical = MaterialTheme.spacing.small,
-            )
-            .shadow(8.dp, RoundedCornerShape(28.dp))
-            .clip(RoundedCornerShape(28.dp))
-        } else {
-          Modifier
-        },
-      )
       .background(container)
-      .then(if (floatingDock) Modifier else Modifier.navigationBarsPadding())
+      .navigationBarsPadding()
       .clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
@@ -170,6 +179,225 @@ fun MiniPlayer(
           onShowTabs = { onExpandedChange(true) },
           buttonsEnabled = buttonsEnabled,
           modeKey = false,
+        )
+      }
+    }
+  }
+}
+
+/**
+ * Floating dock: M3 Expressive [HorizontalFloatingToolbar]. Transport is the
+ * expanded state (art in leading, prev/play/next in content, show-tabs in
+ * trailing); the tab row is the collapsed state (tabs + collapse live in
+ * content, since leading/trailing hide when collapsed). Same controls and
+ * morph clock as the default dock, but wrap-content rows so the pill hugs
+ * its content instead of stretching full width.
+ */
+@Composable
+private fun FloatingDock(
+  showTabs: Boolean,
+  artworkUrl: String,
+  playbackState: PlaybackUiState,
+  isPlaying: Boolean,
+  buttonsEnabled: Boolean,
+  selectedTab: Int,
+  onSelectTab: (Int) -> Unit,
+  onArtClick: () -> Unit,
+  onPrevious: () -> Unit,
+  onNext: () -> Unit,
+  onToggle: () -> Unit,
+  onShowTabs: () -> Unit,
+  onCollapse: () -> Unit,
+) {
+  HorizontalFloatingToolbar(
+    expanded = !showTabs,
+    colors = FloatingToolbarDefaults.standardFloatingToolbarColors(
+      toolbarContainerColor = dockContainer(),
+      toolbarContentColor = onDock(),
+    ),
+    leadingContent = {
+      if (!showTabs) {
+        TrackArt(
+          artworkUrl = artworkUrl,
+          corner = 12.dp,
+          modifier = Modifier
+            .size(DockArtSize)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onArtClick),
+        )
+      }
+    },
+    trailingContent = {
+      if (!showTabs) {
+        IconButton(onClick = onShowTabs, enabled = buttonsEnabled, modifier = Modifier.size(52.dp)) {
+          Icon(
+            Icons.Filled.KeyboardArrowUp,
+            contentDescription = stringResource(R.string.dock_show_navigation),
+            modifier = Modifier.size(28.dp),
+          )
+        }
+      }
+    },
+    content = {
+      AnimatedContent(
+        targetState = showTabs,
+        transitionSpec = {
+          fadeIn(animationSpec = tween(MORPH_MS, easing = FastOutSlowInEasing))
+            .togetherWith(fadeOut(animationSpec = tween(MORPH_EXIT_MS, easing = FastOutSlowInEasing)))
+        },
+        label = "floatingDockMorph",
+      ) { tabs ->
+        if (tabs) {
+          FloatingTabsContent(
+            selected = selectedTab,
+            onSelect = onSelectTab,
+            onCollapse = onCollapse,
+            isPlaying = isPlaying,
+            buttonsEnabled = buttonsEnabled,
+            modeKey = true,
+          )
+        } else {
+          FloatingTransportContent(
+            state = playbackState,
+            onPrevious = onPrevious,
+            onNext = onNext,
+            onToggle = onToggle,
+            buttonsEnabled = buttonsEnabled,
+            modeKey = false,
+          )
+        }
+      }
+    },
+  )
+}
+
+/** Transport middle for the floating pill: prev + hero + next, fixed sizes. */
+@Composable
+private fun FloatingTransportContent(
+  state: PlaybackUiState,
+  onPrevious: () -> Unit,
+  onNext: () -> Unit,
+  onToggle: () -> Unit,
+  buttonsEnabled: Boolean,
+  modeKey: Boolean,
+) {
+  val content = onDock()
+  Row(
+    horizontalArrangement = Arrangement.spacedBy(4.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    MorphSlot(index = 1, modeKey = modeKey) {
+      IconButton(onClick = onPrevious, enabled = buttonsEnabled, modifier = Modifier.size(52.dp)) {
+        Icon(
+          Icons.Filled.SkipPrevious,
+          contentDescription = stringResource(R.string.transport_previous),
+          tint = content,
+          modifier = Modifier.size(30.dp),
+        )
+      }
+    }
+    MorphSlot(index = 2, modeKey = modeKey) {
+      when (state) {
+        PlaybackUiState.Loading -> CircularProgressIndicator(
+          modifier = Modifier.size(36.dp),
+          color = content,
+          trackColor = content.copy(alpha = 0.24f),
+        )
+        PlaybackUiState.Playing -> IconButton(
+          onClick = onToggle,
+          enabled = buttonsEnabled,
+          modifier = Modifier.size(DockHeroTouch),
+        ) {
+          Icon(
+            Icons.Filled.Pause,
+            contentDescription = stringResource(R.string.transport_pause),
+            tint = content,
+            modifier = Modifier.size(40.dp),
+          )
+        }
+        else -> IconButton(
+          onClick = onToggle,
+          enabled = buttonsEnabled &&
+            (state == PlaybackUiState.Paused || state == PlaybackUiState.Idle ||
+              state is PlaybackUiState.Error),
+          modifier = Modifier.size(DockHeroTouch),
+        ) {
+          Icon(
+            Icons.Filled.PlayArrow,
+            contentDescription = stringResource(R.string.transport_play),
+            tint = content,
+            modifier = Modifier.size(40.dp),
+          )
+        }
+      }
+    }
+    MorphSlot(index = 3, modeKey = modeKey) {
+      IconButton(onClick = onNext, enabled = buttonsEnabled, modifier = Modifier.size(52.dp)) {
+        Icon(
+          Icons.Filled.SkipNext,
+          contentDescription = stringResource(R.string.transport_next),
+          tint = content,
+          modifier = Modifier.size(30.dp),
+        )
+      }
+    }
+  }
+}
+
+/** Tab row for the floating pill: icon-only tabs + collapse, fixed sizes. */
+@Composable
+private fun FloatingTabsContent(
+  selected: Int,
+  onSelect: (Int) -> Unit,
+  onCollapse: () -> Unit,
+  isPlaying: Boolean,
+  buttonsEnabled: Boolean,
+  modeKey: Boolean,
+) {
+  val content = onDock()
+  val dim = onDockDim()
+  val pill = dockSelectedPill()
+  Row(
+    horizontalArrangement = Arrangement.spacedBy(4.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    NavTab.entries.forEachIndexed { index, tab ->
+      val isSelected = selected == index
+      MorphSlot(index = index, modeKey = modeKey) {
+        Surface(
+          onClick = {
+            if (index == selected) onCollapse() else onSelect(index)
+          },
+          enabled = buttonsEnabled,
+          shape = RoundedCornerShape(20.dp),
+          color = if (isSelected) pill else Color.Transparent,
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+          ) {
+            Icon(
+              tab.icon,
+              contentDescription = stringResource(tab.labelRes),
+              tint = if (isSelected) content else dim,
+              modifier = Modifier.size(26.dp),
+            )
+            if (isSelected && isPlaying) {
+              Spacer(Modifier.width(6.dp))
+              PlayingIndicator(color = content)
+            }
+          }
+        }
+      }
+    }
+    MorphSlot(index = 4, modeKey = modeKey) {
+      IconButton(onClick = onCollapse, enabled = buttonsEnabled, modifier = Modifier.size(52.dp)) {
+        Icon(
+          Icons.Filled.KeyboardArrowDown,
+          contentDescription = stringResource(R.string.dock_show_player),
+          tint = content,
+          modifier = Modifier.size(28.dp),
         )
       }
     }

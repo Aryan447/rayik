@@ -186,7 +186,7 @@
   <string name="settings_customize_back">Back</string>
   <string name="settings_customize_player">Player</string>
   <string name="pref_floating_dock_label">Floating dock</string>
-  <string name="pref_floating_dock_body">Lift the player bar off the bottom edge</string>
+  <string name="pref_floating_dock_body">Float the player bar as a Material pill over your content</string>
   <string name="pref_seekbar_label">Seekbar style</string>
   <string name="pref_seekbar_standard">Standard</string>
   <string name="pref_seekbar_thick">Thick</string>

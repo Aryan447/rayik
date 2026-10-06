@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import app.rayik.music.preferences.preference.collectAsState as collectPreferenceAsState
 import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
 import androidx.compose.ui.Alignment
@@ -68,6 +69,7 @@ fun RaayHomeScreen(
   val recent by home.recent.collectAsState()
   val currentMediaId by player.currentMediaId.collectAsState()
   val playbackState by player.playbackState.collectAsState()
+  val floatingDock by rayikPreferences().floatingDock.collectPreferenceAsState()
 
   when (val feed = homeState) {
     HomeUiState.Loading -> ScreenScaffold(
@@ -88,10 +90,11 @@ fun RaayHomeScreen(
       LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large),
-        // Bottom clearance so the last shelf clears the inset sheet's
-        // 28dp bottom curve instead of clipping into the dock.
+        // Bottom clearance: floating pill needs DockFloatingClearance,
+        // docked needs the sheet's 28dp curve + large to clear the bar.
         contentPadding = PaddingValues(
-          bottom = DockSheetBottomRadius + MaterialTheme.spacing.large,
+          bottom = if (floatingDock) DockFloatingClearance
+          else DockSheetBottomRadius + MaterialTheme.spacing.large,
         ),
       ) {
         item {

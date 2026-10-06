@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
@@ -34,12 +36,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.theme.spacing
 import kotlinx.coroutines.delay
@@ -85,6 +89,10 @@ fun RayikNav() {
     )
     introPlayed = true
   }
+  // Floating dock: the bar detaches into a pill, so the Scaffold bed
+  // behind it (and the gesture strip) goes home-surface — the pill
+  // keeps dock colors and reads as floating in light and dark.
+  val floatingDock by rayikPreferences().floatingDock.collectAsState()
   val eased = intro.value
   // Invisible dock sits translated fully below the screen (off-screen =
   // untouchable, since graphicsLayer moves hit bounds too).
@@ -95,37 +103,38 @@ fun RayikNav() {
     1f
   }
   val sheetScaleY = 1f + (scale0 - 1f) * (1f - eased)
-  val sheetBottom = DockSheetBottomRadius * eased
+  val sheetBottom = if (floatingDock) 0.dp else DockSheetBottomRadius * eased
   // Inset-sheet layout: content is a rounded sheet sitting on the single
   // morphing dock (transport <-> icon tabs). No floating pill, no FOLDERS
   // tab (local files are pinned-offline fallback only), no player tab (the
   // dock art opens the full player overlay).
   val dock = dockContainer()
-  // Floating dock: the bar detaches into a pill, so the Scaffold bed
-  // behind it (and the gesture strip) goes home-surface — the pill
-  // keeps dock colors and reads as floating in light and dark.
-  val floatingDock by rayikPreferences().floatingDock.collectAsState()
   Scaffold(
     containerColor = if (floatingDock) MaterialTheme.colorScheme.surface else dock,
     contentColor = MaterialTheme.colorScheme.onSurface,
     contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.statusBars),
     bottomBar = {
-      Box(
-        Modifier
-          .onSizeChanged { dockHeightPx = it.height }
-          .graphicsLayer {
-            translationY = (1f - eased) * dockHeightPx.toFloat()
-            alpha = dockAlpha
-          },
-      ) {
-        MiniPlayer(
-          onOpenPlayer = { playerOpen = true },
-          expanded = dockExpanded,
-          onExpandedChange = { dockExpanded = it },
-          selectedTab = tab,
-          onSelectTab = { tab = it },
-          floatingDock = floatingDock,
-        )
+      // Docked only: the bar reserves layout space and the sheet sits on
+      // it. Floating renders as an overlay below so content draws behind
+      // and beside the pill.
+      if (!floatingDock) {
+        Box(
+          Modifier
+            .onSizeChanged { dockHeightPx = it.height }
+            .graphicsLayer {
+              translationY = (1f - eased) * dockHeightPx.toFloat()
+              alpha = dockAlpha
+            },
+        ) {
+          MiniPlayer(
+            onOpenPlayer = { playerOpen = true },
+            expanded = dockExpanded,
+            onExpandedChange = { dockExpanded = it },
+            selectedTab = tab,
+            onSelectTab = { tab = it },
+            floatingDock = false,
+          )
+        }
       }
     }
   ) { inner ->
@@ -159,8 +168,8 @@ fun RayikNav() {
             .padding(horizontal = MaterialTheme.spacing.medium)
             .padding(top = MaterialTheme.spacing.medium),
           // No bottom padding here: each tab screen owns bottom clearance
-          // (DockSheetBottomRadius + large) so its last row clears the
-          // sheet's 28dp bottom curve instead of clipping into the dock.
+          // (DockSheetBottomRadius + large docked, DockFloatingClearance
+          // floating) so its last row clears the dock instead of clipping.
         ) {
           when (NavTab.entries[tab]) {
             NavTab.Raay -> RaayHomeScreen(onPlayStarted = {}, onContentReady = { contentReady = true })
@@ -168,6 +177,31 @@ fun RayikNav() {
             NavTab.Library -> LibraryScreen()
             NavTab.Settings -> SettingsScreen()
           }
+        }
+      }
+      // Floating dock: overlay pill above the content (M3 sample pattern:
+      // BottomCenter + ScreenOffset + zIndex) so lists draw behind and
+      // beside it. Same slide-up intro as the docked bar.
+      if (floatingDock) {
+        Box(
+          Modifier
+            .align(Alignment.BottomCenter)
+            .offset(y = -FloatingToolbarDefaults.ScreenOffset)
+            .zIndex(1f)
+            .onSizeChanged { dockHeightPx = it.height }
+            .graphicsLayer {
+              translationY = (1f - eased) * dockHeightPx.toFloat()
+              alpha = dockAlpha
+            },
+        ) {
+          MiniPlayer(
+            onOpenPlayer = { playerOpen = true },
+            expanded = dockExpanded,
+            onExpandedChange = { dockExpanded = it },
+            selectedTab = tab,
+            onSelectTab = { tab = it },
+            floatingDock = true,
+          )
         }
       }
     }

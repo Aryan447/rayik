@@ -58,6 +58,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import app.rayik.music.preferences.preference.collectAsState as collectPreferenceAsState
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 import app.rayik.music.R
@@ -93,6 +94,7 @@ fun SearchScreen(
   var query by rememberSaveable { mutableStateOf("") }
   val state by searchViewModel.state.collectAsState()
   val recents by searchViewModel.recentSearches.collectAsState()
+  val floatingDock by rayikPreferences().floatingDock.collectPreferenceAsState()
   val scheme = MaterialTheme.colorScheme
 
   fun submit() {
@@ -102,10 +104,11 @@ fun SearchScreen(
   LazyColumn(
     modifier = Modifier.fillMaxSize(),
     verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
-    // Bottom clearance so the last row clears the inset sheet's
-    // 28dp bottom curve instead of clipping into the dock.
+    // Bottom clearance: floating pill needs DockFloatingClearance,
+    // docked needs the sheet's 28dp curve + large to clear the bar.
     contentPadding = PaddingValues(
-      bottom = DockSheetBottomRadius + MaterialTheme.spacing.large,
+      bottom = if (floatingDock) DockFloatingClearance
+      else DockSheetBottomRadius + MaterialTheme.spacing.large,
     ),
   ) {
     item {
@@ -155,7 +158,6 @@ fun SearchScreen(
         singleLine = true,
         textStyle = MaterialTheme.typography.bodyMedium,
         shape = RoundedCornerShape(28.dp),
-        contentPadding = TextFieldDefaults.contentPadding(top = 8.dp, bottom = 8.dp),
         colors = TextFieldDefaults.colors(
           focusedIndicatorColor = Color.Transparent,
           unfocusedIndicatorColor = Color.Transparent,

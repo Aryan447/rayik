@@ -139,6 +139,7 @@ fun SettingsScreen(
   preferences: AppearancePreferences = rayikPreferences(),
 ) {
   val streamQuality by preferences.streamQuality.collectAsState()
+  val floatingDock by preferences.floatingDock.collectAsState()
   val context = LocalContext.current
   val uriHandler = LocalUriHandler.current
   val scope = rememberCoroutineScope()
@@ -439,9 +440,14 @@ fun SettingsScreen(
           Text(stringResource(R.string.settings_github))
         }
       }
-      // Bottom clearance so the last card clears the inset sheet's
-      // 28dp bottom curve instead of clipping into the dock.
-      Spacer(Modifier.height(DockSheetBottomRadius + MaterialTheme.spacing.large))
+      // Bottom clearance: floating pill needs DockFloatingClearance,
+      // docked needs the sheet's 28dp curve + large to clear the bar.
+      Spacer(
+        Modifier.height(
+          if (floatingDock) DockFloatingClearance
+          else DockSheetBottomRadius + MaterialTheme.spacing.large,
+        ),
+      )
     }
     if (showLogin) {
       Surface(Modifier.fillMaxSize()) {
@@ -548,9 +554,14 @@ private fun CustomizationScreen(
         onSelect = { preferences.seekbarStyle.set(it) },
       )
     }
-    // Bottom clearance so the last card clears the inset sheet's
-    // 28dp bottom curve instead of clipping into the dock.
-    Spacer(Modifier.height(DockSheetBottomRadius + MaterialTheme.spacing.large))
+    // Bottom clearance: floating pill needs DockFloatingClearance,
+    // docked needs the sheet's 28dp curve + large to clear the bar.
+    Spacer(
+      Modifier.height(
+        if (floatingDock) DockFloatingClearance
+        else DockSheetBottomRadius + MaterialTheme.spacing.large,
+      ),
+    )
   }
 }
 
