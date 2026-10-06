@@ -316,6 +316,17 @@ val DeviceMutePlaybackRecoveryVolumeKey = intPreferencesKey("deviceMutePlaybackR
 val AutoStartOnBluetoothKey = booleanPreferencesKey("autoStartOnBluetooth")
 val StopMusicOnTaskClearKey = booleanPreferencesKey("stopMusicOnTaskClear")
 val WakelockKey = booleanPreferencesKey("wakelock")
+
+// Synced haptics: vibrate along with the music (Apple-Music-style).
+val SyncedMusicHapticsKey = booleanPreferencesKey("syncedMusicHaptics")
+val SyncedHapticsIntensityKey = stringPreferencesKey("syncedHapticsIntensity")
+val SyncedHapticsSpeakerOnlyKey = booleanPreferencesKey("syncedHapticsSpeakerOnly")
+
+enum class SyncedHapticsIntensity {
+    LOW,
+    MEDIUM,
+    HIGH,
+}
 val ArtistSeparatorsKey = stringPreferencesKey("artistSeparators")
 val ExternalDownloaderEnabledKey = booleanPreferencesKey("externalDownloaderEnabled")
 val ExternalDownloaderPackageKey = stringPreferencesKey("externalDownloaderPackage")
