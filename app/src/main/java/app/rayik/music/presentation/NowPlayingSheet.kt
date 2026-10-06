@@ -455,6 +455,7 @@ fun NowPlayingSheetContent(
             positionMs = positionMs,
             durationMs = durationMs,
             style = seekbarStyle,
+            isPlaying = playbackState == PlaybackUiState.Playing,
             onSeek = player::seekTo,
           )
         }
@@ -941,6 +942,7 @@ private fun SheetSlider(
   positionMs: Long,
   durationMs: Long,
   style: SeekbarStyle,
+  isPlaying: Boolean,
   onSeek: (Long) -> Unit,
 ) {
   // Apple slider: thin track, pinned 10dp dot, small grey times with
@@ -966,8 +968,11 @@ private fun SheetSlider(
   )
 
   Column(Modifier.fillMaxWidth()) {
-    when (style) {
-      SeekbarStyle.Wavy -> {
+    // Paused wavy flattens to a straight slider: SquigglesAnimator's
+    // constructor is internal, so the cheapest way to stop the infinite
+    // wave is to not compose SquigglySlider at all when paused.
+    when {
+      style == SeekbarStyle.Wavy && isPlaying -> {
         SquigglySlider(
           value = sliderValue,
           onValueChange = onScrub,
@@ -978,7 +983,7 @@ private fun SheetSlider(
           modifier = Modifier.fillMaxWidth(),
         )
       }
-      SeekbarStyle.Thick -> {
+      style == SeekbarStyle.Thick -> {
         Slider(
           value = sliderValue,
           onValueChange = onScrub,
@@ -1004,7 +1009,8 @@ private fun SheetSlider(
           modifier = Modifier.fillMaxWidth(),
         )
       }
-      SeekbarStyle.Standard -> {
+      // Standard style + paused Wavy (flattened straight).
+      else -> {
         Slider(
           value = sliderValue,
           onValueChange = onScrub,
