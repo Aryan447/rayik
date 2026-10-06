@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import app.rayik.music.db.MusicDatabase
 import app.rayik.music.db.entities.SearchHistory
+import app.rayik.music.extensions.toMediaItem
 import app.rayik.music.innertube.YouTube
 import app.rayik.music.innertube.models.SongItem
 import app.rayik.music.models.toMediaMetadata
@@ -92,6 +93,16 @@ class SearchViewModel @Inject constructor(
     val conn = holder.connection.value ?: return
     conn.playQueue(YouTubeQueue.radio(song.toMediaMetadata()))
     onStarted()
+  }
+
+  /** Overflow menu: queue the tapped song next. */
+  fun playNext(song: SongItem) {
+    holder.connection.value?.playNext(song.toMediaMetadata().toMediaItem())
+  }
+
+  /** Overflow menu: append the tapped song to the queue. */
+  fun addToQueue(song: SongItem) {
+    holder.connection.value?.addToQueue(song.toMediaMetadata().toMediaItem())
   }
 
   /** Tap-to-play from a bare video id (Raay picks share this path). */

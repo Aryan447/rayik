@@ -20,23 +20,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
@@ -44,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,7 +58,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import app.rayik.music.player.formatMs
 import app.rayik.music.ui.theme.BrandGradient
 import app.rayik.music.ui.theme.spacing
 import app.rayik.music.R
@@ -265,26 +264,31 @@ fun SearchScreen(
             }
           }
         } else {
+          // Dense song list (no hero card): one item so rows sit
+          // edge-to-edge with 0dp gaps + hairline dividers, like YTM.
           item {
-            TopResultCard(
-              track = current.tracks.first(),
-              onClick = {
-                searchViewModel.play(current.tracks.first(), onPlayStarted)
-              },
-            )
-          }
-          item {
-            Text(
-              stringResource(R.string.search_songs_title),
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.SemiBold,
-            )
-          }
-          items(current.tracks, key = { it.id }) { track ->
-            SearchRow(
-              track = track,
-              onClick = { searchViewModel.play(track, onPlayStarted) },
-            )
+            Column {
+              Text(
+                stringResource(R.string.search_songs_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 4.dp),
+              )
+              current.tracks.forEachIndexed { index, track ->
+                SearchRow(
+                  track = track,
+                  onClick = { searchViewModel.play(track, onPlayStarted) },
+                  onPlayNext = { searchViewModel.playNext(track) },
+                  onAddToQueue = { searchViewModel.addToQueue(track) },
+                )
+                if (index < current.tracks.lastIndex) {
+                  HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = scheme.outlineVariant.copy(alpha = 0.4f),
+                  )
+                }
+              }
+            }
           }
         }
       }
@@ -336,85 +340,28 @@ private fun MoodCard(
 }
 
 @Composable
-private fun TopResultCard(
-  track: SongItem,
-  onClick: () -> Unit,
-) {
-  Surface(
-    onClick = onClick,
-    tonalElevation = 2.dp,
-    shape = RoundedCornerShape(24.dp),
-    border = androidx.compose.foundation.BorderStroke(
-      1.dp,
-      MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-    ),
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    Row(
-      modifier = Modifier.padding(MaterialTheme.spacing.medium),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      TrackArt(artworkUrl = track.thumbnail, corner = 20.dp, modifier = Modifier.size(96.dp))
-      Spacer(Modifier.width(MaterialTheme.spacing.medium))
-      Column(Modifier.weight(1f)) {
-        Text(
-          stringResource(R.string.search_top_result),
-          style = MaterialTheme.typography.labelMedium,
-          color = MaterialTheme.colorScheme.primary,
-          fontWeight = FontWeight.Bold,
-        )
-        Text(
-          track.title,
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.SemiBold,
-          maxLines = 2,
-          overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-          track.artists.joinToString { it.name },
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-      }
-      FilledIconButton(
-        onClick = onClick,
-        modifier = Modifier.size(56.dp),
-        colors = IconButtonDefaults.filledIconButtonColors(
-          containerColor = MaterialTheme.colorScheme.primary,
-          contentColor = MaterialTheme.colorScheme.onPrimary,
-        ),
-      ) {
-        Icon(
-          Icons.Filled.PlayArrow,
-          contentDescription = stringResource(R.string.transport_play),
-          modifier = Modifier.size(30.dp),
-        )
-      }
-    }
-  }
-}
-
-@Composable
 private fun SearchRow(
   track: SongItem,
   onClick: () -> Unit,
+  onPlayNext: () -> Unit,
+  onAddToQueue: () -> Unit,
 ) {
+  var menuExpanded by remember { mutableStateOf(false) }
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(16.dp))
+      .clip(RoundedCornerShape(12.dp))
       .clickable(onClick = onClick)
-      .padding(MaterialTheme.spacing.small),
+      .padding(vertical = 7.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    TrackArt(artworkUrl = track.thumbnail, corner = 14.dp, modifier = Modifier.size(52.dp))
-    Spacer(Modifier.width(MaterialTheme.spacing.medium))
+    TrackArt(artworkUrl = track.thumbnail, corner = 10.dp, modifier = Modifier.size(52.dp))
+    Spacer(Modifier.width(12.dp))
     Column(Modifier.weight(1f)) {
       Text(
         track.title,
         style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.SemiBold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
       )
@@ -426,13 +373,41 @@ private fun SearchRow(
         overflow = TextOverflow.Ellipsis,
       )
     }
-    val durationMs = (track.duration ?: 0) * 1_000L
-    if (durationMs > 0) {
-      Text(
-        formatMs(durationMs),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
+    Box {
+      IconButton(onClick = { menuExpanded = true }) {
+        Icon(
+          Icons.Filled.MoreVert,
+          contentDescription = stringResource(R.string.options),
+          tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
+      DropdownMenu(
+        expanded = menuExpanded,
+        onDismissRequest = { menuExpanded = false },
+        shape = RoundedCornerShape(16.dp),
+      ) {
+        DropdownMenuItem(
+          text = { Text(stringResource(R.string.transport_play)) },
+          onClick = {
+            menuExpanded = false
+            onClick()
+          },
+        )
+        DropdownMenuItem(
+          text = { Text(stringResource(R.string.play_next)) },
+          onClick = {
+            menuExpanded = false
+            onPlayNext()
+          },
+        )
+        DropdownMenuItem(
+          text = { Text(stringResource(R.string.add_to_queue)) },
+          onClick = {
+            menuExpanded = false
+            onAddToQueue()
+          },
+        )
+      }
     }
   }
 }
