@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -136,9 +137,15 @@ fun SearchScreen(
       OutlinedTextField(
         value = query,
         onValueChange = { query = it },
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text(stringResource(R.string.search_hint)) },
-        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        placeholder = {
+          Text(
+            stringResource(R.string.search_hint),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        },
+        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
         trailingIcon = {
           if (query.isNotBlank()) {
             IconButton(onClick = { query = "" }) {
@@ -147,7 +154,9 @@ fun SearchScreen(
           }
         },
         singleLine = true,
+        textStyle = MaterialTheme.typography.bodyMedium,
         shape = RoundedCornerShape(28.dp),
+        contentPadding = TextFieldDefaults.contentPadding(top = 8.dp, bottom = 8.dp),
         colors = TextFieldDefaults.colors(
           focusedIndicatorColor = Color.Transparent,
           unfocusedIndicatorColor = Color.Transparent,

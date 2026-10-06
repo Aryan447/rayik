@@ -115,7 +115,7 @@
 
   <string name="search_title">Find it with one line</string>
   <string name="search_body">Only remember a single lyric? That’s plenty — type it and hear it.</string>
-  <string name="search_hint">Songs, artists, or a half-remembered lyric</string>
+  <string name="search_hint">Type to Search</string>
   <string name="search_searching">Searching…</string>
   <string name="search_no_results">No matches — try different words.</string>
   <string name="search_unavailable">Search is unreachable right now — check your connection and try again.</string>
