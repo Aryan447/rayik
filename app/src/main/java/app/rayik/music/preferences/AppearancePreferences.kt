@@ -18,7 +18,7 @@ class AppearancePreferences(
   val amoledMode = preferenceStore.getBoolean("amoled_mode", false)
   val albumArtDynamic = preferenceStore.getBoolean("album_art_dynamic", true)
   val floatingDock = preferenceStore.getBoolean("floating_dock", false)
-  val seekbarStyle = preferenceStore.getEnum("seekbar_style", SeekbarStyle.Standard)
+  val seekbarStyle = preferenceStore.getEnum("seekbar_style", SeekbarStyle.Wavy)
   val onboardingCompleted = preferenceStore.getBoolean("onboarding_completed", false)
   val streamQuality = preferenceStore.getEnum("stream_quality", StreamQuality.Auto)
 }
