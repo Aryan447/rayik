@@ -983,6 +983,34 @@ private fun SheetSlider(
           modifier = Modifier.fillMaxWidth(),
         )
       }
+      // Paused Wavy: straight track but the same `|` bar head as the
+      // wavy slider (4x16dp rounded bar, 4dp track = squiggle stroke).
+      style == SeekbarStyle.Wavy && !isPlaying -> {
+        Slider(
+          value = sliderValue,
+          onValueChange = onScrub,
+          onValueChangeFinished = onScrubFinished,
+          valueRange = range,
+          enabled = durationMs > 0,
+          colors = sliderColors,
+          thumb = {
+            Box(
+              Modifier
+                .size(width = 4.dp, height = 16.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color.White),
+            )
+          },
+          track = { sliderState ->
+            SliderDefaults.Track(
+              sliderState = sliderState,
+              modifier = Modifier.height(4.dp),
+              colors = sliderColors,
+            )
+          },
+          modifier = Modifier.fillMaxWidth(),
+        )
+      }
       style == SeekbarStyle.Thick -> {
         Slider(
           value = sliderValue,
@@ -1009,7 +1037,7 @@ private fun SheetSlider(
           modifier = Modifier.fillMaxWidth(),
         )
       }
-      // Standard style + paused Wavy (flattened straight).
+      // Standard style.
       else -> {
         Slider(
           value = sliderValue,
