@@ -115,7 +115,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import app.rayik.music.BuildConfig
 import app.rayik.music.R
+import app.rayik.music.constants.SyncedHapticsMode
+import app.rayik.music.constants.SyncedHapticsModeKey
+import app.rayik.music.constants.SyncedHapticsPausedKey
 import app.rayik.music.constants.SyncedMusicHapticsKey
+import app.rayik.music.playback.haptics.hasHapticMotor
+import app.rayik.music.utils.rememberEnumPreference
 import app.rayik.music.utils.rememberPreference
 import app.rayik.music.player.PlaybackUiState
 import app.rayik.music.player.PlayerViewModel
@@ -212,6 +217,9 @@ fun NowPlayingSheetContent(
   val streamQuality by prefs.streamQuality.collectAsState()
   val seekbarStyle by prefs.seekbarStyle.collectAsState()
   var syncedHaptics by rememberPreference(SyncedMusicHapticsKey, false)
+  var hapticsPaused by rememberPreference(SyncedHapticsPausedKey, false)
+  var hapticsMode by rememberEnumPreference(SyncedHapticsModeKey, SyncedHapticsMode.FULL_MIX)
+  val hasHapticMotor = remember { context.hasHapticMotor() }
 
   val artwork = player.premiumArtworkUrl.collectAsState().value
   // Bedrock samples the clean art; while home-album taps resolve, the
@@ -387,6 +395,38 @@ fun NowPlayingSheetContent(
                   maxLines = 1,
                   overflow = TextOverflow.Ellipsis,
                 )
+                // Apple-style haptics badge: bright = feeling it, dim =
+                // paused for this song. Tap toggles the pause; hidden when
+                // the master is off or the device has no vibrator.
+                if (syncedHaptics && hasHapticMotor) {
+                  Surface(
+                    onClick = { hapticsPaused = !hapticsPaused },
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = 0.14f),
+                    modifier = Modifier
+                      .size(28.dp)
+                      .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+                  ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                      Icon(
+                        Icons.Filled.Vibration,
+                        contentDescription = stringResource(
+                          if (hapticsPaused) {
+                            R.string.transport_haptics_resume
+                          } else {
+                            R.string.transport_haptics_pause
+                          },
+                        ),
+                        tint = if (hapticsPaused) {
+                          Color.White.copy(alpha = 0.45f)
+                        } else {
+                          Color.White
+                        },
+                        modifier = Modifier.size(14.dp),
+                      )
+                    }
+                  }
+                }
               }
             }
             Spacer(Modifier.weight(1f))
@@ -448,6 +488,8 @@ fun NowPlayingSheetContent(
               TitleOverflowMenu(
                 onShare = { shareTrack(context, current.title, current.artist) },
                 onOpenQueue = { scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) } },
+                hapticsMode = if (syncedHaptics && hasHapticMotor) hapticsMode else null,
+                onHapticsMode = { hapticsMode = it },
               )
             }
           }
@@ -510,18 +552,20 @@ fun NowPlayingSheetContent(
                   modifier = Modifier.size(22.dp),
                 )
               }
-              IconButton(
-                onClick = { syncedHaptics = !syncedHaptics },
-                modifier = Modifier.size(48.dp),
-              ) {
-                Icon(
-                  Icons.Filled.Vibration,
-                  contentDescription = stringResource(
-                    if (syncedHaptics) R.string.transport_haptics_on else R.string.transport_haptics_off,
-                  ),
-                  tint = if (syncedHaptics) Color.White else Color.White.copy(alpha = 0.5f),
-                  modifier = Modifier.size(22.dp),
-                )
+              if (hasHapticMotor) {
+                IconButton(
+                  onClick = { syncedHaptics = !syncedHaptics },
+                  modifier = Modifier.size(48.dp),
+                ) {
+                  Icon(
+                    Icons.Filled.Vibration,
+                    contentDescription = stringResource(
+                      if (syncedHaptics) R.string.transport_haptics_on else R.string.transport_haptics_off,
+                    ),
+                    tint = if (syncedHaptics) Color.White else Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.size(22.dp),
+                  )
+                }
               }
               IconButton(
                 onClick = { immersiveLyrics = true },
@@ -763,11 +807,13 @@ private fun TitleIconButton(
   }
 }
 
-/** Overflow for the title row: share + jump to queue live here now. */
+/** Overflow for the title row: share, jump to queue, and haptics mode. */
 @Composable
 private fun TitleOverflowMenu(
   onShare: () -> Unit,
   onOpenQueue: () -> Unit,
+  hapticsMode: SyncedHapticsMode?,
+  onHapticsMode: (SyncedHapticsMode) -> Unit,
 ) {
   var expanded by remember { mutableStateOf(false) }
   Box {
@@ -804,6 +850,41 @@ private fun TitleOverflowMenu(
           Icon(Icons.Filled.QueueMusic, contentDescription = null, modifier = Modifier.size(18.dp))
         },
       )
+      if (hapticsMode != null) {
+        SyncedHapticsMode.entries.forEach { mode ->
+          DropdownMenuItem(
+            text = {
+              Text(
+                stringResource(
+                  if (mode == SyncedHapticsMode.VOCALS_ONLY) {
+                    R.string.settings_haptics_vocals
+                  } else {
+                    R.string.settings_haptics_fullmix
+                  },
+                ),
+              )
+            },
+            onClick = {
+              expanded = false
+              onHapticsMode(mode)
+            },
+            leadingIcon = {
+              Icon(Icons.Filled.Vibration, contentDescription = null, modifier = Modifier.size(18.dp))
+            },
+            trailingIcon = if (mode == hapticsMode) {
+              {
+                Icon(
+                  Icons.Filled.Check,
+                  contentDescription = null,
+                  modifier = Modifier.size(18.dp),
+                )
+              }
+            } else {
+              null
+            },
+          )
+        }
+      }
     }
   }
 }

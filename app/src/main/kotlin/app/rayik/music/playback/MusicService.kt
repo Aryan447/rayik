@@ -6569,7 +6569,7 @@ class MusicService :
     ) {
         super.onMediaItemTransition(mediaItem, reason)
 
-        syncedHaptics?.reset()
+        syncedHaptics?.resetForTrack()
         if (sleepTimer.pauseWhenSongEnd) {
             pauseFromSleepTimer()
             return
@@ -7102,7 +7102,7 @@ class MusicService :
             if (!crossfadeHandoffInProgress) {
                 cancelCrossfade(resetVolume = true, resetPauseAtEnd = true)
             }
-            syncedHaptics?.reset()
+            syncedHaptics?.resetForSeek()
         }
         if (!isCrossfading && !crossfadeHandoffInProgress) {
             scheduleCrossfade()

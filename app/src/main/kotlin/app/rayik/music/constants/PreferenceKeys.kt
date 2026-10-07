@@ -321,11 +321,20 @@ val WakelockKey = booleanPreferencesKey("wakelock")
 val SyncedMusicHapticsKey = booleanPreferencesKey("syncedMusicHaptics")
 val SyncedHapticsIntensityKey = stringPreferencesKey("syncedHapticsIntensity")
 val SyncedHapticsSpeakerOnlyKey = booleanPreferencesKey("syncedHapticsSpeakerOnly")
+val SyncedHapticsModeKey = stringPreferencesKey("syncedHapticsMode")
+// Badge-pause (Apple's Now-Playing logo tap): haptics stay mastered on but
+// silent. Cleared on track change, so a pause never leaks into next songs.
+val SyncedHapticsPausedKey = booleanPreferencesKey("syncedHapticsPaused")
 
 enum class SyncedHapticsIntensity {
     LOW,
     MEDIUM,
     HIGH,
+}
+
+enum class SyncedHapticsMode {
+    FULL_MIX,
+    VOCALS_ONLY,
 }
 val ArtistSeparatorsKey = stringPreferencesKey("artistSeparators")
 val ExternalDownloaderEnabledKey = booleanPreferencesKey("externalDownloaderEnabled")
