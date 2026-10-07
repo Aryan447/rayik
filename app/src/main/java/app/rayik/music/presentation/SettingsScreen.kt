@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.LinearScale
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Repeat
@@ -122,6 +123,8 @@ import app.rayik.music.constants.PreloadNextSongKey
 import app.rayik.music.constants.SkipSilenceKey
 import app.rayik.music.constants.SyncedHapticsIntensity
 import app.rayik.music.constants.SyncedHapticsIntensityKey
+import app.rayik.music.constants.SyncedHapticsMode
+import app.rayik.music.constants.SyncedHapticsModeKey
 import app.rayik.music.constants.SyncedHapticsSpeakerOnlyKey
 import app.rayik.music.constants.SyncedMusicHapticsKey
 import app.rayik.music.auth.OAuthSessionManager
@@ -163,7 +166,8 @@ fun SettingsScreen(
   var keepShuffle by rememberPreference(PermanentShuffleKey, false)
   var syncedHaptics by rememberPreference(SyncedMusicHapticsKey, false)
   var hapticsIntensity by rememberEnumPreference(SyncedHapticsIntensityKey, SyncedHapticsIntensity.MEDIUM)
-  var hapticsSpeakerOnly by rememberPreference(SyncedHapticsSpeakerOnlyKey, true)
+  var hapticsSpeakerOnly by rememberPreference(SyncedHapticsSpeakerOnlyKey, false)
+  var hapticsMode by rememberEnumPreference(SyncedHapticsModeKey, SyncedHapticsMode.FULL_MIX)
   var normalize by rememberPreference(AudioNormalizationKey, true)
   var skipSilence by rememberPreference(SkipSilenceKey, false)
   var crossfade by rememberPreference(CrossfadeEnabledKey, false)
@@ -252,7 +256,7 @@ fun SettingsScreen(
         }
       }
 
-      if (matches("playback", "quality", "streaming", "gapless", "preload", "autoplay", "queue", "restore", "shuffle", "error", "skip", "haptic", "vibrat", "beat")) {
+      if (matches("playback", "quality", "streaming", "gapless", "preload", "autoplay", "queue", "restore", "shuffle", "error", "skip", "haptic", "vibrat", "beat", "vocal", "mix")) {
         SettingsCard(title = stringResource(R.string.settings_section_playback)) {
           IconLabel(icon = Icons.Filled.Palette, title = stringResource(R.string.pref_quality_label))
           RadioRow(
@@ -324,6 +328,26 @@ fun SettingsScreen(
               subtitle = stringResource(R.string.settings_haptics_speaker_body),
               checked = hapticsSpeakerOnly,
               onChecked = { hapticsSpeakerOnly = it },
+            )
+            IconLabel(icon = Icons.Filled.MusicNote, title = stringResource(R.string.settings_haptics_mode_label))
+            RadioRow(
+              options = listOf(
+                SyncedHapticsMode.FULL_MIX to stringResource(R.string.settings_haptics_fullmix),
+                SyncedHapticsMode.VOCALS_ONLY to stringResource(R.string.settings_haptics_vocals),
+              ),
+              selected = hapticsMode,
+              onSelect = { hapticsMode = it },
+            )
+            Text(
+              stringResource(
+                if (hapticsMode == SyncedHapticsMode.VOCALS_ONLY) {
+                  R.string.settings_haptics_vocals_body
+                } else {
+                  R.string.settings_haptics_fullmix_body
+                },
+              ),
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
           }
         }

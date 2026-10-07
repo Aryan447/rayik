@@ -11,14 +11,17 @@ import android.content.Context
 import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
-import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.content.getSystemService
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import app.rayik.music.constants.SyncedHapticsIntensity
 import app.rayik.music.constants.SyncedHapticsIntensityKey
+import app.rayik.music.constants.SyncedHapticsMode
+import app.rayik.music.constants.SyncedHapticsModeKey
+import app.rayik.music.constants.SyncedHapticsPausedKey
 import app.rayik.music.constants.SyncedHapticsSpeakerOnlyKey
 import app.rayik.music.constants.SyncedMusicHapticsKey
 import app.rayik.music.extensions.toEnum
@@ -26,24 +29,30 @@ import app.rayik.music.models.ActiveOutputDevice
 import app.rayik.music.models.PlayerOutputDevice
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * Drives synced haptics: RMS energy from [HapticTapProcessor] →
- * [HapticBeatDetector] onset → [Vibrator] pulse scaled by strength ×
- * intensity. Fires only while playing, on the phone speaker when
- * speaker-only is on. All vibrator calls are guarded + swallowed —
- * haptics must never crash playback.
+ * Drives synced haptics: band-split energy from [HapticTapProcessor] →
+ * [HapticBeatDetector] events → [HapticSelector]/[HapticRenderer] on the
+ * [Vibrator]. Sharp kick/snare taps plus a sustained texture bed while the
+ * song runs hot — Apple's taps/textures/refined-vibrations model, computed
+ * live on-device.
+ *
+ * Fires only while playing and not session-paused. Renders are delayed by
+ * the estimated audio output latency so taps land on audible beats. All
+ * vibrator calls are guarded + swallowed — haptics must never crash
+ * playback.
  */
 class SyncedHapticsController(
     context: Context,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
     private val tap: HapticTapProcessor,
     private val outputDevice: StateFlow<ActiveOutputDevice>,
-    dataStore: DataStore<Preferences>,
+    private val dataStore: DataStore<Preferences>,
 ) {
     private val appContext = context.applicationContext
     private val powerManager: PowerManager? = appContext.getSystemService()
@@ -55,6 +64,7 @@ class SyncedHapticsController(
             @Suppress("DEPRECATION")
             runCatching { appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }.getOrNull()
         }
+    private val useComposition = vibrator?.let(HapticRenderer::supportsComposition) ?: false
 
     private val detector = HapticBeatDetector()
 
@@ -65,31 +75,50 @@ class SyncedHapticsController(
     private var enabled = false
 
     @Volatile
+    private var sessionPaused = false
+
+    @Volatile
     private var intensity = SyncedHapticsIntensity.MEDIUM
 
     @Volatile
-    private var speakerOnly = true
+    private var vocalsOnly = false
+
+    @Volatile
+    private var speakerOnly = false
+
+    @Volatile
+    private var latencyOffsetMs = 60L
 
     private var powerSaveSkips = 0
+    private var lastTextureRenderMs = 0L
+    private var lastTextureLevel = 0f
 
     init {
-        tap.listener = ::onEnergy
+        tap.listener = ::onFrame
         scope.launch(Dispatchers.IO) {
             dataStore.data
                 .map { prefs ->
-                    Triple(
-                        prefs[SyncedMusicHapticsKey] ?: false,
-                        prefs[SyncedHapticsIntensityKey].toEnum(SyncedHapticsIntensity.MEDIUM),
-                        prefs[SyncedHapticsSpeakerOnlyKey] ?: true,
+                    HapticsPrefs(
+                        on = prefs[SyncedMusicHapticsKey] ?: false,
+                        level = prefs[SyncedHapticsIntensityKey].toEnum(SyncedHapticsIntensity.MEDIUM),
+                        vocals = prefs[SyncedHapticsModeKey].toEnum(SyncedHapticsMode.FULL_MIX) ==
+                            SyncedHapticsMode.VOCALS_ONLY,
+                        speaker = prefs[SyncedHapticsSpeakerOnlyKey] ?: false,
+                        paused = prefs[SyncedHapticsPausedKey] ?: false,
                     )
                 }.distinctUntilChanged()
-                .collect { (on, level, speaker) ->
-                    enabled = on
-                    intensity = level
-                    speakerOnly = speaker
-                    tap.enabled = on
-                    if (!on) cancel()
+                .collect { prefs ->
+                    enabled = prefs.on
+                    intensity = prefs.level
+                    vocalsOnly = prefs.vocals
+                    speakerOnly = prefs.speaker
+                    sessionPaused = prefs.paused
+                    tap.enabled = prefs.on
+                    if (!prefs.on || prefs.paused) cancel()
                 }
+        }
+        scope.launch(Dispatchers.IO) {
+            outputDevice.collect { refreshLatencyEstimate() }
         }
     }
 
@@ -101,22 +130,78 @@ class SyncedHapticsController(
         }
     }
 
-    fun reset() {
+    /** Seek: drop stale detector state, keep the badge-pause as-is. */
+    fun resetForSeek() {
         synchronized(detector) { detector.reset() }
         cancel()
     }
 
-    private fun onEnergy(rms: Float) {
-        if (!enabled || !playing) return
+    /** Track change: fresh song resumes haptics unless the master is off. */
+    fun resetForTrack() {
+        sessionPaused = false
+        synchronized(detector) { detector.reset() }
+        cancel()
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                dataStore.edit { it[SyncedHapticsPausedKey] = false }
+            }
+        }
+    }
+
+    private fun onFrame(frame: EnergyFrame) {
+        if (!enabled || !playing || sessionPaused) return
         if (speakerOnly && !isPhoneSpeaker()) return
         // ponytail: halve the rate under battery saver instead of a settings knob
         if (powerManager?.isPowerSaveMode == true) {
             powerSaveSkips++
             if (powerSaveSkips % 2 == 1) return
         }
-        val beat =
-            synchronized(detector) { detector.onEnergy(rms, SystemClock.uptimeMillis()) } ?: return
-        vibrate(beat.strength)
+        val nowMs = SystemClock.uptimeMillis()
+        val events =
+            synchronized(detector) {
+                detector.vocalsOnly = vocalsOnly
+                detector.onFrame(frame, nowMs)
+            }
+        for (event in events) {
+            when (event) {
+                is HapticEvent.Transient -> renderTransient(event)
+                is HapticEvent.Texture -> renderTexture(event, nowMs)
+            }
+        }
+    }
+
+    private fun renderTransient(event: HapticEvent.Transient) {
+        val command = HapticSelector.select(event, intensity) ?: return
+        // ponytail: fixed latency offset, per-route calibration if taps feel late on BT
+        scope.launch(Dispatchers.Default) {
+            delay(latencyOffsetMs)
+            if (!playing || sessionPaused) return@launch
+            vibrator?.let { HapticRenderer.render(it, command, useComposition) }
+        }
+    }
+
+    private fun renderTexture(event: HapticEvent.Texture, nowMs: Long) {
+        val due = nowMs - lastTextureRenderMs >= TEXTURE_REFRESH_MS
+        val moved = kotlin.math.abs(event.level - lastTextureLevel) >= TEXTURE_DELTA
+        if (!due && !moved) return
+        lastTextureRenderMs = nowMs
+        lastTextureLevel = event.level
+        val command = HapticSelector.select(event, intensity) ?: return
+        vibrator?.let { HapticRenderer.render(it, command, useComposition) }
+    }
+
+    private fun refreshLatencyEstimate() {
+        // ponytail: fixed per-route table, measure per-device offsets if taps feel late on BT
+        val outputLatency =
+            when (outputDevice.value.type) {
+                PlayerOutputDevice.Bluetooth -> 200L
+                PlayerOutputDevice.Usb,
+                PlayerOutputDevice.Headset,
+                PlayerOutputDevice.Hdmi,
+                -> 60L
+                else -> 80L
+            }
+        latencyOffsetMs = (outputLatency - VIBRATOR_LATENCY_MS).coerceAtLeast(0L)
     }
 
     private fun isPhoneSpeaker(): Boolean =
@@ -125,33 +210,33 @@ class SyncedHapticsController(
             else -> false
         }
 
-    private fun vibrate(strength: Float) {
-        val vib = vibrator ?: return
-        runCatching {
-            if (!vib.hasVibrator()) return
-            val scale =
-                when (intensity) {
-                    SyncedHapticsIntensity.LOW -> 0.5f
-                    SyncedHapticsIntensity.MEDIUM -> 0.8f
-                    SyncedHapticsIntensity.HIGH -> 1f
-                }
-            val amplitude = (strength * scale * 255).toInt().coerceIn(1, 255)
-            val durationMs =
-                when (intensity) {
-                    SyncedHapticsIntensity.LOW -> 25L
-                    SyncedHapticsIntensity.MEDIUM -> 40L
-                    SyncedHapticsIntensity.HIGH -> 55L
-                }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vib.vibrate(VibrationEffect.createOneShot(durationMs, amplitude))
-            } else {
-                @Suppress("DEPRECATION")
-                vib.vibrate(durationMs)
-            }
-        }
-    }
-
     private fun cancel() {
         runCatching { vibrator?.cancel() }
     }
+
+    private data class HapticsPrefs(
+        val on: Boolean,
+        val level: SyncedHapticsIntensity,
+        val vocals: Boolean,
+        val speaker: Boolean,
+        val paused: Boolean,
+    )
+
+    private companion object {
+        const val VIBRATOR_LATENCY_MS = 20L
+        const val TEXTURE_REFRESH_MS = 600L
+        const val TEXTURE_DELTA = 0.15f
+    }
 }
+
+/** UI-side capability check (no service handle needed): hide haptics controls when false. */
+fun Context.hasHapticMotor(): Boolean =
+    runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val manager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            manager?.defaultVibrator?.hasVibrator() == true
+        } else {
+            @Suppress("DEPRECATION")
+            (getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)?.hasVibrator() == true
+        }
+    }.getOrDefault(false)
