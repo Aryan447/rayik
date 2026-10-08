@@ -21,14 +21,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -82,6 +83,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -138,6 +140,15 @@ private const val UPNEXT_SECTION_INDEX = 7
 
 /** Apple field: photo runs this far down, then dissolves into flat bedrock. */
 private const val APPLE_PHOTO_FRACTION = 0.68f
+
+/**
+ * Mirror of the art's lower edge under the photo: flipped, blurred, melted
+ * into bedrock. 60% blur ~= 28.dp (codebase max is the 48.dp lyrics wash).
+ * Overlap tucks the mirror under the photo so the blur melts the crop seam.
+ */
+private const val REFLECTION_FRACTION = 0.26f
+private val REFLECTION_BLUR = 28.dp
+private val REFLECTION_OVERLAP = 24.dp
 
 /** Fallback field when sampling fails — deep teal-black. */
 private val BedrockFallback = Color(0xFF0B2427)
@@ -287,9 +298,10 @@ fun NowPlayingSheetContent(
       .background(bedrock)
       .graphicsLayer { translationY = dragOffset.value },
   ) {
-    // ---- Apple artwork: full-bleed portrait Crop to ~68%, feathered into
-    // the flat bedrock. No cloud-blur copy (neither reference has one), no
-    // fit-width banner. Crossfade across tracks is the transition.
+    // ---- Artwork: sharp full-bleed photo to ~68%, then a vertically
+    // flipped + blurred mirror of the art's lower edge melting into the
+    // flat bedrock. Same Coil URL = memory-cache hit, no extra fetch, and
+    // Crossfade across tracks is the transition.
     // NOTE: Crossfade must own a real size (fillMaxSize) — a bare one
     // collapses to 0x0 and the art silently disappears.
     Crossfade(
@@ -298,35 +310,76 @@ fun NowPlayingSheetContent(
       modifier = Modifier.fillMaxSize(),
     ) { art ->
       if (art.isNotBlank()) {
-        AsyncImage(
-          model = art,
-          contentDescription = null,
-          contentScale = ContentScale.Crop,
-          alignment = Alignment.TopCenter,
-          modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(APPLE_PHOTO_FRACTION)
-            .drawWithContent {
-              drawContent()
-              drawRect(
-                brush = Brush.verticalGradient(
-                  0f to Color.Black,
-                  0.72f to Color.Black,
-                  1f to Color.Transparent,
-                ),
-                blendMode = BlendMode.DstIn,
-              )
-            },
-        )
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+          val photoH = maxHeight * APPLE_PHOTO_FRACTION
+          val reflectH = maxHeight * REFLECTION_FRACTION
+          // Sharp photo (unchanged).
+          AsyncImage(
+            model = art,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(photoH)
+              .drawWithContent {
+                drawContent()
+                drawRect(
+                  brush = Brush.verticalGradient(
+                    0f to Color.Black,
+                    0.72f to Color.Black,
+                    1f to Color.Transparent,
+                  ),
+                  blendMode = BlendMode.DstIn,
+                )
+              },
+          )
+          // Mirror: bottom edge of the same art, flipped, blurred, tucked
+          // under the photo so the blur melts the crop seam, then feathered
+          // out through DstIn into the bedrock below.
+          AsyncImage(
+            model = art,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.BottomCenter,
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(reflectH)
+              .align(Alignment.TopCenter)
+              .offset(y = photoH - REFLECTION_OVERLAP)
+              .graphicsLayer { scaleY = -1f }
+              .blur(REFLECTION_BLUR)
+              .drawWithContent {
+                drawContent()
+                drawRect(
+                  brush = Brush.verticalGradient(
+                    0f to Color.Black,
+                    0.55f to Color.Black,
+                    1f to Color.Transparent,
+                  ),
+                  blendMode = BlendMode.DstIn,
+                )
+              },
+          )
+        }
       }
     }
-    // Bridge: bedrock transparent above the melt, opaque below — the photo
+    // Dim over the mirror for title/slider legibility on bright art.
+    Box(
+      Modifier.matchParentSize().background(
+        Brush.verticalGradient(
+          0.60f to Color.Transparent,
+          0.94f to Color.Black.copy(alpha = 0.45f),
+        ),
+      ),
+    )
+    // Bridge: bedrock transparent above the melt, opaque below — the mirror
     // always lands on flat color with zero line on any aspect.
     Box(
       Modifier.matchParentSize().background(
         Brush.verticalGradient(
-          0.52f to Color.Transparent,
-          0.70f to bedrock,
+          0.78f to Color.Transparent,
+          0.96f to bedrock,
         ),
       ),
     )
