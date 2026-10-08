@@ -174,6 +174,7 @@
 
   <string name="settings_autodl_label">Download liked</string>
   <string name="settings_autodl_body">Pin liked songs for offline</string>
+  <string name="offline_pin_limit_reached">Pin limit reached — remove a pin to add more</string>
   <string name="settings_cache_label">Streaming cache</string>
   <string name="settings_cache_body">Capped at %1$d MB</string>
   <string name="settings_cache_clear">Clear cache</string>

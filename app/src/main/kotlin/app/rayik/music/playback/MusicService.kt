@@ -177,6 +177,7 @@ import app.rayik.music.constants.StopMusicOnTaskClearKey
 import app.rayik.music.constants.TogetherClientIdKey
 import app.rayik.music.constants.WakelockKey
 import app.rayik.music.db.MusicDatabase
+import app.rayik.music.domain.offline.DownloadQuotas
 import app.rayik.music.playback.haptics.HapticTapProcessor
 import app.rayik.music.playback.haptics.SyncedHapticsController
 import app.rayik.music.db.entities.AlbumEntity
@@ -688,6 +689,9 @@ class MusicService :
     @Inject
     @DownloadCache
     lateinit var downloadCache: Cache
+
+    @Inject
+    lateinit var downloadUtil: DownloadUtil
 
     lateinit var localPlayer: ExoPlayer
         private set
@@ -5907,6 +5911,17 @@ class MusicService :
 
                 // Check if auto-download on like is enabled and the song is now liked
                 if (!song.isLocal && dataStore.get(AutoDownloadOnLikeKey, false) && song.liked) {
+                    // Capped user pins only: skip honestly (with user copy) at the cap.
+                    val pinnedCount =
+                        downloadUtil.downloads.value.count { (_, download) ->
+                            DownloadQuotas.occupiesPinSlot(download.state)
+                        }
+                    if (!DownloadQuotas.canPin(pinnedCount, downloadCache.cacheSpace, 0L)) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MusicService, R.string.offline_pin_limit_reached, Toast.LENGTH_SHORT).show()
+                        }
+                        return@launch
+                    }
                     // Trigger download for the liked song
                     val downloadRequest =
                         androidx.media3.exoplayer.offline.DownloadRequest

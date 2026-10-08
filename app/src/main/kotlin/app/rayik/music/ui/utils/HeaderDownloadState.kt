@@ -13,6 +13,7 @@ import androidx.core.net.toUri
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
+import app.rayik.music.domain.offline.DownloadQuotas
 import app.rayik.music.playback.ExoDownloadService
 
 @Immutable
@@ -111,23 +112,29 @@ fun sendAddMissingDownloads(
     songs: List<HeaderDownloadItem>,
     downloads: Map<String, Download>,
 ) {
-    songs
-        .distinctBy { it.id }
-        .filter { item -> downloads[item.id]?.state.shouldRequestDownload() }
-        .forEach { item ->
-            val downloadRequest =
-                DownloadRequest
-                    .Builder(item.id, item.id.toUri())
-                    .setCustomCacheKey(item.id)
-                    .setData(item.title.toByteArray())
-                    .build()
-            DownloadService.sendAddDownload(
-                context,
-                ExoDownloadService::class.java,
-                downloadRequest,
-                false,
-            )
-        }
+    // Capped user pins only: ids already occupying a pin slot never
+    // re-request, and new pins stop at the MAX_PINS budget.
+    val pinnedIds = downloads.filterValues { DownloadQuotas.occupiesPinSlot(it.state) }.keys
+    val byId = songs.associateBy { it.id }
+    DownloadQuotas.selectPinnable(
+        requestedIds = songs.map { it.id },
+        alreadyPinnedIds = pinnedIds,
+        currentPinCount = pinnedIds.size,
+    ).forEach { id ->
+        val item = byId[id] ?: return@forEach
+        val downloadRequest =
+            DownloadRequest
+                .Builder(item.id, item.id.toUri())
+                .setCustomCacheKey(item.id)
+                .setData(item.title.toByteArray())
+                .build()
+        DownloadService.sendAddDownload(
+            context,
+            ExoDownloadService::class.java,
+            downloadRequest,
+            false,
+        )
+    }
 }
 
 fun sendRemoveDownloads(
@@ -152,17 +159,6 @@ fun sendRemoveDownloads(
         )
     }
 }
-
-private fun Int?.shouldRequestDownload(): Boolean =
-    when (this) {
-        Download.STATE_COMPLETED,
-        Download.STATE_QUEUED,
-        Download.STATE_DOWNLOADING,
-        Download.STATE_RESTARTING,
-        -> false
-
-        else -> true
-    }
 
 private const val DOWNLOAD_STOP_REASON_NONE = 0
 private const val COLLECTION_PAUSE_STOP_REASON = 1
