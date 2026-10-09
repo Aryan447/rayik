@@ -142,12 +142,15 @@ private const val UPNEXT_SECTION_INDEX = 7
 private const val APPLE_PHOTO_FRACTION = 0.68f
 
 /**
- * Mirror of the art's lower edge under the photo: flipped, blurred, melted
- * into bedrock. 60% blur ~= 28.dp (codebase max is the 48.dp lyrics wash).
- * Overlap tucks the mirror under the photo so the blur melts the crop seam.
+ * Mirror of the photo under itself: the IDENTICAL crop (same size, same
+ * TopCenter), flipped — so the join is pixel-continuous by construction and
+ * the blur only melts it downward. The visible window below the photo is
+ * REFLECTION_FRACTION of the screen; the DstIn mask (not layout height) does
+ * the windowing. 80% blur ~= 38.dp (codebase max is the 48.dp lyrics wash).
+ * Overlap tucks the mirror under the photo so the blur melts the crease.
  */
 private const val REFLECTION_FRACTION = 0.26f
-private val REFLECTION_BLUR = 28.dp
+private val REFLECTION_BLUR = 38.dp
 private val REFLECTION_OVERLAP = 24.dp
 
 /** Fallback field when sampling fails — deep teal-black. */
@@ -334,28 +337,33 @@ fun NowPlayingSheetContent(
                 )
               },
           )
-          // Mirror: bottom edge of the same art, flipped, blurred, tucked
-          // under the photo so the blur melts the crop seam, then feathered
-          // out through DstIn into the bedrock below.
+          // Mirror: same box + same TopCenter crop as the photo, flipped —
+          // its visual top IS the photo's bottom edge, so shapes flow across
+          // the join and only the blur melts them. The mask windows it to a
+          // short strip dissolving into bedrock; nothing below is laid out.
+          // Same Coil URL = memory-cache hit, no extra fetch.
           AsyncImage(
             model = art,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            alignment = Alignment.BottomCenter,
+            alignment = Alignment.TopCenter,
             modifier = Modifier
               .fillMaxWidth()
-              .height(reflectH)
+              .height(photoH)
               .align(Alignment.TopCenter)
               .offset(y = photoH - REFLECTION_OVERLAP)
               .graphicsLayer { scaleY = -1f }
               .blur(REFLECTION_BLUR)
               .drawWithContent {
+                // Window as a fraction of this (photo-sized) box: the tucked
+                // overlap plus one reflection strip, opaque into a fade-out.
+                val window = ((reflectH + REFLECTION_OVERLAP) / photoH).coerceIn(0f, 1f)
                 drawContent()
                 drawRect(
                   brush = Brush.verticalGradient(
                     0f to Color.Black,
-                    0.55f to Color.Black,
-                    1f to Color.Transparent,
+                    (window * 0.7f) to Color.Black,
+                    window to Color.Transparent,
                   ),
                   blendMode = BlendMode.DstIn,
                 )
@@ -364,12 +372,14 @@ fun NowPlayingSheetContent(
         }
       }
     }
-    // Dim over the mirror for title/slider legibility on bright art.
+    // Dim over the mirror's lower half for transport legibility on bright
+    // art — starts below the join so no dark stripe can form where the
+    // photo meets its reflection.
     Box(
       Modifier.matchParentSize().background(
         Brush.verticalGradient(
-          0.60f to Color.Transparent,
-          0.94f to Color.Black.copy(alpha = 0.45f),
+          0.70f to Color.Transparent,
+          0.94f to Color.Black.copy(alpha = 0.40f),
         ),
       ),
     )
