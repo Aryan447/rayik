@@ -1,12 +1,9 @@
 package app.rayik.music.presentation
 
-import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -21,10 +18,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,15 +34,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
@@ -53,8 +52,6 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Vibration
@@ -64,29 +61,26 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -95,26 +89,16 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
-import coil3.imageLoader
-import coil3.request.ImageRequest
-import coil3.request.SuccessResult
-import coil3.request.allowHardware
-import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import app.rayik.music.BuildConfig
 import app.rayik.music.R
 import app.rayik.music.constants.SyncedHapticsMode
@@ -135,71 +119,20 @@ import app.rayik.music.preferences.preference.collectAsState
 import app.rayik.music.ui.theme.spacing
 import me.saket.squiggles.SquigglySlider
 
-/** Lazy-list index of the scroll target; header sections above are always emitted. */
-private const val UPNEXT_SECTION_INDEX = 7
+/** Barber mirror-arch top, ticket-stub bottom. One shape for every theme; color does the theming. */
+private val ArchTopRadius = 140.dp
+private val ArchBottomRadius = 28.dp
 
-/** Apple field: photo runs this far down, then dissolves into flat bedrock. */
-private const val APPLE_PHOTO_FRACTION = 0.68f
-
-/**
- * Mirror of the photo under itself: the IDENTICAL crop (same size, same
- * TopCenter), flipped — so the join is pixel-continuous by construction and
- * the blur only melts it downward. The visible window below the photo is
- * REFLECTION_FRACTION of the screen; the DstIn mask (not layout height) does
- * the windowing. 80% blur ~= 38.dp (codebase max is the 48.dp lyrics wash).
- * Overlap tucks the mirror under the photo so the blur melts the crease.
- */
-private const val REFLECTION_FRACTION = 0.26f
-private val REFLECTION_BLUR = 38.dp
-private val REFLECTION_OVERLAP = 24.dp
-
-/** Fallback field when sampling fails — deep teal-black. */
-private val BedrockFallback = Color(0xFF0B2427)
+private fun archTicketShape() = RoundedCornerShape(
+  topStart = ArchTopRadius,
+  topEnd = ArchTopRadius,
+  bottomStart = ArchBottomRadius,
+  bottomEnd = ArchBottomRadius,
+)
 
 /**
- * Apple-style flat bedrock sampled from the art: dark muted first, then
- * dark vibrant, then a darkened dominant. Darkened to V<=0.22 so white
- * controls always contrast. Cached per URL; falls back quietly.
- */
-@Composable
-private fun rememberSampledBedrock(artUrl: String): Color {
-  val context = LocalContext.current
-  var bedrock by remember(artUrl) { mutableStateOf(BedrockFallback) }
-  LaunchedEffect(artUrl) {
-    if (artUrl.isBlank()) {
-      bedrock = BedrockFallback
-      return@LaunchedEffect
-    }
-    bedrock = withContext(Dispatchers.IO) {
-      runCatching {
-        val request = ImageRequest.Builder(context)
-          .data(artUrl)
-          .size(128)
-          .allowHardware(false)
-          .build()
-        val result = context.imageLoader.execute(request)
-        val bitmap = (result as? SuccessResult)?.image?.toBitmap()
-          ?: return@runCatching BedrockFallback
-        val palette = Palette.from(bitmap).maximumColorCount(16).generate()
-        val rgb = palette.darkMutedSwatch?.rgb
-          ?: palette.darkVibrantSwatch?.rgb
-          ?: palette.dominantSwatch?.rgb
-          ?: return@runCatching BedrockFallback
-        val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(rgb, hsv)
-        hsv[2] = minOf(hsv[2], 0.22f)
-        Color(android.graphics.Color.HSVToColor(hsv))
-      }.getOrDefault(BedrockFallback)
-    }
-  }
-  return bedrock
-}
-
-/**
- * Immersive full-screen player: the track artwork IS the screen —
- * full-bleed and sharp, with scrims top (status bar) and bottom
- * (title + transport). Title, slider, transport and pills float on the
- * art; lyrics + Up next live below the fold. Glass lyrics overlay kept.
+ * Rayik player: theme surface, arch-ticket art, tabbed Player | Queue |
+ * Lyrics. Same [PlayerViewModel] contract as before — only the look changed.
  */
 @Composable
 fun NowPlayingSheetContent(
@@ -224,9 +157,10 @@ fun NowPlayingSheetContent(
   val rawLyrics = lyricsEntity?.lyrics
 
   val current = rows.firstOrNull { it.isCurrent }
-  val listState = rememberLazyListState()
   val scope = rememberCoroutineScope()
   var immersiveLyrics by remember { mutableStateOf(false) }
+  var lyricsExpanded by rememberSaveable { mutableStateOf(false) }
+  var tab by rememberSaveable { mutableIntStateOf(0) }
   val prefs = rayikPreferences()
   val streamQuality by prefs.streamQuality.collectAsState()
   val seekbarStyle by prefs.seekbarStyle.collectAsState()
@@ -236,36 +170,10 @@ fun NowPlayingSheetContent(
   val hasHapticMotor = remember { context.hasHapticMotor() }
 
   val artwork = player.premiumArtworkUrl.collectAsState().value
-  // Bedrock samples the clean art; while home-album taps resolve, the
-  // queue's frame tints the field so the screen is never a black void.
-  val sampleUrl = artwork.ifBlank { current?.artworkUrl.orEmpty() }
-  val bedrockTarget = rememberSampledBedrock(sampleUrl)
-  val bedrock by animateColorAsState(
-    targetValue = bedrockTarget,
-    animationSpec = tween(600),
-    label = "bedrockMelt",
-  )
+  val artUrl = artwork.ifBlank { current?.artworkUrl.orEmpty() }
   val scheme = MaterialTheme.colorScheme
 
-  // The player is always a dark room over artwork: force light status +
-  // nav icons while open, restore the theme-driven values on close.
-  val view = LocalView.current
-  DisposableEffect(view) {
-    var ctx: Context? = view.context
-    while (ctx is ContextWrapper && ctx !is Activity) ctx = ctx.baseContext
-    val controller = (ctx as? Activity)?.window?.let { WindowCompat.getInsetsController(it, view) }
-    val prevStatus = controller?.isAppearanceLightStatusBars
-    val prevNav = controller?.isAppearanceLightNavigationBars
-    controller?.isAppearanceLightStatusBars = false
-    controller?.isAppearanceLightNavigationBars = false
-    onDispose {
-      prevStatus?.let { controller.isAppearanceLightStatusBars = it }
-      prevNav?.let { controller.isAppearanceLightNavigationBars = it }
-    }
-  }
-
-  // Drag-to-dismiss (replaces the old bottom-sheet gesture): the header
-  // zone tracks the finger; fling down or drag past threshold collapses.
+  // Drag-to-dismiss on the header zone: fling down or drag past threshold collapses.
   val dragOffset = remember { Animatable(0f) }
   val density = LocalDensity.current
   val dismissThresholdPx = with(density) { 120.dp.toPx() }
@@ -296,116 +204,21 @@ fun NowPlayingSheetContent(
   Box(
     modifier = Modifier
       .fillMaxSize()
-      // Apple field: flat sampled color, never black, never transparent —
-      // home can never ghost through and no seam can open mid-screen.
-      .background(bedrock)
+      .background(scheme.surface)
       .graphicsLayer { translationY = dragOffset.value },
   ) {
-    // ---- Artwork: sharp full-bleed photo to ~68%, then a vertically
-    // flipped + blurred mirror of the art's lower edge melting into the
-    // flat bedrock. Same Coil URL = memory-cache hit, no extra fetch, and
-    // Crossfade across tracks is the transition.
-    // NOTE: Crossfade must own a real size (fillMaxSize) — a bare one
-    // collapses to 0x0 and the art silently disappears.
-    Crossfade(
-      targetState = artwork,
-      label = "artBackdrop",
-      modifier = Modifier.fillMaxSize(),
-    ) { art ->
-      if (art.isNotBlank()) {
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-          val photoH = maxHeight * APPLE_PHOTO_FRACTION
-          val reflectH = maxHeight * REFLECTION_FRACTION
-          // Sharp photo (unchanged).
-          AsyncImage(
-            model = art,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.TopCenter,
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(photoH)
-              .drawWithContent {
-                drawContent()
-                drawRect(
-                  brush = Brush.verticalGradient(
-                    0f to Color.Black,
-                    0.72f to Color.Black,
-                    1f to Color.Transparent,
-                  ),
-                  blendMode = BlendMode.DstIn,
-                )
-              },
-          )
-          // Mirror: same box + same TopCenter crop as the photo, flipped —
-          // its visual top IS the photo's bottom edge, so shapes flow across
-          // the join and only the blur melts them. The mask windows it to a
-          // short strip dissolving into bedrock; nothing below is laid out.
-          // Same Coil URL = memory-cache hit, no extra fetch.
-          AsyncImage(
-            model = art,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.TopCenter,
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(photoH)
-              .align(Alignment.TopCenter)
-              .offset(y = photoH - REFLECTION_OVERLAP)
-              .graphicsLayer { scaleY = -1f }
-              .blur(REFLECTION_BLUR)
-              .drawWithContent {
-                // Window as a fraction of this (photo-sized) box: the tucked
-                // overlap plus one reflection strip, opaque into a fade-out.
-                val window = ((reflectH + REFLECTION_OVERLAP) / photoH).coerceIn(0f, 1f)
-                drawContent()
-                drawRect(
-                  brush = Brush.verticalGradient(
-                    0f to Color.Black,
-                    (window * 0.7f) to Color.Black,
-                    window to Color.Transparent,
-                  ),
-                  blendMode = BlendMode.DstIn,
-                )
-              },
-          )
-        }
-      }
-    }
-    // Dim over the mirror's lower half for transport legibility on bright
-    // art — starts below the join so no dark stripe can form where the
-    // photo meets its reflection.
+    // Subtle tint from theme roles only — never sampled from art.
     Box(
       Modifier.matchParentSize().background(
         Brush.verticalGradient(
-          0.70f to Color.Transparent,
-          0.94f to Color.Black.copy(alpha = 0.40f),
-        ),
-      ),
-    )
-    // Bridge: bedrock transparent above the melt, opaque below — the mirror
-    // always lands on flat color with zero line on any aspect.
-    Box(
-      Modifier.matchParentSize().background(
-        Brush.verticalGradient(
-          0.78f to Color.Transparent,
-          0.96f to bedrock,
-        ),
-      ),
-    )
-    // Whisper top scrim for status-bar legibility only.
-    Box(
-      Modifier.matchParentSize().background(
-        Brush.verticalGradient(
-          0f to Color.Black.copy(alpha = 0.30f),
-          0.15f to Color.Transparent,
+          0f to scheme.surfaceContainerHigh.copy(alpha = 0.55f),
+          0.38f to scheme.surface,
         ),
       ),
     )
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-      LazyColumn(
-        state = listState,
+      Column(
         modifier = Modifier
           .widthIn(max = 560.dp)
           .fillMaxSize()
@@ -413,383 +226,184 @@ fun NowPlayingSheetContent(
           .padding(horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
       ) {
-        item {
-          Spacer(Modifier.statusBarsPadding().height(10.dp))
-          Box(
-            Modifier
-              .width(42.dp)
-              .height(5.dp)
-              .clip(CircleShape)
-              .background(Color.White.copy(alpha = 0.55f))
-              .then(headerDrag),
-          )
-          Spacer(Modifier.height(10.dp))
-          Row(
-            modifier = Modifier.fillMaxWidth().then(headerDrag),
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            ArtCircleButton(onClick = onCollapse) {
-              Icon(
-                Icons.Filled.KeyboardArrowDown,
-                contentDescription = stringResource(R.string.action_collapse),
+        Spacer(Modifier.statusBarsPadding().height(10.dp))
+        Box(
+          Modifier
+            .width(42.dp)
+            .height(5.dp)
+            .clip(CircleShape)
+            .background(scheme.surfaceVariant)
+            .then(headerDrag),
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(
+          modifier = Modifier.fillMaxWidth().then(headerDrag),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          IconButton(onClick = onCollapse, modifier = Modifier.size(48.dp)) {
+            Icon(
+              Icons.Filled.KeyboardArrowDown,
+              contentDescription = stringResource(R.string.action_collapse),
+              tint = scheme.onSurface,
+            )
+          }
+          Spacer(Modifier.weight(1f))
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+              stringResource(R.string.player_now_playing).uppercase(),
+              style = MaterialTheme.typography.labelLarge,
+              fontWeight = FontWeight.Bold,
+              letterSpacing = 2.2.sp,
+              color = scheme.onSurface,
+            )
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(6.dp),
+              modifier = Modifier.padding(top = 4.dp),
+            ) {
+              LiveDot(isPlaying = playbackState == PlaybackUiState.Playing)
+              Text(
+                current?.artist?.takeIf { it.isNotBlank() }?.uppercase() ?: "RAYIK",
+                style = MaterialTheme.typography.labelSmall,
+                color = scheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.4.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
               )
             }
-            Spacer(Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          }
+          Spacer(Modifier.weight(1f))
+          IconButton(
+            onClick = { shareTrack(context, current?.title.orEmpty(), current?.artist.orEmpty()) },
+            enabled = current != null,
+            modifier = Modifier.size(48.dp),
+          ) {
+            Icon(
+              Icons.Filled.Share,
+              contentDescription = stringResource(R.string.action_share),
+              tint = scheme.onSurface,
+            )
+          }
+        }
+
+        TabRow(
+          selectedTabIndex = tab,
+          containerColor = Color.Transparent,
+          contentColor = scheme.onSurface,
+          modifier = Modifier.fillMaxWidth(),
+        ) {
+          Tab(
+            selected = tab == 0,
+            onClick = { tab = 0 },
+            text = { Text(stringResource(R.string.player)) },
+          )
+          Tab(
+            selected = tab == 1,
+            onClick = { tab = 1 },
+            text = {
               Text(
-                stringResource(R.string.player_now_playing).uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.2.sp,
-                color = Color.White,
+                if (rows.isEmpty()) stringResource(R.string.queue)
+                else "${stringResource(R.string.queue)} • ${rows.size}",
               )
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(top = 4.dp),
-              ) {
-                LiveDot(isPlaying = playbackState == PlaybackUiState.Playing)
-                Text(
-                  current?.artist?.takeIf { it.isNotBlank() }?.uppercase() ?: "RAYIK",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = Color.White.copy(alpha = 0.8f),
-                  fontWeight = FontWeight.SemiBold,
-                  letterSpacing = 1.4.sp,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis,
-                )
-                // Apple-style haptics badge: bright = feeling it, dim =
-                // paused for this song. Tap toggles the pause; hidden when
-                // the master is off or the device has no vibrator.
-                if (syncedHaptics && hasHapticMotor) {
-                  Surface(
-                    onClick = { hapticsPaused = !hapticsPaused },
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.14f),
-                    modifier = Modifier
-                      .size(28.dp)
-                      .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
-                  ) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                      Icon(
-                        Icons.Filled.Vibration,
-                        contentDescription = stringResource(
-                          if (hapticsPaused) {
-                            R.string.transport_haptics_resume
-                          } else {
-                            R.string.transport_haptics_pause
-                          },
-                        ),
-                        tint = if (hapticsPaused) {
-                          Color.White.copy(alpha = 0.45f)
-                        } else {
-                          Color.White
-                        },
-                        modifier = Modifier.size(14.dp),
-                      )
-                    }
+            },
+          )
+          Tab(
+            selected = tab == 2,
+            onClick = { tab = 2 },
+            text = { Text(stringResource(R.string.lyrics)) },
+          )
+        }
+
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+          Crossfade(targetState = tab, label = "playerTabs") { page ->
+            when (page) {
+            0 -> PlayerTab(
+              currentTitle = current?.title,
+              currentArtist = current?.artist,
+              isLiked = isLiked,
+              playbackState = playbackState,
+              positionMs = positionMs,
+              durationMs = durationMs,
+              seekbarStyle = seekbarStyle,
+              repeatMode = repeatMode,
+              shuffleEnabled = shuffleEnabled,
+              syncedHaptics = syncedHaptics,
+              hasHapticMotor = hasHapticMotor,
+              artUrl = artUrl,
+              onSeek = player::seekTo,
+              onToggle = {
+                if (playbackState is PlaybackUiState.Error) player.retry()
+                else player.togglePlayPause()
+              },
+              onNext = player::next,
+              onPrevious = player::previous,
+              onToggleLike = player::toggleLike,
+              onToggleShuffle = player::toggleShuffle,
+              onCycleRepeat = player::cycleRepeat,
+              onToggleHaptics = { syncedHaptics = !syncedHaptics },
+              onOpenQueue = { tab = 1 },
+              onOpenLyrics = { tab = 2 },
+              onShare = { shareTrack(context, current?.title.orEmpty(), current?.artist.orEmpty()) },
+              hapticsMode = if (syncedHaptics && hasHapticMotor) hapticsMode else null,
+              onHapticsMode = { hapticsMode = it },
+              errorBlock = {
+                if (playbackState is PlaybackUiState.Error) {
+                  Spacer(Modifier.height(12.dp))
+                  GlassCard {
+                    ScreenScaffold(
+                      state = ScreenState.Unavailable(
+                        (playbackState as PlaybackUiState.Error).message,
+                      ),
+                      loadingText = "",
+                      onRetry = player::retry,
+                      secondaryLabel = "Copy details",
+                      onSecondary = {
+                        copyDiagnostics(
+                          context,
+                          buildPlaybackDiagnostics(
+                            appVersion = BuildConfig.VERSION_NAME,
+                            gitSha = "master",
+                            trackId = current?.mediaId.orEmpty(),
+                            trackTitle = current?.title.orEmpty(),
+                            streamUrl = "",
+                            mimeType = "",
+                            errorMessage = (playbackState as PlaybackUiState.Error).message,
+                          ),
+                        )
+                      },
+                    ) {}
                   }
                 }
-              }
-            }
-            Spacer(Modifier.weight(1f))
-            ArtCircleButton(
-              onClick = {
-                shareTrack(context, current?.title.orEmpty(), current?.artist.orEmpty())
               },
-              enabled = current != null,
-            ) {
-              Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.action_share))
-            }
-          }
-        }
-
-        // No hero card — the full-bleed art above IS the hero. This
-        // spacer drops the title onto the melt, Apple-style.
-        item {
-          Spacer(Modifier.fillParentMaxHeight(0.42f))
-        }
-
-        item {
-          if (current == null) {
-            ScreenScaffold(state = ScreenState.Loading, loadingText = "", onRetry = {}) {}
-          } else {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              verticalAlignment = Alignment.CenterVertically,
-            ) {
-              Column(Modifier.weight(1f)) {
-                Text(
-                  current.title,
-                  style = MaterialTheme.typography.headlineSmall,
-                  fontWeight = FontWeight.SemiBold,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis,
-                  color = Color.White,
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                  current.artist,
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = Color.White.copy(alpha = 0.6f),
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis,
-                )
-              }
-              Spacer(Modifier.width(8.dp))
-              TitleIconButton(onClick = player::toggleLike) {
-                Icon(
-                  imageVector = if (isLiked) Icons.Filled.Star else Icons.Filled.StarBorder,
-                  contentDescription = stringResource(
-                    if (isLiked) R.string.action_unlike else R.string.action_like,
-                  ),
-                  tint = Color.White,
-                  modifier = Modifier.size(20.dp),
-                )
-              }
-              Spacer(Modifier.width(8.dp))
-              TitleOverflowMenu(
-                onShare = { shareTrack(context, current.title, current.artist) },
-                onOpenQueue = { scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) } },
-                hapticsMode = if (syncedHaptics && hasHapticMotor) hapticsMode else null,
-                onHapticsMode = { hapticsMode = it },
-              )
-            }
-          }
-        }
-
-        item {
-          Spacer(Modifier.height(6.dp))
-          SheetSlider(
-            positionMs = positionMs,
-            durationMs = durationMs,
-            style = seekbarStyle,
-            isPlaying = playbackState == PlaybackUiState.Playing,
-            onSeek = player::seekTo,
-          )
-        }
-
-        item {
-          Spacer(Modifier.height(4.dp))
-          ControlDock(
-            state = playbackState,
-            // On error the hero retries instead of toggling — the dock
-            // never sits dead with a disabled button and no way forward.
-            onToggle = {
-              if (playbackState is PlaybackUiState.Error) player.retry()
-              else player.togglePlayPause()
-            },
-            onNext = player::next,
-            onPrevious = player::previous,
-          )
-        }
-
-        item {
-          if (current != null) {
-            Spacer(Modifier.height(8.dp))
-            // Apple footer: quiet icon row. Shuffle/repeat moved here from
-            // the transport so nothing is lost; lyrics + queue stay one tap.
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceEvenly,
-              verticalAlignment = Alignment.CenterVertically,
-            ) {
-              IconButton(onClick = player::toggleShuffle, modifier = Modifier.size(48.dp)) {
-                Icon(
-                  imageVector = Icons.Filled.Shuffle,
-                  contentDescription = stringResource(
-                    if (shuffleEnabled) R.string.transport_shuffle_on else R.string.transport_shuffle_off,
-                  ),
-                  tint = if (shuffleEnabled) Color.White else Color.White.copy(alpha = 0.5f),
-                  modifier = Modifier.size(22.dp),
-                )
-              }
-              IconButton(onClick = player::cycleRepeat, modifier = Modifier.size(48.dp)) {
-                Icon(
-                  imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-                  contentDescription = stringResource(R.string.transport_repeat, repeatMode.name),
-                  tint = if (repeatMode == RepeatMode.OFF) {
-                    Color.White.copy(alpha = 0.5f)
-                  } else {
-                    Color.White
-                  },
-                  modifier = Modifier.size(22.dp),
-                )
-              }
-              if (hasHapticMotor) {
-                IconButton(
-                  onClick = { syncedHaptics = !syncedHaptics },
-                  modifier = Modifier.size(48.dp),
-                ) {
-                  Icon(
-                    Icons.Filled.Vibration,
-                    contentDescription = stringResource(
-                      if (syncedHaptics) R.string.transport_haptics_on else R.string.transport_haptics_off,
-                    ),
-                    tint = if (syncedHaptics) Color.White else Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.size(22.dp),
-                  )
-                }
-              }
-              IconButton(
-                onClick = { immersiveLyrics = true },
-                modifier = Modifier.size(48.dp),
-              ) {
-                Icon(
-                  Icons.Filled.FormatQuote,
-                  contentDescription = stringResource(R.string.lyrics_fullscreen),
-                  tint = Color.White.copy(alpha = 0.75f),
-                  modifier = Modifier.size(22.dp),
-                )
-              }
-              IconButton(
-                onClick = { scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) } },
-                modifier = Modifier.size(48.dp),
-              ) {
-                Icon(
-                  Icons.Filled.QueueMusic,
-                  contentDescription = stringResource(R.string.action_open_queue),
-                  tint = Color.White.copy(alpha = 0.75f),
-                  modifier = Modifier.size(22.dp),
-                )
-              }
-            }
-          }
-        }
-
-        item {
-          if (playbackState is PlaybackUiState.Error) {
-            Spacer(Modifier.height(12.dp))
-            GlassCard {
-              ScreenScaffold(
-                state = ScreenState.Unavailable(
-                  (playbackState as PlaybackUiState.Error).message,
-                ),
-                loadingText = "",
-                onRetry = player::retry,
-                secondaryLabel = "Copy details",
-                onSecondary = {
-                  copyDiagnostics(
-                    context,
-                    buildPlaybackDiagnostics(
-                      appVersion = BuildConfig.VERSION_NAME,
-                      gitSha = "master",
-                      trackId = current?.mediaId.orEmpty(),
-                      trackTitle = current?.title.orEmpty(),
-                      streamUrl = "",
-                      mimeType = "",
-                      errorMessage = (playbackState as PlaybackUiState.Error).message,
-                    ),
-                  )
-                },
-              ) {}
-            }
-          }
-        }
-
-        item {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            Text(
-              stringResource(R.string.queue_title),
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.width(10.dp))
-            if (rows.isNotEmpty()) {
-              Surface(
-                shape = CircleShape,
-                color = scheme.primaryContainer.copy(alpha = 0.85f),
-              ) {
-                Text(
-                  stringResource(R.string.player_up_next_count, rows.size),
-                  style = MaterialTheme.typography.labelMedium,
-                  fontWeight = FontWeight.SemiBold,
-                  color = scheme.onPrimaryContainer,
-                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                )
-              }
-            }
-            Spacer(Modifier.weight(1f))
-            QualityMenu(
-              quality = streamQuality,
-              onSelect = {
+            1 -> QueueTab(
+              rows = rows,
+              playbackState = playbackState,
+              queueTitle = queueTitle,
+              streamQuality = streamQuality,
+              onQuality = {
                 prefs.streamQuality.set(it)
                 scope.launch(Dispatchers.IO) { context.mirrorStreamQualityChoice(it) }
               },
+              onPlayRow = { player.playWindow(it) },
+              onOpenPlayer = { tab = 0 },
+            )
+            else -> LyricsTab(
+              raw = rawLyrics,
+              positionMs = positionMs,
+              isPlaying = playbackState == PlaybackUiState.Playing,
+              expanded = lyricsExpanded,
+              onToggleExpand = { lyricsExpanded = !lyricsExpanded },
+              onOpenImmersive = { immersiveLyrics = true },
+              onSeek = player::seekTo,
             )
           }
-          Spacer(Modifier.height(MaterialTheme.spacing.small))
-        }
-
-        if (rows.isEmpty()) {
-          item {
-            GlassCard {
-              Text(
-                stringResource(R.string.queue_empty_title),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(18.dp),
-              )
-            }
           }
-        } else {
-          items(rows, key = { it.mediaId }) { row ->
-            GlassQueueWrapper(isCurrent = row.isCurrent) {
-              UpNextRow(
-                item = row,
-                isPlaying = row.isCurrent && playbackState == PlaybackUiState.Playing,
-                onClick = { player.playWindow(row) },
-              )
-            }
-            Spacer(Modifier.height(6.dp))
-          }
-        }
-
-        if (!queueTitle.isNullOrBlank()) {
-          item {
-            Spacer(Modifier.height(MaterialTheme.spacing.small))
-            GlassCard {
-              Row(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .padding(horizontal = 18.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-              ) {
-                Column(Modifier.weight(1f)) {
-                  Text(
-                    stringResource(R.string.playing_from, queueTitle!!),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                  )
-                }
-                GlassIconButton(
-                  onClick = {
-                    scope.launch { listState.animateScrollToItem(UPNEXT_SECTION_INDEX) }
-                  },
-                ) {
-                  Icon(
-                    Icons.Filled.QueueMusic,
-                    contentDescription = stringResource(R.string.action_open_queue),
-                    modifier = Modifier.size(22.dp),
-                  )
-                }
-              }
-            }
-          }
-        }
-
-        item {
-          Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
         }
       }
     }
 
-    // Animated in AND out: the overlay stays composed through exit so
-    // closing glides back to the player instead of blinking away.
     AnimatedVisibility(
       visible = immersiveLyrics,
       enter = fadeIn(animationSpec = tween(350)) +
@@ -813,61 +427,373 @@ fun NowPlayingSheetContent(
   }
 }
 
-// ---------- Premium pieces ----------
-
-/**
- * Thin white outline circle for controls floating directly on artwork
- * (collapse, share, add). Below-the-fold cards keep scheme-tinted
- * [GlassIconButton] instead — white icons die on light surfaces.
- */
 @Composable
-private fun ArtCircleButton(
-  onClick: () -> Unit,
-  enabled: Boolean = true,
-  size: Dp = 48.dp,
-  content: @Composable () -> Unit,
+private fun PlayerTab(
+  currentTitle: String?,
+  currentArtist: String?,
+  isLiked: Boolean,
+  playbackState: PlaybackUiState,
+  positionMs: Long,
+  durationMs: Long,
+  seekbarStyle: SeekbarStyle,
+  repeatMode: RepeatMode,
+  shuffleEnabled: Boolean,
+  syncedHaptics: Boolean,
+  hasHapticMotor: Boolean,
+  artUrl: String,
+  onSeek: (Long) -> Unit,
+  onToggle: () -> Unit,
+  onNext: () -> Unit,
+  onPrevious: () -> Unit,
+  onToggleLike: () -> Unit,
+  onToggleShuffle: () -> Unit,
+  onCycleRepeat: () -> Unit,
+  onToggleHaptics: () -> Unit,
+  onOpenQueue: () -> Unit,
+  onOpenLyrics: () -> Unit,
+  onShare: () -> Unit,
+  hapticsMode: SyncedHapticsMode?,
+  onHapticsMode: (SyncedHapticsMode) -> Unit,
+  errorBlock: @Composable () -> Unit,
 ) {
-  Surface(
-    onClick = onClick,
-    enabled = enabled,
-    shape = CircleShape,
-    color = Color.White.copy(alpha = 0.14f),
-    tonalElevation = 0.dp,
+  Column(
     modifier = Modifier
-      .size(size)
-      .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+      .fillMaxSize()
+      .verticalScroll(rememberScrollState()),
+    horizontalAlignment = Alignment.CenterHorizontally,
   ) {
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-      CompositionLocalProvider(LocalContentColor provides Color.White) {
-        content()
+    Spacer(Modifier.height(12.dp))
+    ArchTicketArt(artUrl = artUrl)
+    Spacer(Modifier.height(16.dp))
+
+    if (currentTitle == null) {
+      ScreenScaffold(state = ScreenState.Loading, loadingText = "", onRetry = {}) {}
+    } else {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(Modifier.weight(1f)) {
+          Text(
+            currentTitle,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface,
+          )
+          Spacer(Modifier.height(2.dp))
+          Text(
+            currentArtist.orEmpty(),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        }
+        IconButton(onClick = onToggleLike, modifier = Modifier.size(48.dp)) {
+          Icon(
+            imageVector = if (isLiked) Icons.Filled.Star else Icons.Filled.StarBorder,
+            contentDescription = stringResource(
+              if (isLiked) R.string.action_unlike else R.string.action_like,
+            ),
+            tint = if (isLiked) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+          )
+        }
+        TitleOverflowMenu(
+          onShare = onShare,
+          onOpenQueue = onOpenQueue,
+          hapticsMode = hapticsMode,
+          onHapticsMode = onHapticsMode,
+        )
       }
     }
+
+    Spacer(Modifier.height(6.dp))
+    SheetSlider(
+      positionMs = positionMs,
+      durationMs = durationMs,
+      style = seekbarStyle,
+      isPlaying = playbackState == PlaybackUiState.Playing,
+      onSeek = onSeek,
+    )
+    Spacer(Modifier.height(4.dp))
+    ControlDock(
+      state = playbackState,
+      onToggle = onToggle,
+      onNext = onNext,
+      onPrevious = onPrevious,
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceEvenly,
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      IconButton(onClick = onToggleShuffle, modifier = Modifier.size(48.dp)) {
+        Icon(
+          imageVector = Icons.Filled.Shuffle,
+          contentDescription = stringResource(
+            if (shuffleEnabled) R.string.transport_shuffle_on else R.string.transport_shuffle_off,
+          ),
+          tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary
+          else MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.size(22.dp),
+        )
+      }
+      IconButton(onClick = onCycleRepeat, modifier = Modifier.size(48.dp)) {
+        Icon(
+          imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+          contentDescription = stringResource(R.string.transport_repeat, repeatMode.name),
+          tint = if (repeatMode == RepeatMode.OFF) {
+            MaterialTheme.colorScheme.onSurfaceVariant
+          } else {
+            MaterialTheme.colorScheme.primary
+          },
+          modifier = Modifier.size(22.dp),
+        )
+      }
+      if (hasHapticMotor) {
+        IconButton(onClick = onToggleHaptics, modifier = Modifier.size(48.dp)) {
+          Icon(
+            Icons.Filled.Vibration,
+            contentDescription = stringResource(
+              if (syncedHaptics) R.string.transport_haptics_on else R.string.transport_haptics_off,
+            ),
+            tint = if (syncedHaptics) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+          )
+        }
+      }
+      IconButton(onClick = onOpenLyrics, modifier = Modifier.size(48.dp)) {
+        Icon(
+          Icons.Filled.FormatQuote,
+          contentDescription = stringResource(R.string.lyrics),
+          tint = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.size(22.dp),
+        )
+      }
+      IconButton(onClick = onOpenQueue, modifier = Modifier.size(48.dp)) {
+        Icon(
+          Icons.Filled.QueueMusic,
+          contentDescription = stringResource(R.string.action_open_queue),
+          tint = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.size(22.dp),
+        )
+      }
+    }
+    errorBlock()
+    Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
+  }
+}
+
+@Composable
+private fun QueueTab(
+  rows: List<app.rayik.music.player.QueueRow>,
+  playbackState: PlaybackUiState,
+  queueTitle: String?,
+  streamQuality: StreamQuality,
+  onQuality: (StreamQuality) -> Unit,
+  onPlayRow: (app.rayik.music.player.QueueRow) -> Unit,
+  onOpenPlayer: () -> Unit,
+) {
+  val scheme = MaterialTheme.colorScheme
+  Column(Modifier.fillMaxSize()) {
+    Spacer(Modifier.height(12.dp))
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+        stringResource(R.string.queue_title),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = scheme.onSurface,
+      )
+      Spacer(Modifier.width(10.dp))
+      if (rows.isNotEmpty()) {
+        Surface(shape = CircleShape, color = scheme.primaryContainer) {
+          Text(
+            stringResource(R.string.player_up_next_count, rows.size),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = scheme.onPrimaryContainer,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+          )
+        }
+      }
+      Spacer(Modifier.weight(1f))
+      QualityMenu(quality = streamQuality, onSelect = onQuality)
+    }
+    Spacer(Modifier.height(MaterialTheme.spacing.small))
+    if (rows.isEmpty()) {
+      GlassCard {
+        Column(
+          modifier = Modifier.padding(18.dp).fillMaxWidth(),
+          horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+          Icon(
+            Icons.Filled.QueueMusic,
+            contentDescription = null,
+            tint = scheme.onSurfaceVariant,
+            modifier = Modifier.size(28.dp),
+          )
+          Spacer(Modifier.height(8.dp))
+          Text(
+            stringResource(R.string.queue_empty_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = scheme.onSurface,
+          )
+        }
+      }
+    } else {
+      LazyColumn(
+        modifier = Modifier.weight(1f).fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+      ) {
+        items(rows, key = { it.mediaId }) { row ->
+          GlassQueueWrapper(isCurrent = row.isCurrent) {
+            UpNextRow(
+              item = row,
+              isPlaying = row.isCurrent && playbackState == PlaybackUiState.Playing,
+              onClick = { onPlayRow(row) },
+            )
+          }
+        }
+      }
+    }
+    if (!queueTitle.isNullOrBlank()) {
+      Spacer(Modifier.height(MaterialTheme.spacing.small))
+      GlassCard {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Column(Modifier.weight(1f)) {
+            Text(
+              stringResource(R.string.playing_from, queueTitle),
+              style = MaterialTheme.typography.bodyLarge,
+              fontWeight = FontWeight.SemiBold,
+              color = scheme.onSurface,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
+            )
+          }
+          IconButton(onClick = onOpenPlayer, modifier = Modifier.size(44.dp)) {
+            Icon(
+              Icons.Filled.QueueMusic,
+              contentDescription = stringResource(R.string.action_open_queue),
+              tint = scheme.onSurfaceVariant,
+              modifier = Modifier.size(22.dp),
+            )
+          }
+        }
+      }
+    }
+    Spacer(Modifier.height(MaterialTheme.spacing.medium))
+  }
+}
+
+@Composable
+private fun LyricsTab(
+  raw: String?,
+  positionMs: Long,
+  isPlaying: Boolean,
+  expanded: Boolean,
+  onToggleExpand: () -> Unit,
+  onOpenImmersive: () -> Unit,
+  onSeek: (Long) -> Unit,
+) {
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .verticalScroll(rememberScrollState()),
+  ) {
+    Spacer(Modifier.height(12.dp))
+    LyricsPreviewCard(
+      raw = raw,
+      positionMs = positionMs,
+      expanded = expanded,
+      onToggleExpand = onToggleExpand,
+      isPlaying = isPlaying,
+      onOpenImmersive = onOpenImmersive,
+      onSeek = onSeek,
+    )
+    Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
   }
 }
 
 /**
- * Small dark circle for title-row actions (like star, overflow) floating
- * on the melt — Apple-sized, quieter than [ArtCircleButton].
+ * Signature art: mirror-arch with a brass (tertiary) rim and two ticket
+ * notches punched from the sides. Same geometry on every theme; the scheme
+ * supplies the colors so light/dark/AMOLED stay free.
  */
 @Composable
-private fun TitleIconButton(
-  onClick: () -> Unit,
-  content: @Composable () -> Unit,
+private fun ArchTicketArt(
+  artUrl: String,
+  modifier: Modifier = Modifier,
 ) {
-  Surface(
-    onClick = onClick,
-    shape = CircleShape,
-    color = Color.White.copy(alpha = 0.12f),
-    tonalElevation = 0.dp,
-    modifier = Modifier
-      .size(38.dp)
-      .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
+  val scheme = MaterialTheme.colorScheme
+  val shape = archTicketShape()
+  Box(
+    modifier = modifier
+      .widthIn(max = 360.dp)
+      .fillMaxWidth()
+      .aspectRatio(0.92f),
+    contentAlignment = Alignment.Center,
   ) {
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-      CompositionLocalProvider(LocalContentColor provides Color.White) {
-        content()
+    Surface(
+      shape = shape,
+      color = scheme.surfaceContainerHigh,
+      tonalElevation = 2.dp,
+      shadowElevation = 8.dp,
+      modifier = Modifier
+        .matchParentSize()
+        .border(1.dp, scheme.tertiary.copy(alpha = 0.6f), shape),
+    ) {
+      Box(
+        modifier = Modifier.fillMaxSize().clip(shape).background(scheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center,
+      ) {
+        Icon(
+          imageVector = Icons.Filled.MusicNote,
+          contentDescription = null,
+          tint = scheme.onSurfaceVariant,
+          modifier = Modifier.size(64.dp),
+        )
+        if (artUrl.isNotBlank()) {
+          AsyncImage(
+            model = artUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize().clip(shape),
+          )
+        }
       }
     }
+    // Ticket notches: surface discs straddling each edge read as punches.
+    // Half outside the art so the rim breaks instead of a dot sitting on it.
+    Box(
+      Modifier
+        .size(24.dp)
+        .align(Alignment.CenterStart)
+        .offset(x = (-12).dp)
+        .clip(CircleShape)
+        .background(scheme.surface)
+        .border(1.dp, scheme.tertiary.copy(alpha = 0.4f), CircleShape),
+    )
+    Box(
+      Modifier
+        .size(24.dp)
+        .align(Alignment.CenterEnd)
+        .offset(x = 12.dp)
+        .clip(CircleShape)
+        .background(scheme.surface)
+        .border(1.dp, scheme.tertiary.copy(alpha = 0.4f), CircleShape),
+    )
   }
 }
 
@@ -881,12 +807,12 @@ private fun TitleOverflowMenu(
 ) {
   var expanded by remember { mutableStateOf(false) }
   Box {
-    TitleIconButton(onClick = { expanded = true }) {
+    IconButton(onClick = { expanded = true }, modifier = Modifier.size(48.dp)) {
       Icon(
         Icons.Filled.MoreVert,
         contentDescription = stringResource(R.string.action_open_queue),
-        tint = Color.White,
-        modifier = Modifier.size(20.dp),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(22.dp),
       )
     }
     DropdownMenu(
@@ -953,34 +879,7 @@ private fun TitleOverflowMenu(
   }
 }
 
-@Composable
-private fun GlassIconButton(
-  onClick: () -> Unit,
-  enabled: Boolean = true,
-  content: @Composable () -> Unit,
-) {
-  val scheme = MaterialTheme.colorScheme
-  Surface(
-    onClick = onClick,
-    enabled = enabled,
-    shape = CircleShape,
-    color = scheme.surface.copy(alpha = 0.5f),
-    tonalElevation = 0.dp,
-    modifier = Modifier
-      .size(44.dp)
-      .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape),
-  ) {
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-      content()
-    }
-  }
-}
-
-/**
- * In-player streaming quality: compact glass chip trailing the Up-next
- * header, opening the same Saver / Auto / High choice as Settings.
- * Writes through the same preference + legacy-key mirror.
- */
+/** In-player streaming quality chip trailing the Up-next header. */
 @Composable
 private fun QualityMenu(
   quality: StreamQuality,
@@ -992,8 +891,8 @@ private fun QualityMenu(
     Surface(
       onClick = { expanded = true },
       shape = CircleShape,
-      color = scheme.surface.copy(alpha = 0.5f),
-      modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape),
+      color = scheme.surfaceContainerHigh,
+      modifier = Modifier.border(1.dp, scheme.outlineVariant, CircleShape),
     ) {
       Row(
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
@@ -1002,12 +901,14 @@ private fun QualityMenu(
         Icon(
           Icons.Filled.HighQuality,
           contentDescription = stringResource(R.string.pref_quality_label),
+          tint = scheme.onSurfaceVariant,
           modifier = Modifier.size(15.dp),
         )
         Spacer(Modifier.width(4.dp))
         Text(
           stringResource(quality.titleRes),
           style = MaterialTheme.typography.labelMedium,
+          color = scheme.onSurface,
         )
       }
     }
@@ -1040,7 +941,7 @@ private fun QualityMenu(
   }
 }
 
-/** Frosted card used for lyrics / error / empty states. */
+/** Theme card for lyrics / error / empty states. */
 @Composable
 fun GlassCard(
   modifier: Modifier = Modifier,
@@ -1049,10 +950,10 @@ fun GlassCard(
   Surface(
     tonalElevation = 2.dp,
     shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+    color = MaterialTheme.colorScheme.surfaceContainerHigh,
     modifier = modifier
       .fillMaxWidth()
-      .border(1.dp, Color.White.copy(alpha = 0.13f), RoundedCornerShape(26.dp)),
+      .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(26.dp)),
   ) {
     content()
   }
@@ -1067,7 +968,7 @@ private fun GlassQueueWrapper(
   if (isCurrent) {
     Surface(
       shape = RoundedCornerShape(18.dp),
-      color = scheme.primaryContainer.copy(alpha = 0.55f),
+      color = scheme.primaryContainer,
       modifier = Modifier
         .fillMaxWidth()
         .border(1.dp, scheme.primary.copy(alpha = 0.35f), RoundedCornerShape(18.dp)),
@@ -1077,7 +978,7 @@ private fun GlassQueueWrapper(
   } else {
     Surface(
       shape = RoundedCornerShape(18.dp),
-      color = scheme.surface.copy(alpha = 0.38f),
+      color = scheme.surfaceContainer,
       modifier = Modifier.fillMaxWidth(),
     ) {
       content()
@@ -1106,9 +1007,7 @@ private fun SheetSlider(
   isPlaying: Boolean,
   onSeek: (Long) -> Unit,
 ) {
-  // Apple slider: thin track, pinned 10dp dot, small grey times with
-  // negative remaining. Always white: floats on artwork, never on theme.
-  val activeSlider = Color.White
+  val scheme = MaterialTheme.colorScheme
   var dragging by remember { mutableStateOf(false) }
   var dragValue by remember { mutableFloatStateOf(0f) }
   val range = 0f..maxOf(durationMs.toFloat(), 1f)
@@ -1123,9 +1022,9 @@ private fun SheetSlider(
     dragging = false
   }
   val sliderColors = SliderDefaults.colors(
-    activeTrackColor = activeSlider,
-    inactiveTrackColor = activeSlider.copy(alpha = 0.28f),
-    thumbColor = activeSlider,
+    activeTrackColor = scheme.primary,
+    inactiveTrackColor = scheme.surfaceVariant,
+    thumbColor = scheme.primary,
   )
 
   Column(Modifier.fillMaxWidth()) {
@@ -1159,7 +1058,7 @@ private fun SheetSlider(
               Modifier
                 .size(width = 4.dp, height = 16.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color.White),
+                .background(scheme.primary),
             )
           },
           track = { sliderState ->
@@ -1185,7 +1084,7 @@ private fun SheetSlider(
               Modifier
                 .size(18.dp)
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(scheme.primary),
             )
           },
           track = { sliderState ->
@@ -1212,7 +1111,7 @@ private fun SheetSlider(
               Modifier
                 .size(10.dp)
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(scheme.primary),
             )
           },
           track = { sliderState ->
@@ -1230,13 +1129,13 @@ private fun SheetSlider(
       Text(
         formatMs(shownPosition),
         style = MaterialTheme.typography.labelSmall,
-        color = Color.White.copy(alpha = 0.6f),
+        color = scheme.onSurfaceVariant,
       )
       Spacer(Modifier.weight(1f))
       Text(
         "-" + formatMs(maxOf(durationMs - shownPosition, 0L)),
         style = MaterialTheme.typography.labelSmall,
-        color = Color.White.copy(alpha = 0.6f),
+        color = scheme.onSurfaceVariant,
       )
     }
   }
@@ -1249,8 +1148,7 @@ private fun ControlDock(
   onNext: () -> Unit,
   onPrevious: () -> Unit,
 ) {
-  // Apple transport: three bare white icons, no circle. Shuffle/repeat
-  // live in the quiet footer row so nothing is lost.
+  val scheme = MaterialTheme.colorScheme
   Row(
     modifier = Modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -1264,41 +1162,43 @@ private fun ControlDock(
       Icon(
         Icons.Filled.SkipPrevious,
         contentDescription = stringResource(R.string.transport_previous),
-        tint = Color.White,
-        modifier = Modifier.size(42.dp),
+        tint = scheme.onSurface,
+        modifier = Modifier.size(36.dp),
       )
     }
     if (state == PlaybackUiState.Loading) {
       CircularProgressIndicator(
         modifier = Modifier.size(60.dp),
-        color = Color.White,
-        trackColor = Color.White.copy(alpha = 0.24f),
+        color = scheme.primary,
+        trackColor = scheme.surfaceVariant,
       )
     } else {
-      IconButton(
+      Surface(
         onClick = onToggle,
-        // Idle with a queue means "tap to start"; Error means "tap to
-        // retry". Only an unknown state sits disabled.
         enabled = state == PlaybackUiState.Playing || state == PlaybackUiState.Paused ||
           state == PlaybackUiState.Idle || state is PlaybackUiState.Error,
+        shape = CircleShape,
+        color = scheme.primary,
         modifier = Modifier.size(76.dp),
       ) {
-        Icon(
-          imageVector = if (state == PlaybackUiState.Playing) {
-            Icons.Filled.Pause
-          } else {
-            Icons.Filled.PlayArrow
-          },
-          contentDescription = stringResource(
-            if (state == PlaybackUiState.Playing) {
-              R.string.transport_pause
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+          Icon(
+            imageVector = if (state == PlaybackUiState.Playing) {
+              Icons.Filled.Pause
             } else {
-              R.string.transport_play
+              Icons.Filled.PlayArrow
             },
-          ),
-          tint = Color.White,
-          modifier = Modifier.size(58.dp),
-        )
+            contentDescription = stringResource(
+              if (state == PlaybackUiState.Playing) {
+                R.string.transport_pause
+              } else {
+                R.string.transport_play
+              },
+            ),
+            tint = scheme.onPrimary,
+            modifier = Modifier.size(40.dp),
+          )
+        }
       }
     }
     IconButton(
@@ -1309,8 +1209,8 @@ private fun ControlDock(
       Icon(
         Icons.Filled.SkipNext,
         contentDescription = stringResource(R.string.transport_next),
-        tint = Color.White,
-        modifier = Modifier.size(42.dp),
+        tint = scheme.onSurface,
+        modifier = Modifier.size(36.dp),
       )
     }
   }

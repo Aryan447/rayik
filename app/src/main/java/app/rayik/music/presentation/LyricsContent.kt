@@ -3,6 +3,8 @@ package app.rayik.music.presentation
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -43,16 +46,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.rayik.music.R
 import app.rayik.music.lyrics.LyricDisplayParser
 import app.rayik.music.lyrics.LyricsEntry
+import app.rayik.music.lyrics.WordTimestamp
 import app.rayik.music.ui.theme.spacing
 
 /** Index of the line playing at [positionMs], or -1 when none matches yet. */
@@ -121,6 +130,7 @@ fun LyricsPreviewCard(
   positionMs: Long,
   expanded: Boolean,
   onToggleExpand: () -> Unit,
+  isPlaying: Boolean = true,
   modifier: Modifier = Modifier,
   onShareCard: (() -> Unit)? = null,
   onOpenImmersive: (() -> Unit)? = null,
@@ -190,6 +200,12 @@ fun LyricsPreviewCard(
       }
 
       val lines = remember(raw) { LyricDisplayParser.parseTimed(raw) }
+      // Interpolated clock so the active line fills word-by-word instead
+      // of stepping at the 500ms poll cadence. Runs only when a provider
+      // actually shipped word timings — otherwise it would spin 60fps
+      // recompositions for nothing visible.
+      val hasWordTimings = remember(lines) { lines.any { !it.words.isNullOrEmpty() } }
+      val smoothPositionMs = rememberSmoothLyricPosition(positionMs, isPlaying && hasWordTimings)
       if (lines.isEmpty()) {
         Text(
           LyricDisplayParser.plainText(raw),
@@ -214,22 +230,41 @@ fun LyricsPreviewCard(
         ) {
           Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.smaller)) {
             preview.forEachIndexed { i, line ->
-              Text(
-                line.text,
-                style = if (i == 0) {
-                  MaterialTheme.typography.titleMedium
-                } else {
-                  MaterialTheme.typography.bodyMedium
-                },
-                fontWeight = if (i == 0) FontWeight.Bold else FontWeight.Normal,
-                color = if (i == 0) {
-                  MaterialTheme.colorScheme.onSurface
-                } else {
-                  MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-              )
+              // The stanza's first line is the live one: fill it word by
+              // word on the smooth clock, keep the rest as plain text.
+              if (i == 0 && active >= 0 && !line.words.isNullOrEmpty()) {
+                val direction = if (line.isRtl == true) LayoutDirection.Rtl else LayoutDirection.Ltr
+                CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                  WordKaraokeLine(
+                    words = line.words,
+                    positionMs = smoothPositionMs,
+                    fontSizeSp = MaterialTheme.typography.titleMedium.fontSize.value,
+                    sungColor = MaterialTheme.colorScheme.onSurface,
+                    unsungColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    glowColor = null,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth(),
+                  )
+                }
+              } else {
+                Text(
+                  line.text,
+                  style = if (i == 0) {
+                    MaterialTheme.typography.titleMedium
+                  } else {
+                    MaterialTheme.typography.bodyMedium
+                  },
+                  fontWeight = if (i == 0) FontWeight.Bold else FontWeight.Normal,
+                  color = if (i == 0) {
+                    MaterialTheme.colorScheme.onSurface
+                  } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                  },
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis,
+                )
+              }
             }
           }
         }
@@ -237,6 +272,7 @@ fun LyricsPreviewCard(
         LyricLines(
           lines = lines,
           positionMs = positionMs,
+          isPlaying = isPlaying,
           modifier = Modifier.heightIn(max = 320.dp),
           onSeek = onSeek,
         )
@@ -271,11 +307,16 @@ fun LyricsPreviewCard(
 fun LyricLines(
   lines: List<LyricsEntry>,
   positionMs: Long,
+  isPlaying: Boolean = true,
   modifier: Modifier = Modifier,
   onSeek: ((Long) -> Unit)? = null,
 ) {
   val listState = rememberLazyListState()
   val active = remember(lines, positionMs) { activeLyricIndex(lines, positionMs) }
+  // Same interpolated clock as fullscreen: only the active row reads it,
+  // so only it recomposes per frame. Off when no word timings exist.
+  val hasWordTimings = remember(lines) { lines.any { !it.words.isNullOrEmpty() } }
+  val smoothPositionMs = rememberSmoothLyricPosition(positionMs, isPlaying && hasWordTimings)
 
   LaunchedEffect(active) {
     // Never fight the user's finger: a skipped line centers on the next change.
@@ -292,6 +333,7 @@ fun LyricLines(
       LyricRow(
         line = line,
         isActive = index == active,
+        smoothPositionMs = if (index == active) smoothPositionMs else 0L,
         onSeek = onSeek?.let { seek -> { seek(line.time) } },
         modifier = Modifier.animateItem(),
       )
@@ -305,6 +347,7 @@ private fun LyricRow(
   isActive: Boolean,
   onSeek: (() -> Unit)?,
   modifier: Modifier = Modifier,
+  smoothPositionMs: Long = 0L,
 ) {
   val color by animateColorAsState(
     targetValue = if (isActive) {
@@ -320,25 +363,88 @@ private fun LyricRow(
     animationSpec = LYRIC_FOLLOW_FLOAT_SPEC,
     label = "lyricScale",
   )
-  Text(
-    line.text,
-    style = if (isActive) {
-      MaterialTheme.typography.titleMedium
+  val rowModifier = modifier
+    .fillMaxWidth()
+    .graphicsLayer {
+      scaleX = scale
+      scaleY = scale
+    }
+    .then(if (onSeek != null) Modifier.clickable(onClick = onSeek) else Modifier)
+    .padding(horizontal = MaterialTheme.spacing.medium)
+  // RTL lyrics (Arabic/Hebrew/Urdu) flow right-to-left like fullscreen.
+  val direction = if (line.isRtl == true) LayoutDirection.Rtl else LayoutDirection.Ltr
+  CompositionLocalProvider(LocalLayoutDirection provides direction) {
+    if (isActive && !line.words.isNullOrEmpty()) {
+      WordKaraokeLine(
+        words = line.words,
+        positionMs = smoothPositionMs,
+        fontSizeSp = MaterialTheme.typography.titleMedium.fontSize.value,
+        sungColor = MaterialTheme.colorScheme.primary,
+        unsungColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        glowColor = null,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
+        modifier = rowModifier,
+      )
     } else {
-      MaterialTheme.typography.bodyLarge
-    },
-    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-    color = color,
-    textAlign = TextAlign.Center,
-    modifier = modifier
-      .fillMaxWidth()
-      .graphicsLayer {
-        scaleX = scale
-        scaleY = scale
-      }
-      .then(if (onSeek != null) Modifier.clickable(onClick = onSeek) else Modifier)
-      .padding(horizontal = MaterialTheme.spacing.medium),
-  )
+      Text(
+        line.text,
+        style = if (isActive) {
+          MaterialTheme.typography.titleMedium
+        } else {
+          MaterialTheme.typography.bodyLarge
+        },
+        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+        color = color,
+        textAlign = TextAlign.Center,
+        modifier = rowModifier,
+      )
+    }
+  }
+}
+
+/**
+ * Word-by-word fill for the active line, shared by fullscreen and the
+ * inline Lyrics tab. Each word lights up as its timestamp passes on the
+ * interpolated clock — a crisp karaoke step, not a fade, so timing feels
+ * locked to the vocal. Duet (background) words cap dimmer. Callers fall
+ * back to the plain line when the provider ships no word timings.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun WordKaraokeLine(
+  words: List<WordTimestamp>,
+  positionMs: Long,
+  fontSizeSp: Float,
+  sungColor: Color,
+  unsungColor: Color,
+  glowColor: Color?,
+  fontWeight: FontWeight,
+  textAlign: TextAlign,
+  modifier: Modifier = Modifier,
+) {
+  FlowRow(modifier = modifier) {
+    words.forEach { word ->
+      val wordStartMs = (word.startTime * 1000).toLong()
+      val sung = positionMs >= wordStartMs
+      val base = if (sung) sungColor else unsungColor
+      Text(
+        text = word.text + " ",
+        fontSize = fontSizeSp.sp,
+        lineHeight = (fontSizeSp * 1.25f).sp,
+        fontWeight = fontWeight,
+        textAlign = textAlign,
+        color = if (word.isBackground) base.copy(alpha = base.alpha * 0.7f) else base,
+        style = MaterialTheme.typography.headlineSmall.copy(
+          shadow = if (sung && glowColor != null) {
+            Shadow(color = glowColor, offset = Offset.Zero, blurRadius = 28f)
+          } else {
+            null
+          },
+        ),
+      )
+    }
+  }
 }
 
 private val LYRIC_FOLLOW_FLOAT_SPEC = tween<Float>(

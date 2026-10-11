@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,7 +55,6 @@ import androidx.compose.ui.unit.sp
 import app.rayik.music.R
 import app.rayik.music.lyrics.LyricDisplayParser
 import app.rayik.music.lyrics.LyricsEntry
-import app.rayik.music.lyrics.WordTimestamp
 import app.rayik.music.ui.theme.spacing
 import coil3.compose.AsyncImage
 
@@ -194,6 +192,7 @@ fun ImmersiveLyrics(
   }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ImmersiveLyricRow(
   line: LyricsEntry,
@@ -230,7 +229,12 @@ private fun ImmersiveLyricRow(
       WordKaraokeLine(
         words = line.words,
         positionMs = smoothPositionMs,
-        fontSize = fontSize,
+        fontSizeSp = fontSize,
+        sungColor = Color.White,
+        unsungColor = Color.White.copy(alpha = 0.35f),
+        glowColor = Color.White.copy(alpha = 0.55f),
+        fontWeight = FontWeight.ExtraBold,
+        textAlign = TextAlign.Start,
         modifier = modifier
           .fillMaxWidth()
           .then(seekModifier),
@@ -253,49 +257,6 @@ private fun ImmersiveLyricRow(
         modifier = modifier
           .fillMaxWidth()
           .then(seekModifier),
-      )
-    }
-  }
-}
-
-/**
- * Apple-style word-by-word fill for the active line. Each word lights up
- * as its timestamp passes on the interpolated clock — a crisp karaoke
- * step, not a fade, so timing feels locked to the vocal. Background
- * (duet) words cap dimmer. Falls back to the plain line above when the
- * provider ships no word timings.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun WordKaraokeLine(
-  words: List<WordTimestamp>,
-  positionMs: Long,
-  fontSize: Float,
-  modifier: Modifier = Modifier,
-) {
-  FlowRow(modifier = modifier) {
-    words.forEach { word ->
-      val wordStartMs = (word.startTime * 1000).toLong()
-      val sung = positionMs >= wordStartMs
-      val cap = if (word.isBackground) 0.7f else 1f
-      Text(
-        text = word.text + " ",
-        fontSize = fontSize.sp,
-        lineHeight = (fontSize * 1.25f).sp,
-        fontWeight = FontWeight.ExtraBold,
-        textAlign = TextAlign.Start,
-        color = if (sung) {
-          Color.White.copy(alpha = cap)
-        } else {
-          Color.White.copy(alpha = 0.35f * cap)
-        },
-        style = MaterialTheme.typography.headlineSmall.copy(
-          shadow = if (sung) {
-            Shadow(color = Color.White.copy(alpha = 0.55f), offset = Offset.Zero, blurRadius = 28f)
-          } else {
-            null
-          },
-        ),
       )
     }
   }
