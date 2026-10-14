@@ -464,56 +464,34 @@ private fun PlayerTab(
       .verticalScroll(rememberScrollState()),
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
-    Spacer(Modifier.height(12.dp))
-    ArchTicketArt(artUrl = artUrl)
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(8.dp))
+    HeroArt(artUrl = artUrl)
+    Spacer(Modifier.height(28.dp))
 
     if (currentTitle == null) {
       ScreenScaffold(state = ScreenState.Loading, loadingText = "", onRetry = {}) {}
     } else {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Column(Modifier.weight(1f)) {
-          Text(
-            currentTitle,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurface,
-          )
-          Spacer(Modifier.height(2.dp))
-          Text(
-            currentArtist.orEmpty(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-          )
-        }
-        IconButton(onClick = onToggleLike, modifier = Modifier.size(48.dp)) {
-          Icon(
-            imageVector = if (isLiked) Icons.Filled.Star else Icons.Filled.StarBorder,
-            contentDescription = stringResource(
-              if (isLiked) R.string.action_unlike else R.string.action_like,
-            ),
-            tint = if (isLiked) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(22.dp),
-          )
-        }
-        TitleOverflowMenu(
-          onShare = onShare,
-          onOpenQueue = onOpenQueue,
-          hapticsMode = hapticsMode,
-          onHapticsMode = onHapticsMode,
-        )
-      }
+      Text(
+        currentTitle,
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.Bold,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+      )
+      Spacer(Modifier.height(6.dp))
+      Text(
+        currentArtist.orEmpty(),
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+      )
     }
 
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(20.dp))
     SheetSlider(
       positionMs = positionMs,
       durationMs = durationMs,
@@ -521,20 +499,31 @@ private fun PlayerTab(
       isPlaying = playbackState == PlaybackUiState.Playing,
       onSeek = onSeek,
     )
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(8.dp))
     ControlDock(
       state = playbackState,
       onToggle = onToggle,
       onNext = onNext,
       onPrevious = onPrevious,
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(16.dp))
     Row(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.SpaceEvenly,
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      IconButton(onClick = onToggleShuffle, modifier = Modifier.size(48.dp)) {
+      IconButton(onClick = onToggleLike, modifier = Modifier.size(46.dp)) {
+        Icon(
+          imageVector = if (isLiked) Icons.Filled.Star else Icons.Filled.StarBorder,
+          contentDescription = stringResource(
+            if (isLiked) R.string.action_unlike else R.string.action_like,
+          ),
+          tint = if (isLiked) MaterialTheme.colorScheme.primary
+          else MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.size(22.dp),
+        )
+      }
+      IconButton(onClick = onToggleShuffle, modifier = Modifier.size(46.dp)) {
         Icon(
           imageVector = Icons.Filled.Shuffle,
           contentDescription = stringResource(
@@ -545,7 +534,7 @@ private fun PlayerTab(
           modifier = Modifier.size(22.dp),
         )
       }
-      IconButton(onClick = onCycleRepeat, modifier = Modifier.size(48.dp)) {
+      IconButton(onClick = onCycleRepeat, modifier = Modifier.size(46.dp)) {
         Icon(
           imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
           contentDescription = stringResource(R.string.transport_repeat, repeatMode.name),
@@ -558,7 +547,7 @@ private fun PlayerTab(
         )
       }
       if (hasHapticMotor) {
-        IconButton(onClick = onToggleHaptics, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = onToggleHaptics, modifier = Modifier.size(46.dp)) {
           Icon(
             Icons.Filled.Vibration,
             contentDescription = stringResource(
@@ -570,7 +559,7 @@ private fun PlayerTab(
           )
         }
       }
-      IconButton(onClick = onOpenLyrics, modifier = Modifier.size(48.dp)) {
+      IconButton(onClick = onOpenLyrics, modifier = Modifier.size(46.dp)) {
         Icon(
           Icons.Filled.FormatQuote,
           contentDescription = stringResource(R.string.lyrics),
@@ -578,7 +567,7 @@ private fun PlayerTab(
           modifier = Modifier.size(22.dp),
         )
       }
-      IconButton(onClick = onOpenQueue, modifier = Modifier.size(48.dp)) {
+      IconButton(onClick = onOpenQueue, modifier = Modifier.size(46.dp)) {
         Icon(
           Icons.Filled.QueueMusic,
           contentDescription = stringResource(R.string.action_open_queue),
@@ -586,6 +575,12 @@ private fun PlayerTab(
           modifier = Modifier.size(22.dp),
         )
       }
+      TitleOverflowMenu(
+        onShare = onShare,
+        onOpenQueue = onOpenQueue,
+        hapticsMode = hapticsMode,
+        onHapticsMode = onHapticsMode,
+      )
     }
     errorBlock()
     Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
@@ -734,37 +729,40 @@ private fun LyricsTab(
  * supplies the colors so light/dark/AMOLED stay free.
  */
 @Composable
-private fun ArchTicketArt(
+private fun HeroArt(
   artUrl: String,
   modifier: Modifier = Modifier,
 ) {
   val scheme = MaterialTheme.colorScheme
-  val shape = archTicketShape()
+  val shape = RoundedCornerShape(32.dp)
   Box(
     modifier = modifier
-      .widthIn(max = 360.dp)
+      .widthIn(max = 340.dp)
       .fillMaxWidth()
-      .aspectRatio(0.92f),
+      .aspectRatio(1f),
     contentAlignment = Alignment.Center,
   ) {
     Surface(
       shape = shape,
       color = scheme.surfaceContainerHigh,
-      tonalElevation = 2.dp,
-      shadowElevation = 8.dp,
+      tonalElevation = 3.dp,
+      shadowElevation = 18.dp,
       modifier = Modifier
         .matchParentSize()
-        .border(1.dp, scheme.tertiary.copy(alpha = 0.6f), shape),
+        .border(1.dp, scheme.outlineVariant.copy(alpha = 0.4f), shape),
     ) {
       Box(
-        modifier = Modifier.fillMaxSize().clip(shape).background(scheme.surfaceContainerHigh),
+        modifier = Modifier
+          .fillMaxSize()
+          .clip(shape)
+          .background(scheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center,
       ) {
         Icon(
           imageVector = Icons.Filled.MusicNote,
           contentDescription = null,
-          tint = scheme.onSurfaceVariant,
-          modifier = Modifier.size(64.dp),
+          tint = scheme.onSurfaceVariant.copy(alpha = 0.6f),
+          modifier = Modifier.size(80.dp),
         )
         if (artUrl.isNotBlank()) {
           AsyncImage(
@@ -776,26 +774,6 @@ private fun ArchTicketArt(
         }
       }
     }
-    // Ticket notches: surface discs straddling each edge read as punches.
-    // Half outside the art so the rim breaks instead of a dot sitting on it.
-    Box(
-      Modifier
-        .size(24.dp)
-        .align(Alignment.CenterStart)
-        .offset(x = (-12).dp)
-        .clip(CircleShape)
-        .background(scheme.surface)
-        .border(1.dp, scheme.tertiary.copy(alpha = 0.4f), CircleShape),
-    )
-    Box(
-      Modifier
-        .size(24.dp)
-        .align(Alignment.CenterEnd)
-        .offset(x = 12.dp)
-        .clip(CircleShape)
-        .background(scheme.surface)
-        .border(1.dp, scheme.tertiary.copy(alpha = 0.4f), CircleShape),
-    )
   }
 }
 
